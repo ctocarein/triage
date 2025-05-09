@@ -1,0 +1,52 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Account\LogoutController;
+use App\Http\Controllers\Account\MedicalProfileController;
+use App\Http\Controllers\Account\PersonalProfileController;
+use App\Http\Controllers\Account\RegisterOrLoginController;
+use App\Http\Controllers\Evaluation\EvaluationAnswerController;
+use App\Http\Controllers\Evaluation\EvaluationSessionController;
+use App\Http\Controllers\Evaluation\QuestionFlowController;
+
+
+
+Route::group(['prefix' => 'account'], function () {
+    Route::post('/',RegisterOrLoginController::class);
+});
+
+// This route is for logging out the user. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
+// The LogoutController handles the logout process, which typically involves invalidating the user's token.
+Route::group(['prefix' => 'account','middleware'=>'auth:sanctum'], function () {
+    // Logout route
+    Route::get('/logout',LogoutController::class);
+    // Medical and Personal Profile routes
+    // These routes are protected by the 'sanctum' middleware, ensuring that only authenticated users can access them.
+    Route::get('/medical-profile', [MedicalProfileController::class, 'index']);
+    Route::post('/medical-profile', [MedicalProfileController::class, 'store']);
+    Route::put('/medical-profile', [MedicalProfileController::class, 'update']);
+    Route::get('/personal-profile', [PersonalProfileController::class, 'index']);
+    Route::post('/personal-profile', [PersonalProfileController::class, 'store']);
+    Route::put('/personal-profile', [PersonalProfileController::class, 'update']);
+});
+// This route is for flow. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
+Route::prefix('flow')->group(function () {
+    Route::get('entry-points', [QuestionFlowController::class, 'entryPoints']);
+    Route::post('questions', [QuestionFlowController::class, 'flow']);
+});
+
+// This route is for the evaluation session. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
+Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
+    Route::get('/', [EvaluationSessionController::class, 'index']);
+    Route::post('/start', [EvaluationSessionController::class, 'start']);
+    Route::post('/{session}/complete', [EvaluationSessionController::class, 'complete']);
+    Route::get('/{session}', [EvaluationSessionController::class, 'show']);
+});
+
+// This route is for submitting answers to the evaluation. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
+
+Route::prefix('answers')->middleware(['auth:sanctum', 'has.active.session'])->group(function () {
+    Route::get('/{sessionId}', [EvaluationAnswerController::class, 'index']);
+    Route::post('/', [EvaluationAnswerController::class, 'store']);
+    Route::delete('/{id}', [EvaluationAnswerController::class, 'destroy']);
+});
