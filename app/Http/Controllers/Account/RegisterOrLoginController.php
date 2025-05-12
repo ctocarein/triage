@@ -13,19 +13,26 @@ class RegisterOrLoginController extends Controller
     {
         $request->validate([
             'phone' => 'required|string|min:8|max:20',
-            'pin_code' => 'nullable|string|min:4|max:6', // nullable accepté à la création seulement
+            'pin_code' => 'nullable|string|min:4|max:6',
             'phone_uuid' => 'nullable|string',
             'needs_assistance' => 'nullable|boolean',
         ]);
 
-        $data = $request->only(['phone', 'pin_code', 'phone_uuid','needs_assistance']);
-
+        $data = $request->only(['phone', 'pin_code', 'phone_uuid', 'needs_assistance']);
         $account = Account::where('phone', $data['phone'])->first();
 
+        // Cas : un compte anonyme existe déjà avec ce numéro
+        if ($account && $account->is_anonymous) {
+            return response()->json([
+                'message' => 'Ce numéro est déjà associé à un compte anonyme. Veuillez d’abord le convertir.'
+            ], 403);
+        }
+
+        // Cas : le compte existe mais aucun PIN fourni
         if ($account && empty($data['pin_code'])) {
             return response()->json([
-                'message' => 'PIN code is required for existing accounts.'
-            ], 422); // Unprocessable Entity
+                'message' => 'Veuillez saisir votre code PIN pour vous connecter.'
+            ], 422);
         }
 
         $response = $service->handle($data);
@@ -40,9 +47,9 @@ class RegisterOrLoginController extends Controller
                 'is_active' => $response['account']->is_active,
                 'needs_assistance' => $response['account']->needs_assistance,
                 'phone_uuid' => $response['account']->phone_uuid,
+                'is_anonymous' => $response['account']->is_anonymous,
                 'last_login_at' => optional($response['account']->last_login_at)->toDateTimeString(),
             ],
         ]);
     }
-
 }

@@ -18,6 +18,9 @@ class Account extends Authenticatable
         'type',
         'marraine_status',
         'is_active',
+        'is_anonymous',
+        'is_anonymous_at',
+        'needs_assistance',
         'marraine_id',
         'health_facility_id',
         'user_id',
@@ -30,6 +33,9 @@ class Account extends Authenticatable
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_anonymous' => 'boolean',
+        'is_anonymous_at' => 'datetime',
+        'needs_assistance' => 'boolean',
         'last_login_at' => 'datetime',
     ];
 

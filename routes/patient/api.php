@@ -2,17 +2,20 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Account\LogoutController;
+use App\Http\Controllers\Account\AnonymousAuthController;
 use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
 use App\Http\Controllers\Account\RegisterOrLoginController;
+use App\Http\Controllers\Evaluation\QuestionFlowController;
 use App\Http\Controllers\Evaluation\EvaluationAnswerController;
 use App\Http\Controllers\Evaluation\EvaluationSessionController;
-use App\Http\Controllers\Evaluation\QuestionFlowController;
 
 
 
 Route::group(['prefix' => 'account'], function () {
     Route::post('/',RegisterOrLoginController::class);
+    Route::post('/anonymous', AnonymousAuthController::class);
+
 });
 
 // This route is for logging out the user. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.

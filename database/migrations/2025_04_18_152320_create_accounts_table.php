@@ -17,6 +17,8 @@ return new class extends Migration {
 
             // 🧭 Statuts & rôles
             $table->enum('type', ['standard', 'subscriber', 'staff'])->default('standard');
+            $table->boolean('is_anonymous')->default(false);
+            $table->timestamp('is_anonymous_at')->nullable();
             $table->enum('marraine_status', ['none', 'pending', 'active', 'inactive', 'rejected'])->default('none');
             $table->boolean('is_active')->default(true);
             $table->boolean('needs_assistance')->default(false);
