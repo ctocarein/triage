@@ -15,6 +15,7 @@ use App\Http\Controllers\Evaluation\EvaluationSessionController;
 Route::group(['prefix' => 'account'], function () {
     Route::post('/',RegisterOrLoginController::class);
     Route::post('/anonymous', AnonymousAuthController::class);
+    Route::post('/pincode', AnonymousAuthController::class);
 
 });
 
