@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
             QuestionGroupSeeder::class,
             DynamicQuestionTemplateSeeder::class,
             // PathologySeeder::class,
-            PathologySymptomSeeder::class,
-            UserSeeder::class,
+            // PathologySymptomSeeder::class,
+            // UserSeeder::class,
             // Add other seeders here
         ]);
 
