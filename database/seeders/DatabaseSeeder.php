@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             QuestionGroupSeeder::class,
             DynamicQuestionTemplateSeeder::class,
-            PathologySeeder::class,
+            // PathologySeeder::class,
             PathologySymptomSeeder::class,
             UserSeeder::class,
             // Add other seeders here
