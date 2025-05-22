@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Account\LogoutController;
+use App\Http\Controllers\Mobile\MobileBoardController;
 use App\Http\Controllers\Account\AnonymousAuthController;
 use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
@@ -33,6 +34,11 @@ Route::group(['prefix' => 'account','middleware'=>'auth:sanctum'], function () {
     Route::post('/personal-profile', [PersonalProfileController::class, 'store']);
     Route::put('/personal-profile', [PersonalProfileController::class, 'update']);
 });
+
+Route::group(['prefix' => 'mobile-board','middleware'=>'auth:sanctum'], function () {
+    Route::get('/', [MobileBoardController::class]);
+});
+
 // This route is for flow. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
 Route::middleware(['auth:sanctum'])->prefix('flow')->group(function () {
     Route::get('entry-points', [QuestionFlowController::class, 'entryPoints']);
