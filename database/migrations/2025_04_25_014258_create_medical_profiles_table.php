@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('patient_medical_profiles', function (Blueprint $table) {
+        Schema::create('medical_profiles', function (Blueprint $table) {
             $table->id();
 
             // 🔗 Lien avec le compte
@@ -43,6 +43,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('patient_medical_profiles');
+        Schema::dropIfExists('medical_profiles');
     }
 };

@@ -4,22 +4,20 @@ namespace App\Services;
 
 use Carbon\Carbon;
 use App\Models\Capsule\Capsule;
-use App\Models\Recommendation;
+use App\Models\Report;
 use App\Services\DecisionEngineService;
 use App\Models\Evaluation\EvaluationSession;
+
 
 class MobileBoardService
 {
     public function buildDashboard($account): array
     {
-        // Récupération des données de l'utilisateur
-        // On suppose que $account est un modèle d'utilisateur avec les relations nécessaires 
-        $account = $request->user();
-
+        // ✅ Ne pas re-demander $request->user()
         $age = $account->personalProfile?->age();
         $profile = $account->medicalProfile?->menopause_status ? 'menopause' : 'cycle_regular';
 
-        // Capsules éducatives ciblées
+        // ✅ Capsules éducatives ciblées
         $capsules = Capsule::with('items')
             ->where('is_active', true)
             ->where('published_at', '<=', now())
@@ -38,27 +36,27 @@ class MobileBoardService
             ->take(6)
             ->get();
 
-        $profile = $account->personalProfile;
+        // ✅ Profils
+        $profileData = $account->personalProfile;
         $medical = $account->medicalProfile;
-        $age = $profile?->date_of_birth ? Carbon::parse($profile->date_of_birth)->age : null;
+        $age = $profileData?->date_of_birth ? Carbon::parse($profileData->date_of_birth)->age : null;
 
-        // Logique mammographie
+        // ✅ Évaluation intelligente
         $mammo = app(DecisionEngineService::class)->evaluateMammo($account, $age);
-        // Logique autopalpation
         $palpation = app(DecisionEngineService::class)->evaluatePalpation($account);
-        // Logique frottis/VIA-VILI
         $col = app(DecisionEngineService::class)->evaluateCol($account, $age);
 
-        // Recommandations
-        $recommendations = Recommendation::where('account_id', $account->id)->latest()->take(5)->get();
-  
+        // ✅ Recommandations
+        $reports = Report::where('account_id', $account->id)
+            ->latest()
+            ->take(5)
+            ->get();
 
         return [
-
             'mammo' => $mammo,
             'palpation' => $palpation,
             'col' => $col,
-            'recommendations' => $recommendations,
+            'reports' => $reports,
             'capsules' => $capsules,
         ];
     }
