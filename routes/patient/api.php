@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MobileBoardController;
 use App\Http\Controllers\Account\LogoutController;
-use App\Http\Controllers\Mobile\MobileBoardController;
 use App\Http\Controllers\Account\AnonymousAuthController;
 use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
