@@ -42,6 +42,7 @@ class CapsuleController extends Controller
     /**
      * Affiche une capsule spécifique (détail + items).
      */
+    
     public function show($id)
     {
         $capsule = Capsule::with('items')->findOrFail($id);

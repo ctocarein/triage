@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MobileBoardController;
 use App\Http\Controllers\Account\LogoutController;
+use App\Http\Controllers\Capsule\CapsuleController;
 use App\Http\Controllers\Account\AnonymousAuthController;
 use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
@@ -59,4 +60,9 @@ Route::prefix('answers')->middleware(['auth:sanctum', 'has.active.session'])->gr
     Route::get('/{sessionId}', [EvaluationAnswerController::class, 'index']);
     Route::post('/', [EvaluationAnswerController::class, 'store']);
     Route::delete('/{id}', [EvaluationAnswerController::class, 'destroy']);
+});
+
+// route for getting capsules
+Route::middleware(['auth:sanctum'])->prefix('capsules')->group(function () {
+    Route::get('/{id}', [CapsuleController::class, 'show']);
 });
