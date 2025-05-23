@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Capsule;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Capsule;
+use App\Models\Capsule\Capsule;
+use App\Http\Controllers\Controller;
 
 
 class CapsuleController extends Controller
