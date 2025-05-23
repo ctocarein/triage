@@ -36,7 +36,7 @@ Route::group(['prefix' => 'account','middleware'=>'auth:sanctum'], function () {
 });
 
 Route::group(['prefix' => 'mobile-board','middleware'=>'auth:sanctum'], function () {
-    Route::get('/', [MobileBoardController::class]);
+    Route::get('/', MobileBoardController::class);
 });
 
 // This route is for flow. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
