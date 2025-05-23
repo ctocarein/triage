@@ -41,8 +41,8 @@ Route::group(['prefix' => 'mobile-board','middleware'=>'auth:sanctum'], function
 
 // This route is for flow. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
 Route::middleware(['auth:sanctum'])->prefix('flow')->group(function () {
-    Route::get('entry-points', [QuestionFlowController::class, 'entryPoints']);
-    Route::post('questions', [QuestionFlowController::class, 'flow']);
+    Route::get('/entry-points', [QuestionFlowController::class, 'entryPoints']);
+    Route::post('/questions', [QuestionFlowController::class, 'flow']);
 });
 
 // This route is for the evaluation session. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
