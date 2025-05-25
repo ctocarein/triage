@@ -15,15 +15,17 @@ class Account extends Authenticatable
         'phone',
         'pin_code',
         'phone_uuid',
+
         'type',
-        'marraine_status',
-        'is_active',
         'is_anonymous',
         'is_anonymous_at',
+        'status',
+        'is_active',
         'needs_assistance',
-        'marraine_id',
+
         'health_facility_id',
         'user_id',
+        'created_by',
         'last_login_at',
     ];
 
@@ -32,11 +34,11 @@ class Account extends Authenticatable
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'is_anonymous' => 'boolean',
-        'is_anonymous_at' => 'datetime',
+        'is_active' => 'boolean',
         'needs_assistance' => 'boolean',
         'last_login_at' => 'datetime',
+        'is_anonymous_at' => 'datetime',
     ];
 
     // 🔁 Relations
@@ -45,34 +47,31 @@ class Account extends Authenticatable
     {
         return $this->hasOne(PersonalProfile::class);
     }
+
     public function medicalProfile()
     {
         return $this->hasOne(MedicalProfile::class);
     }
-    
-    public function marraine()
-    {
-        return $this->belongsTo(Account::class, 'marraine_id');
-    }
 
-    public function filleules()
-    {
-        return $this->hasMany(Account::class, 'marraine_id');
-    }
 
     public function healthFacility()
     {
         return $this->belongsTo(HealthFacility::class);
     }
 
-    public function createdBy()
+    public function creator()
+    {
+        return $this->belongsTo(Account::class, 'created_by');
+    }
+
+    public function adminUser()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function evaluations()
+    public function evaluationSessions()
     {
-        return $this->hasMany(Evaluation::class);
+        return $this->hasMany(Evaluation\EvaluationSession::class);
     }
 
     public function appointments()
@@ -102,9 +101,14 @@ class Account extends Authenticatable
 
     // 🔎 Helpers
 
-    public function isMarraine(): bool
+    public function isMidwife(): bool
     {
-        return $this->marraine_status === 'active';
+        return $this->type === 'midwife';
+    }
+
+    public function isAmbassador(): bool
+    {
+        return $this->type === 'ambassador';
     }
 
     public function isSubscriber(): bool
@@ -112,13 +116,18 @@ class Account extends Authenticatable
         return $this->type === 'subscriber';
     }
 
+    public function isAnonymous(): bool
+    {
+        return $this->is_anonymous === true;
+    }
+
     public function isStaff(): bool
     {
-        return $this->type === 'staff';
+        return in_array($this->type, ['midwife', 'ambassador']);
     }
 
     public function hasAccess(): bool
     {
-        return $this->is_active;
+        return $this->is_active && $this->status === 'active';
     }
 }

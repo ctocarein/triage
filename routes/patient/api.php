@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MobileBoardController;
 use App\Http\Controllers\Account\LogoutController;
 use App\Http\Controllers\Capsule\CapsuleController;
+use App\Http\Controllers\Account\SetPinCodeController;
 use App\Http\Controllers\Account\AnonymousAuthController;
 use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
@@ -17,7 +18,9 @@ use App\Http\Controllers\Evaluation\EvaluationSessionController;
 Route::group(['prefix' => 'account'], function () {
     Route::post('/',RegisterOrLoginController::class);
     Route::post('/anonymous', AnonymousAuthController::class);
-    Route::post('/pincode', AnonymousAuthController::class);
+    Route::post('/pincode', SetPinCodeController::class);
+    Route::post('/request-reset', [SetPinCodeController::class, 'requestReset']);
+    Route::post('/confirm-reset', [SetPinCodeController::class, 'confirmReset']);
 
 });
 

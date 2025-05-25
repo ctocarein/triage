@@ -9,47 +9,46 @@ use App\Services\Account\RegisterOrLoginService;
 
 class RegisterOrLoginController extends Controller
 {
-    public function __invoke(Request $request, RegisterOrLoginService $service)
-    {
+ public function __invoke(Request $request)
+
+ {
+        // dd($request->all());
         $request->validate([
             'phone' => 'required|string|min:8|max:20',
-            'pin_code' => 'nullable|string|min:4|max:6',
             'phone_uuid' => 'nullable|string',
-            'needs_assistance' => 'nullable|boolean',
+            'needs_assistance' => 'nullable|boolean'
         ]);
 
-        $data = $request->only(['phone', 'pin_code', 'phone_uuid', 'needs_assistance']);
+        $data = $request->only(['phone', 'phone_uuid', 'needs_assistance']);
         $account = Account::where('phone', $data['phone'])->first();
 
-        // Cas : un compte anonyme existe déjà avec ce numéro
-        if ($account && $account->is_anonymous) {
+        // 🔐 Cas 1 : un compte existe déjà
+        if ($account) {
+            if ($account->is_anonymous) {
+                return response()->json([
+                    'status' => 'anonymous_conflict',
+                    'message' => 'Ce numéro est déjà associé à un compte anonyme. Veuillez le convertir.',
+                ], 403);
+            }
+
             return response()->json([
-                'message' => 'Ce numéro est déjà associé à un compte anonyme. Veuillez d’abord le convertir.'
-            ], 403);
+                'status' => 'login_required',
+                'message' => 'PIN requis pour se connecter',
+            ]);
         }
 
-        // Cas : le compte existe mais aucun PIN fourni
-        if ($account && empty($data['pin_code'])) {
-            return response()->json([
-                'message' => 'Veuillez saisir votre code PIN pour vous connecter.'
-            ], 422);
-        }
-
-        $response = $service->handle($data);
+        // 🆕 Cas 2 : nouveau compte → création en attente de PIN
+        $newAccount = Account::create([
+            'phone' => $data['phone'],
+            'phone_uuid' => $data['phone_uuid'] ?? null,
+            'needs_assistance' => $data['needs_assistance'] ?? false,
+            'is_active' => true,
+        ]);
 
         return response()->json([
-            'token' => $response['token'],
-            'account' => [
-                'id' => $response['account']->id,
-                'phone' => $response['account']->phone,
-                'type' => $response['account']->type,
-                'marraine_status' => $response['account']->marraine_status,
-                'is_active' => $response['account']->is_active,
-                'needs_assistance' => $response['account']->needs_assistance,
-                'phone_uuid' => $response['account']->phone_uuid,
-                'is_anonymous' => $response['account']->is_anonymous,
-                'last_login_at' => optional($response['account']->last_login_at)->toDateTimeString(),
-            ],
-        ]);
+            'status' => 'set_pin_required',
+            'message' => 'Nouveau compte créé. Définissez un code PIN.',
+            'account_id' => $newAccount->id
+        ], 201);
     }
 }
