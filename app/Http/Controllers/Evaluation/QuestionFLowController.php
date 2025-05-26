@@ -6,8 +6,6 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Services\Evaluation\QuestionFlowService;
 
-
-
 class QuestionFlowController extends Controller
 {
     protected QuestionFlowService $flow;
