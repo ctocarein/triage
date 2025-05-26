@@ -3,28 +3,29 @@
 namespace App\Http\Controllers\Evaluation;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Evaluation\EvaluationSession;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use App\Services\ReportGenerationService;
 
 class EvaluationSessionController extends Controller
 {
     /**
-     * Lister les sessions de l'utilisateur connecté
+     * 🧾 Lister les sessions de l'utilisateur connecté
      */
     public function index(Request $request)
     {
         $sessions = $request->user()
             ->evaluationSessions()
-            ->latest()
             ->withCount('answers')
+            ->with('report') // charge le résumé automatiquement
+            ->latest()
             ->get();
 
         return response()->json($sessions);
     }
 
     /**
-     * Démarrer une nouvelle session (si aucune en cours)
+     * 🆕 Démarrer une session (1 seule en cours autorisée)
      */
     public function start(Request $request)
     {
@@ -38,7 +39,7 @@ class EvaluationSessionController extends Controller
             return response()->json([
                 'message' => 'Une session est déjà en cours.',
                 'session' => $existing
-            ], 200);
+            ]);
         }
 
         $session = $account->evaluationSessions()->create([
@@ -47,16 +48,22 @@ class EvaluationSessionController extends Controller
             'context' => $request->input('context', []),
         ]);
 
-        return response()->json($session, 201);
+        return response()->json([
+            'message' => 'Session démarrée.',
+            'session' => $session
+        ], 201);
     }
 
     /**
-     * Terminer une session
+     * ✅ Terminer la session et générer le rapport
      */
-    public function complete(EvaluationSession $session)
+    public function complete(EvaluationSession $session, ReportGenerationService $reportService)
     {
         if ($session->status === 'completed') {
-            return response()->json(['message' => 'Session déjà complétée.'], 400);
+            return response()->json([
+                'message' => 'Cette session est déjà complétée.',
+                'report' => $session->report
+            ], 200);
         }
 
         $session->update([
@@ -64,28 +71,27 @@ class EvaluationSessionController extends Controller
             'completed_at' => now(),
         ]);
 
-        return response()->json(['message' => 'Session complétée.']);
-    }
+        $report = $reportService->generate($session);
 
-    public function store(){
-        // Récupération de la question et son poids
-    $question = DynamicQuestionTemplate::find($validated['dynamic_question_template_id']);
-
-    $scoreIncrement = 0;
-    if (!$validated['is_skipped'] && $question && $question->risk_weight > 0) {
-        $scoreIncrement = (int) $question->risk_weight;
-    }
-
-    // Mettre à jour le score total
-    $session = EvaluationSession::find($validated['evaluation_session_id']);
-    $session->increment('score', $scoreIncrement);
+        return response()->json([
+            'message' => 'Session complétée avec succès.',
+            'score' => $report->score,
+            'risk_level' => $report->risk_level,
+            'recommendation' => $report->recommendation,
+            'report_id' => $report->id,
+        ], 201);
     }
 
     /**
-     * Voir une session spécifique
+     * 🔍 Voir une session en détail
      */
     public function show(EvaluationSession $session)
     {
-        return response()->json($session->load('answers.question'));
+        return response()->json(
+            $session->load([
+                'answers.question',
+                'report'
+            ])
+        );
     }
 }

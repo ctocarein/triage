@@ -2,56 +2,63 @@
 
 namespace App\Http\Controllers\Evaluation;
 
+use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Services\Evaluation\AnswerService;
 use App\Models\Evaluation\EvaluationAnswer;
 use App\Models\Evaluation\EvaluationSession;
 use App\Models\Evaluation\DynamicQuestionTemplate;
-use Illuminate\Http\Request;
 
 class EvaluationAnswerController extends Controller
 {
     /**
-     * Lister les réponses d'une session
+     * Lister toutes les réponses d’une session
      */
     public function index($sessionId)
     {
-        $answers = EvaluationAnswer::with('question')
-            ->where('evaluation_session_id', $sessionId)
-            ->get();
+        $session = EvaluationSession::with('answers.question')->findOrFail($sessionId);
 
-        return response()->json($answers);
+        return response()->json([
+            'session_id' => $session->id,
+            'answers' => $session->answers
+        ]);
     }
 
     /**
-     * Enregistrer ou mettre à jour une réponse
+     * Enregistrer une réponse à une question
      */
-    public function store(Request $request)
+  public function store(Request $request, AnswerService $answerService)
     {
         $validated = $request->validate([
             'evaluation_session_id' => 'required|exists:evaluation_sessions,id',
             'dynamic_question_template_id' => 'required|exists:dynamic_question_templates,id',
             'value' => 'nullable',
-            'is_skipped' => 'boolean',
+            'is_skipped' => 'boolean'
         ]);
-    
-        $answer = EvaluationAnswer::create($validated);
-    
-        // Appel du service de score
-        app(\App\Services\Evaluation\ScoreService::class)
-            ->updateScore($answer->session, $answer->dynamic_question_template_id, $validated['is_skipped'] ?? false);
-    
-        return response()->json($answer, 201);
+
+        try {
+            $answer = $answerService->saveAnswer($validated);
+
+            return response()->json([
+                'message' => 'Réponse enregistrée avec succès.',
+                'answer' => $answer
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
-    
+
     /**
-     * Supprimer une réponse (optionnel, pour reprise de session)
+     * Supprimer une réponse (optionnel)
      */
     public function destroy($id)
     {
         $answer = EvaluationAnswer::findOrFail($id);
         $answer->delete();
 
-        return response()->json(['message' => 'Réponse supprimée']);
+        return response()->json(['message' => 'Réponse supprimée.']);
     }
-
 }

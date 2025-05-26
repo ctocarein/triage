@@ -11,17 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reports', function (Blueprint $table) {
+       Schema::create('reports', function (Blueprint $table) {
             $table->id();
-                $table->foreignId('account_id')->constrained()->onDelete('cascade');
-    $table->foreignId('evaluation_session_id')->constrained()->onDelete('cascade');
+            $table->foreignId('evaluation_session_id')->constrained()->onDelete('cascade');
 
-    $table->integer('score')->default(0);
-    $table->enum('status', ['completed', 'reviewed', 'escalated'])->default('completed');
-    $table->string('summary'); // Exemple : "Pas de signe préoccupant"
-    $table->text('recommendation_text')->nullable();
-    $table->enum('recommended_action', ['wait', 'visit_clinic', 'schedule_exam'])->nullable();
-    $table->enum('risk_level', ['low', 'moderate', 'high'])->default('low');
+            $table->unsignedInteger('score')->default(0);
+            $table->enum('risk_level', ['low', 'moderate', 'high'])->default('low');
+            $table->text('recommendation')->nullable();
+            $table->json('summary')->nullable();
+
+            $table->foreignId('decision_path_id')->nullable()->constrained()->nullOnDelete();
+
             $table->timestamps();
         });
     }

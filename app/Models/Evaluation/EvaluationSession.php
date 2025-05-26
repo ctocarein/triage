@@ -17,6 +17,7 @@ class EvaluationSession extends Model
         'score',               // score final de l’évaluation
         'started_at',
         'completed_at',
+        
     ];
 
     protected $casts = [
