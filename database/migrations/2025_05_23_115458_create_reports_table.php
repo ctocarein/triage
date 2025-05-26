@@ -13,6 +13,7 @@ return new class extends Migration
     {
        Schema::create('reports', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('account_id')->constrained(); // Cette ligne doit exister
             $table->foreignId('evaluation_session_id')->constrained()->onDelete('cascade');
 
             $table->unsignedInteger('score')->default(0);

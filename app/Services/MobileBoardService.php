@@ -47,10 +47,12 @@ class MobileBoardService
         $col = app(DecisionEngineService::class)->evaluateCol($account, $age);
 
         // ✅ Recommandations
-        $reports = Report::where('account_id', $account->id)
-            ->latest()
-            ->take(5)
-            ->get();
+        $reports = Report::whereHas('evaluationSession', function($query) use ($account) {
+            $query->where('account_id', $account->id);
+        })
+        ->latest()
+        ->take(5)
+        ->get();
 
         return [
             'mammo' => $mammo,

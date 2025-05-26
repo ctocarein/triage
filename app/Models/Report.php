@@ -30,7 +30,10 @@ class Report extends Model
         return $this->belongsTo(Account::class);
     }
 
-    public function session()
+    /**
+     * La session d'évaluation associée au rapport.
+     */
+    public function evaluationSession()
     {
         return $this->belongsTo(EvaluationSession::class);
     }

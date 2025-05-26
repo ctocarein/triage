@@ -46,4 +46,9 @@ class EvaluationSession extends Model
     {
         return $this->status === 'in_progress';
     }
+
+    public function reports()
+    {
+        return $this->hasMany(Report::class);
+    }
 }
