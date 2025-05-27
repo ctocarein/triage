@@ -4,9 +4,9 @@ namespace App\Models;
 
 use App\Models\MedicalProfile;
 use App\Models\PersonalProfile;
-use Evaluation\EvaluationSession;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Evaluation\EvaluationSession;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
