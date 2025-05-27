@@ -9,7 +9,7 @@ use App\Http\Controllers\Account\AnonymousAuthController;
 use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
 use App\Http\Controllers\Account\RegisterOrLoginController;
-use App\Http\Controllers\Evaluation\QuestionFlowController;
+use App\Http\Controllers\Evaluation\QuestionFlowsController;
 use App\Http\Controllers\Evaluation\EvaluationAnswerController;
 use App\Http\Controllers\Evaluation\EvaluationSessionController;
 
@@ -45,8 +45,8 @@ Route::group(['prefix' => 'mobile-board','middleware'=>'auth:sanctum'], function
 
 // This route is for flow. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
 Route::middleware(['auth:sanctum'])->prefix('flow')->group(function () {
-    Route::get('/entry-points', [QuestionFlowController::class, 'entryPoints']);
-    Route::post('/questions', [QuestionFlowController::class, 'flow']);
+    Route::get('/entry-points', [QuestionFlowsController::class, 'entryPoints']);
+    Route::post('/questions', [QuestionFlowsController::class, 'flow']);
 });
 
 // This route is for the evaluation session. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
