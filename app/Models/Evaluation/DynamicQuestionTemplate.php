@@ -3,6 +3,9 @@
 namespace App\Models\Evaluation;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Evaluation\QuestionGroup;
+use App\Models\Evaluation\EvaluationAnswer;
+use App\Models\Evaluation\EvaluationSession;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class DynamicQuestionTemplate extends Model

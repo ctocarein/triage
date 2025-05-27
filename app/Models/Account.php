@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MedicalProfile;
+use App\Models\PersonalProfile;
 use Evaluation\EvaluationSession;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
@@ -39,7 +41,6 @@ class Account extends Authenticatable
     public function appointments() { return $this->hasMany(Appointment::class); }
     public function visits() { return $this->hasMany(Visit::class); }
     public function subscriptions() { return $this->hasMany(Subscription::class); }
-    public function recommandations() { return $this->hasMany(Recommandation::class); }
     public function notifications() { return $this->hasMany(Notification::class); }
 
     // Scopes

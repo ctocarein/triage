@@ -2,7 +2,10 @@
 
 namespace App\Models\Evaluation;
 
+use App\Models\Account;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Evaluation\EvaluationAnswer;
+use App\Models\Evaluation\DynamicQuestionTemplate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class EvaluationSession extends Model

@@ -3,6 +3,8 @@
 namespace App\Models\Evaluation;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Evaluation\EvaluationSession;
+use App\Models\Evaluation\DynamicQuestionTemplate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class EvaluationAnswer extends Model
