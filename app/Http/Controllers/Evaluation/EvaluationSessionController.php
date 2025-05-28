@@ -28,52 +28,56 @@ class EvaluationSessionController extends Controller
     /**
      * 🆕 Démarrer une session (1 seule en cours autorisée)
      */
-    public function start(Request $request)
-    {
-        $account = $request->user();
 
-        $existing = $account->evaluationSessions()
-            ->where('status', 'in_progress')
-            ->first();
+public function start(Request $request)
+{
+    $account = $request->user();
 
-        if ($existing) {
-            return response()->json([
-                'message' => 'Une session est déjà en cours.',
-                'session' => $existing
-            ]);
-        }
+    // Vérifie si une session est déjà active
+    $existing = $account->evaluationSessions()
+        ->where('status', 'in_progress')
+        ->first();
 
-        // Étape 1 – Créer la session
-        $session = $account->evaluationSessions()->create([
-            'status' => 'in_progress',
-            'started_at' => now(),
-            'context' => $request->input('context', []),
-        ]);
-
-        // Étape 2 – Chercher le premier groupe actif
-        $firstGroup = QuestionGroup::query()
-            ->where('is_active', true)
-            ->orderBy('order')
-            ->first();
-
-        // Étape 3 – Chercher la première question de ce groupe
-        $firstQuestion = $firstGroup?->questions()
-            ->orderBy('order')
-            ->first();
-
-        // Étape 4 – Mise à jour de la session avec la première question
-        if ($firstQuestion) {
-            $session->update([
-                'current_question_id' => $firstQuestion->id,
-            ]);
-        }
-
+    if ($existing) {
         return response()->json([
-            'message' => 'Session démarrée.',
-            'session' => $session,
-            'question' => $firstQuestion,
-        ], 201);
+            'message' => 'Une session est déjà en cours.',
+            'session' => $existing,
+            'question' => $existing->currentQuestion, // relation à définir si pas encore
+        ], 200);
     }
+
+    // Étape 1 – Crée la nouvelle session
+    $session = $account->evaluationSessions()->create([
+        'status' => 'in_progress',
+        'started_at' => now(),
+        'context' => $request->input('context', []),
+    ]);
+
+    // Étape 2 – Sélectionne le premier groupe actif (ordre logique)
+    $firstGroup = QuestionGroup::query()
+        ->where('is_active', true)
+        ->orderBy('order')
+        ->first();
+
+    // Étape 3 – Charge la première question de ce groupe
+    $firstQuestion = $firstGroup?->questions()
+        ->orderBy('order')
+        ->first();
+
+    // Étape 4 – Enregistre la première question dans la session
+    if ($firstQuestion) {
+        $session->update([
+            'current_question_id' => $firstQuestion->id,
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'Session démarrée.',
+        'session' => $session,
+        'question' => $firstQuestion,
+    ], 201);
+}
+
 
     /**
      * ✅ Terminer la session et générer le rapport

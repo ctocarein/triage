@@ -28,6 +28,7 @@ class EvaluationSession extends Model
     public function answers() { return $this->hasMany(EvaluationAnswer::class); }
     public function report() { return $this->hasOne(Report::class); }
     public function questions() { return $this->belongsToMany(DynamicQuestionTemplate::class, 'evaluation_answers'); }
+    public function currentQuestion(){ return $this->belongsTo(DynamicQuestionTemplate::class, 'current_question_id');}
 
     // Scopes
     public function scopeCompleted($query) {
