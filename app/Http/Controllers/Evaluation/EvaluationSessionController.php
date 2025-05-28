@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Evaluation;
 
-use App\Http\Controllers\Controller;
-use App\Models\Evaluation\EvaluationSession;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Evaluation\QuestionGroup;
 use App\Services\ReportGenerationService;
+use App\Models\Evaluation\EvaluationSession;
 
 class EvaluationSessionController extends Controller
 {
@@ -42,15 +43,35 @@ class EvaluationSessionController extends Controller
             ]);
         }
 
+        // Étape 1 – Créer la session
         $session = $account->evaluationSessions()->create([
             'status' => 'in_progress',
             'started_at' => now(),
             'context' => $request->input('context', []),
         ]);
 
+        // Étape 2 – Chercher le premier groupe actif
+        $firstGroup = QuestionGroup::query()
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->first();
+
+        // Étape 3 – Chercher la première question de ce groupe
+        $firstQuestion = $firstGroup?->questions()
+            ->orderBy('order')
+            ->first();
+
+        // Étape 4 – Mise à jour de la session avec la première question
+        if ($firstQuestion) {
+            $session->update([
+                'current_question_id' => $firstQuestion->id,
+            ]);
+        }
+
         return response()->json([
             'message' => 'Session démarrée.',
-            'session' => $session
+            'session' => $session,
+            'question' => $firstQuestion,
         ], 201);
     }
 
