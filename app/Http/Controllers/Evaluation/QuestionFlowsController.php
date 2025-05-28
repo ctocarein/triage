@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Evaluation;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Services\Evaluation\QuestionFlowService;
 
 class QuestionFlowsController extends Controller
