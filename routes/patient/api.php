@@ -47,6 +47,7 @@ Route::group(['prefix' => 'mobile-board','middleware'=>'auth:sanctum'], function
 Route::middleware(['auth:sanctum'])->prefix('flow')->group(function () {
     Route::get('/entry-points', [QuestionFlowsController::class, 'entryPoints']);
     Route::post('/questions', [QuestionFlowsController::class, 'flow']);
+    Route::post('/next-group', [QuestionFlowsController::class, 'nextGroup']);
 });
 
 // This route is for the evaluation session. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
@@ -68,12 +69,7 @@ Route::prefix('answers')
     });
 
 
-// route for getting capsules
-Route::middleware(['auth:sanctum'])->prefix('capsules')->group(function () {
-    Route::get('/{id}', [CapsuleController::class, 'show']);
-});
-
-// Report routes & Decision Path routes
+    // Report routes & Decision Path routes
 
 Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     Route::get('/', [ReportController::class, 'index']);
@@ -87,3 +83,10 @@ Route::middleware('auth:sanctum')->prefix('decision-paths')->group(function () {
     Route::put('/{id}', [DecisionPathController::class, 'update']);
     Route::delete('/{id}', [DecisionPathController::class, 'destroy']);
 });
+
+// route for getting capsules
+Route::middleware(['auth:sanctum'])->prefix('capsules')->group(function () {
+    Route::get('/{id}', [CapsuleController::class, 'show']);
+});
+
+

@@ -2,6 +2,8 @@
 
 namespace App\Services\Evaluation;
 
+use App\Models\Evaluation\QuestionGroup;
+use App\Models\Evaluation\EvaluationSession;
 use App\Models\Evaluation\DynamicQuestionTemplate;
 
 class QuestionFlowService
@@ -79,5 +81,34 @@ class QuestionFlowService
             return true;
         })->values()->all();
     }
+
+    public function nextGroup(string $currentGroupKey, EvaluationSession $session): ?string
+    {
+        // Tous les groupes actifs, triés par ordre
+        $groups = QuestionGroup::where('is_active', true)
+            ->orderBy('order')
+            ->pluck('key')
+            ->toArray();
+
+        // Trouver la position du groupe actuel
+        $index = array_search($currentGroupKey, $groups);
+
+        if ($index === false || $index + 1 >= count($groups)) {
+            return null; // Fin du flux
+        }
+
+        $nextKey = $groups[$index + 1];
+
+        // 🔍 Optionnel : logique conditionnelle
+        if ($nextKey === 'symptom_cervix') {
+            $age = optional($session->account->personalProfile)->age();
+            if ($age && $age < 22) {
+                return $this->nextGroup($nextKey, $session); // Sauter et aller au suivant
+            }
+        }
+
+        return $nextKey;
+    }
+
     
 }

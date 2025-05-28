@@ -8,6 +8,7 @@ use App\Services\Evaluation\AnswerService;
 use App\Models\Evaluation\EvaluationAnswer;
 use App\Models\Evaluation\EvaluationSession;
 use App\Models\Evaluation\DynamicQuestionTemplate;
+use App\Services\Evaluation\ProfileUpdaterService;
 
 class EvaluationAnswerController extends Controller
 {
@@ -27,7 +28,7 @@ class EvaluationAnswerController extends Controller
     /**
      * Enregistrer une réponse à une question
      */
-  public function store(Request $request, AnswerService $answerService)
+  public function store(Request $request, AnswerService $answerService, ProfileUpdaterService $profileUpdater)
     {
         $validated = $request->validate([
             'evaluation_session_id' => 'required|exists:evaluation_sessions,id',
@@ -37,7 +38,14 @@ class EvaluationAnswerController extends Controller
         ]);
 
         try {
+            
+            // Enregistrement de la réponse
             $answer = $answerService->saveAnswer($validated);
+
+            // Mise à jour du profil si nécessaire
+            if (in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'])) {
+                $profileUpdater->syncFromAnswers($answer->session);
+            }
 
             return response()->json([
                 'message' => 'Réponse enregistrée avec succès.',

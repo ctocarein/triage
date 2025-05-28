@@ -4,78 +4,70 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 
 class QuestionGroupSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        $now = Carbon::now();
-
-        DB::table('question_groups')->insert([
+        $groups = [
             [
-                'key' => 'identite',
-                'label' => 'Identité',
+                'key' => 'profile_personal',
+                'label' => 'Profil personnel',
+                'description' => 'Informations de base sur votre identité.',
                 'icon' => 'user',
-                'color' => '#4CAF50',
-                'description' => 'Informations de base de la femme',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'color' => '#F8A734',
+                'order' => 1,
             ],
             [
-                'key' => 'socio',
-                'label' => 'Situation sociale',
-                'icon' => 'users',
-                'color' => '#009688',
-                'description' => 'Niveau d’éducation, langue, commune…',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'key' => 'maternite',
-                'label' => 'Maternité / Statut hormonal',
-                'icon' => 'baby',
-                'color' => '#FF9800',
-                'description' => 'Grossesse, allaitement, ménopause',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'key' => 'symptomes_sein',
-                'label' => 'Symptômes du sein',
+                'key' => 'profile_medical',
+                'label' => 'Profil médical',
+                'description' => 'Informations sur vos antécédents médicaux.',
                 'icon' => 'stethoscope',
-                'color' => '#E91E63',
-                'description' => 'Masses, douleurs, écoulement mammaire…',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'color' => '#F8DC82',
+                'order' => 2,
             ],
             [
-                'key' => 'symptomes_col',
-                'label' => 'Symptômes du col de l’utérus',
-                'icon' => 'venus',
-                'color' => '#9C27B0',
-                'description' => 'Saignements, douleurs pelviennes…',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'key' => 'symptom_breast',
+                'label' => 'Symptômes mammaires',
+                'description' => 'Symptômes liés au sein : douleurs, masse, écoulements...',
+                'icon' => 'activity',
+                'color' => '#C24E3A',
+                'order' => 3,
             ],
             [
-                'key' => 'suivi',
-                'label' => 'Suivi post-dépistage',
-                'icon' => 'clipboard-check',
-                'color' => '#607D8B',
-                'description' => 'Questions après la recommandation',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'key' => 'symptom_cervix',
+                'label' => 'Symptômes gynécologiques',
+                'description' => 'Saignements, douleurs pelviennes ou anomalies gynécologiques.',
+                'icon' => 'droplet',
+                'color' => '#F8EBC5',
+                'order' => 4,
             ],
             [
-                'key' => 'rappel_prevention',
-                'label' => 'Rappels prévention',
-                'icon' => 'calendar-check',
-                'color' => '#3F51B5',
-                'description' => 'Autopalpation, consultation annuelle',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'key' => 'lifestyle',
+                'label' => 'Habitudes de vie',
+                'description' => 'Habitudes alimentaires, activité physique, tabac, alcool.',
+                'icon' => 'heart',
+                'color' => '#6C757D',
+                'order' => 5,
             ],
-        ]);
+            [
+                'key' => 'final_recommendation',
+                'label' => 'Résumé et recommandations',
+                'description' => 'Conclusion basée sur vos réponses.',
+                'icon' => 'check-circle',
+                'color' => '#162447',
+                'order' => 6,
+            ],
+        ];
+
+        foreach ($groups as $group) {
+            DB::table('question_groups')->updateOrInsert(
+                ['key' => $group['key']],
+                array_merge($group, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])
+            );
+        }
     }
 }

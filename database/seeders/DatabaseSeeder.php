@@ -6,6 +6,8 @@ use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Database\Seeders\CapsuleSeeder;
+use Database\Seeders\MedicalProfileQuestionSeeder;
+use Database\Seeders\PersonalProfileQuestionSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,6 +21,10 @@ class DatabaseSeeder extends Seeder
             QuestionGroupSeeder::class,
             DynamicQuestionTemplateSeeder::class,
             CapsuleSeeder::class,
+            PersonalProfileQuestionSeeder::class,
+            MedicalProfileQuestionSeeder::class,
+            SymptomBreastQuestionSeeder::class,
+            SymptomCervicalQuestionSeeder::class,
             // PathologySymptomSeeder::class,
             // UserSeeder::class,
             // Add other seeders here

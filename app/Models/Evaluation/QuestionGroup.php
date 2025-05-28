@@ -9,7 +9,7 @@ class QuestionGroup extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['key', 'label', 'icon', 'color', 'description'];
+    protected $fillable = ['key', 'label','order','conditions','is_active', 'icon', 'color', 'description'];
 
     // Relations
     public function questions() { return $this->hasMany(DynamicQuestionTemplate::class); }

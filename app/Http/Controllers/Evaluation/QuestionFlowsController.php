@@ -32,4 +32,14 @@ class QuestionFlowsController extends Controller
             $this->flow->getVisibleQuestions($answers)
         );
     }
+
+    public function nextGroup(Request $request, QuestionFlowService $service)
+    {
+        $current = $request->query('current');
+        $session = $request->user()->evaluationSessions()->latest()->first();
+
+        $next = $service->nextGroup($current, $session);
+
+        return response()->json(['next_group' => $next]);
+    }
 }

@@ -16,8 +16,9 @@ return new class extends Migration {
             $table->string('language')->nullable();
             $table->enum('education_level', ['none', 'primary', 'secondary', 'university'])->nullable();
             $table->string('commune')->nullable();
-            $table->string('national_id_number')->nullable();
+            $table->boolean('cmu')->nullable()->default(false); // CMU (Couverture Maladie Universelle)
             $table->string('height')->nullable(); // 🔁 taille ajoutée
+            $table->string('occupation')->nullable(); // 🔁 occupation ajoutée
             $table->timestamps();
         });
     }
