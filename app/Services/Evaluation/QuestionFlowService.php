@@ -62,8 +62,11 @@ class QuestionFlowService
         // Filtrer les questions en fonction des réponses
         return $questions->filter(function ($question) use ($answers) {
             // Si visible_if est vide, la question est visible
-            if (!$question->visible_if) return true;
+               $visibleIf = is_string($question->visible_if)
+                ? json_decode($question->visible_if, true)
+                : $question->visible_if;
 
+            if (!is_array($visibleIf)) return true;
             foreach ($question->visible_if as $condition) {
                 $qKey = $condition['question'];
                 $expected = $condition['value'];
@@ -90,33 +93,44 @@ class QuestionFlowService
         })->values()->all();
     }
 
-    public function nextGroup(string $currentGroupKey, EvaluationSession $session): ?string
-    {
-        // Tous les groupes actifs, triés par ordre
-        $groups = QuestionGroup::where('is_active', true)
-            ->orderBy('order')
-            ->pluck('key')
-            ->toArray();
+    public function nextGroup(?string $currentGroupKey, EvaluationSession $session): ?string
+{
+    // Tous les groupes actifs, triés par ordre
+    $groups = QuestionGroup::where('is_active', true)
+        ->orderBy('order')
+        ->pluck('key')
+        ->toArray();
 
-        // Trouver la position du groupe actuel
-        $index = array_search($currentGroupKey, $groups);
+    // ✅ Si aucun groupe courant n'est fourni, prendre le premier
+    if (is_null($currentGroupKey)) {
+        $currentGroupKey = $session->currentQuestion?->group?->key ?? null;
 
-        if ($index === false || $index + 1 >= count($groups)) {
-            return null; // Fin du flux
+        // Si on ne peut pas déterminer le groupe courant, démarrer au début
+        if (is_null($currentGroupKey)) {
+            return $groups[0] ?? null;
         }
-
-        $nextKey = $groups[$index + 1];
-
-        // 🔍 Optionnel : logique conditionnelle
-        if ($nextKey === 'symptom_cervix') {
-            $age = optional($session->account->personalProfile)->age();
-            if ($age && $age < 22) {
-                return $this->nextGroup($nextKey, $session); // Sauter et aller au suivant
-            }
-        }
-
-        return $nextKey;
     }
+
+    // Trouver la position du groupe actuel
+    $index = array_search($currentGroupKey, $groups);
+
+    if ($index === false || $index + 1 >= count($groups)) {
+        return null; // 🚫 Fin du flux ou groupe inconnu
+    }
+
+    $nextKey = $groups[$index + 1];
+
+    // 🔍 Logique conditionnelle pour sauter certains groupes
+    if ($nextKey === 'symptom_cervix') {
+        $age = optional($session->account->personalProfile)->age();
+        if ($age && $age < 22) {
+            return $this->nextGroup($nextKey, $session); // 🔁 Sauter vers le suivant
+        }
+    }
+
+    return $nextKey;
+}
+
 
     
 }
