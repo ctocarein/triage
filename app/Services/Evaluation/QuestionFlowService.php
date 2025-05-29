@@ -11,11 +11,16 @@ class QuestionFlowService
     public function getVisibleQuestions(array $answers = []): \Illuminate\Support\Collection
     {
         $questions = DynamicQuestionTemplate::with('group')->orderBy('order')->get();
-
+  
+        // Filtrer les questions en fonction des réponses
         return $questions->filter(function ($question) use ($answers) {
-            if (!$question->visible_if) return true;
+            $visibleIf = is_string($question->visible_if)
+                ? json_decode($question->visible_if, true)
+                : $question->visible_if;
 
-            foreach ($question->visible_if as $condition) {
+            if (!is_array($visibleIf)) return true;
+
+            foreach ($visibleIf as $condition) {
                 $qKey = $condition['question'] ?? null;
                 $expected = $condition['value'] ?? null;
                 $actual = $answers[$qKey] ?? null;
@@ -34,6 +39,8 @@ class QuestionFlowService
 
             return true;
         })->values();
+
+
     }
 
     public function getEntryPoints(?string $target = null)
@@ -52,6 +59,7 @@ class QuestionFlowService
         $answers = $session->answers->keyBy('dynamic_question_template_id');
         $questions = DynamicQuestionTemplate::with('group')->orderBy('order')->get();
 
+        // Filtrer les questions en fonction des réponses
         return $questions->filter(function ($question) use ($answers) {
             // Si visible_if est vide, la question est visible
             if (!$question->visible_if) return true;

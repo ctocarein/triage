@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Http\Middleware\VerifyDeviceUuid;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use App\Http\Middleware\EnsureHasActiveEvaluationSession;
 
 class Kernel extends HttpKernel
 {
@@ -37,6 +38,7 @@ class Kernel extends HttpKernel
      * Route middleware (assignables individuellement dans les routes).
      */
     protected $routeMiddleware = [
+        'has.active.session' => EnsureHasActiveEvaluationSession::class,
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
 

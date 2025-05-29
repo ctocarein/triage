@@ -19,8 +19,8 @@ class DynamicQuestionTemplate extends Model
     ];
 
     protected $casts = [
-        'options' => 'array',
         'visible_if' => 'array',
+        'options' => 'array',
         'is_required' => 'boolean',
         'is_entry_point' => 'boolean',
     ];
