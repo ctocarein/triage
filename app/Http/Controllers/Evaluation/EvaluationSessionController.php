@@ -32,12 +32,13 @@ class EvaluationSessionController extends Controller
 public function start(Request $request)
 {
     $account = $request->user();
+  
 
     // Vérifie si une session est déjà active
     $existing = $account->evaluationSessions()
         ->where('status', 'in_progress')
         ->first();
-
+    
     if ($existing) {
         return response()->json([
             'message' => 'Une session est déjà en cours.',
@@ -53,11 +54,13 @@ public function start(Request $request)
         'context' => $request->input('context', []),
     ]);
 
+   
     // Étape 2 – Sélectionne le premier groupe actif (ordre logique)
     $firstGroup = QuestionGroup::query()
         ->where('is_active', true)
         ->orderBy('order')
         ->first();
+
 
     // Étape 3 – Charge la première question de ce groupe
     $firstQuestion = $firstGroup?->questions()

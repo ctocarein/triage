@@ -13,7 +13,7 @@ class EvaluationSession extends Model
     use HasFactory;
 
     protected $fillable = [
-        'account_id', 'status', 'context', 'score', 'started_at', 'completed_at'
+        'account_id', 'status', 'context', 'score', 'started_at', 'completed_at', 'current_question_id'
     ];
 
     protected $casts = [
