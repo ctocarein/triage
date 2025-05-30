@@ -16,7 +16,7 @@ class EvaluationAnswer extends Model
     ];
 
     protected $casts = [
-        'value' => 'json',
+        'value' => 'nullable|array|string',
         'is_skipped' => 'boolean',
     ];
 
