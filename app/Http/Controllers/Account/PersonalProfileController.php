@@ -34,7 +34,7 @@ class PersonalProfileController extends Controller
          $validated = $request->validate([
              'first_name' => 'nullable|string|max:255',
              'last_name' => 'nullable|string|max:255',
-             'date_of_birth' => 'required|date',
+             'birth_date' => 'required|date',
              'language' => 'required|string|max:255',
              'education_level' => 'required|string|in:none,primary,secondary,university', // ✅ validation safe
              'commune' => 'required|string|max:255',
@@ -73,7 +73,7 @@ class PersonalProfileController extends Controller
          $validated = $request->validate([
              'first_name' => 'nullable|string|max:255',
              'last_name' => 'nullable|string|max:255',
-             'date_of_birth' => 'required|date',
+             'birth_date' => 'required|date',
              'language' => 'required|string|max:255',
              'education_level' => 'required|string|in:none,primary,secondary,university',
              'commune' => 'required|string|max:255',
