@@ -21,7 +21,7 @@ class EvaluationAnswer extends Model
     ];
 
     // Relations
-    public function session() { return $this->belongsTo(EvaluationSession::class); }
+    public function session() {  return $this->belongsTo(EvaluationSession::class, 'evaluation_session_id'); }
     public function question() {  return $this->belongsTo(DynamicQuestionTemplate::class, 'dynamic_question_template_id'); }
     
 

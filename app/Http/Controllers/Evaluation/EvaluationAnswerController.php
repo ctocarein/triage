@@ -42,10 +42,13 @@ class EvaluationAnswerController extends Controller
         $validated['is_skipped'] = $validated['is_skipped'] ?? false;
 
         try {
+            // Enregistrement de la réponse
             $answer = $answerService->saveAnswer($validated);
-            $answer->load('question');
+            // Chargement des relations nécessaires
+            $answer->load(['question', 'session']);
 
-            if (in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'])) {
+            // Vérification sécurisée de la cible de profil
+            if ($answer->question && in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'])) {
                 $profileUpdater->syncFromAnswers($answer->session);
             }
 
@@ -53,13 +56,15 @@ class EvaluationAnswerController extends Controller
                 'message' => 'Réponse enregistrée avec succès.',
                 'answer' => $answer
             ], 201);
-        } catch (\Exception $e) {
+
+        } catch (\Throwable $e) {
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
+
 
   
 
