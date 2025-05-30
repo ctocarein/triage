@@ -9,48 +9,36 @@ use App\Models\MedicalProfile;
 class ProfileUpdaterService
 {
     public function syncFromAnswers(EvaluationSession $session): void
-    {
-        $answers = $session->answers()->with('question')->get();
+{
+    $answers = $session->answers()->with('question')->get();
 
-        $personalData = [];
-        $medicalData = [];
+    $personalData = [];
+    $medicalData = [];
 
-        foreach ($answers as $answer) {
-            $key = $answer->question->key;
-            $target = $answer->question->answer_target;
+    foreach ($answers as $answer) {
+        $target = $answer->question->answer_target;
+        $key = $answer->question->key;
+        $value = $answer->value;
 
-            if ($target === 'personal_profile') {
-                $personalData[$key] = $this->formatValue($answer->value);
-            }
-
-            if ($target === 'medical_profile') {
-                $medicalData[$key] = $this->formatValue($answer->value);
-            }
+        if ($target === 'personal_profile') {
+            $personalData[$key] = $value;
         }
 
-        // Synchroniser le profil personnel
-        if (!empty($personalData)) {
-            $profile = $session->account->personalProfile ?? new PersonalProfile([
-                'account_id' => $session->account_id
-            ]);
-            $profile->fill($personalData)->save();
-        }
-
-        // Synchroniser le profil médical
-        if (!empty($medicalData)) {
-            $profile = $session->account->medicalProfile ?? new MedicalProfile([
-                'account_id' => $session->account_id
-            ]);
-            $profile->fill($medicalData)->save();
+        if ($target === 'medical_profile') {
+            $medicalData[$key] = $value;
         }
     }
 
-    private function formatValue($value)
-    {
-        // Adaptation simple si le champ est un tableau ou une valeur simple
-        if (is_array($value) && count($value) === 1) {
-            return $value[0];
-        }
-        return is_array($value) ? json_encode($value) : $value;
+    // On récupère les profils liés à l’utilisateur
+    $account = $session->account;
+
+    if (!empty($personalData)) {
+        $account->personalProfile()->updateOrCreate([], $personalData);
     }
+
+    if (!empty($medicalData)) {
+        $account->medicalProfile()->updateOrCreate([], $medicalData);
+    }
+}
+
 }

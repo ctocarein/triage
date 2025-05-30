@@ -30,31 +30,25 @@ class EvaluationAnswerController extends Controller
      */
     public function store(Request $request, AnswerService $answerService, ProfileUpdaterService $profileUpdater)
     {
-        // Récupération de la session active injectée (via middleware ou route binding)
         $session = $request->get('active_evaluation_session');
 
-        // Validation des champs (ne pas valider l’ID de session côté utilisateur)
         $validated = $request->validate([
             'dynamic_question_template_id' => 'required|exists:dynamic_question_templates,id',
-            'value' => 'nullable',
+            'value' => 'nullable|string',
             'is_skipped' => 'sometimes|boolean',
         ]);
 
-        // On s’assure que la session ID correspond bien à la session active
         $validated['evaluation_session_id'] = $session->id;
-
-        // Fallback sur `is_skipped` si absent
         $validated['is_skipped'] = $validated['is_skipped'] ?? false;
 
         try {
-            // Enregistrement de la réponse
             $answer = $answerService->saveAnswer($validated);
-            // Chargement de la question associée pour enrichir la réponse
             $answer->load('question');
-            // Mise à jour du profil si nécessaire
-            if ($answer->question && in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'])) {
+
+            if (in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'])) {
                 $profileUpdater->syncFromAnswers($answer->session);
             }
+
             return response()->json([
                 'message' => 'Réponse enregistrée avec succès.',
                 'answer' => $answer
@@ -66,6 +60,8 @@ class EvaluationAnswerController extends Controller
             ], 400);
         }
     }
+
+  
 
     /**
      * Supprimer une réponse (optionnel)
