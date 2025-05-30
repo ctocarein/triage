@@ -12,7 +12,7 @@ return new class extends Migration {
             $table->foreignId('account_id')->constrained()->onDelete('cascade');
             $table->string('first_name')->nullable();
             $table->string('last_name')->nullable();
-            $table->date('date_of_birth')->nullable();
+            $table->date('birth_date')->nullable();
             $table->string('language')->nullable();
             $table->enum('education_level', ['none', 'primary', 'secondary', 'university'])->nullable();
             $table->string('commune')->nullable();
