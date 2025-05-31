@@ -14,11 +14,19 @@ class MobileBoardService
     public function buildDashboard($account): array
     {
         // ✅ Ne pas re-demander $request->user()
-        $age = $account->personalProfile?->age();
-        $profile = $account->medicalProfile?->menopause_status ? 'menopause' : 'cycle_regular';
+        if (!$account) {
+            throw new \Exception('Account not provided');
+        }
+        // ✅ Vérifier si l'utilisateur a un profil personnel
 
-        // ✅ Capsules éducatives ciblées
-        $capsules = Capsule::with('items')
+        if ($account->personalProfile?->getAgeAttribute() == null && !$account->personalProfile?->menopause_status) {
+    
+            return ['message' => "Veuillez compléter votre profil personnel"];
+        }
+            $age = $account->personalProfile?->getAgeAttribute();
+            $profile = $account->medicalProfile?->menopause_status ? 'menopause' : 'cycle_regular';
+            
+             $capsules = Capsule::with('items')
             ->where('is_active', true)
             ->where('published_at', '<=', now())
             ->when($age, fn($q) =>
@@ -35,11 +43,20 @@ class MobileBoardService
             ->latest('published_at')
             ->take(6)
             ->get();
+            return [
+                'capsules' => $capsules,
+            ];
+        // else {
+        //     throw new \Exception('Profile could not be determined from the medical profile');
+        // }
+
+        // ✅ Capsules éducatives ciblées
+ 
 
         // ✅ Profils
         $profileData = $account->personalProfile;
         $medical = $account->medicalProfile;
-        $age = $profileData?->date_of_birth ? Carbon::parse($profileData->date_of_birth)->age : null;
+        $age = $profileData?->birth_date ? Carbon::parse($profileData->birth_date)->age : null;
 
         // ✅ Évaluation intelligente
         $mammo = app(DecisionEngineService::class)->evaluateMammo($account, $age);

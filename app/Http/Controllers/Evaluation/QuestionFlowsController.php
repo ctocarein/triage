@@ -27,11 +27,17 @@ class QuestionFlowsController extends Controller
     public function flow(Request $request)
     {
         $answers = $request->input('answers', []);
+        $groupId = $request->input('question_group_id');
+
+        if (!$groupId) {
+            return response()->json(['error' => 'Group ID requis'], 400);
+        }
 
         return response()->json(
-            $this->flow->getVisibleQuestions($answers)
+            $this->flow->getVisibleQuestions($groupId, $answers)
         );
     }
+
 
     public function nextGroup(Request $request, QuestionFlowService $service)
     {

@@ -8,11 +8,14 @@ use App\Models\Evaluation\DynamicQuestionTemplate;
 
 class QuestionFlowService
 {
-    public function getVisibleQuestions(array $answers = []): \Illuminate\Support\Collection
+    public function getVisibleQuestions(int $groupId, array $answers = []): \Illuminate\Support\Collection
     {
-        $questions = DynamicQuestionTemplate::with('group')->orderBy('order')->get();
-  
-        // Filtrer les questions en fonction des réponses
+        $questions = DynamicQuestionTemplate::with('group')
+            ->where('question_group_id', $groupId)
+            ->orderBy('order')
+            ->get();
+
+        // Appliquer les logiques conditionnelles de visibilité
         return $questions->filter(function ($question) use ($answers) {
             $visibleIf = is_string($question->visible_if)
                 ? json_decode($question->visible_if, true)
@@ -39,9 +42,8 @@ class QuestionFlowService
 
             return true;
         })->values();
-
-
     }
+
 
     public function getEntryPoints(?string $target = null)
     {
