@@ -26,16 +26,20 @@ class QuestionFlowsController extends Controller
 
     public function flow(Request $request)
     {
-        $answers = $request->input('answers', []);
-        $groupId = $request->input('question_group_id');
+       /** @var EvaluationSession $session */
+            $session = $request->get('active_evaluation_session');
+            $question = $session->currentQuestion;
 
-        if (!$groupId) {
-            return response()->json(['error' => 'Group ID requis'], 400);
-        }
+            if (!$question || !$question->question_group_id) {
+                return response()->json(['error' => 'Aucune question active ou groupe introuvable.'], 400);
+            }
 
-        return response()->json(
-            $this->flow->getVisibleQuestions($groupId, $answers)
-        );
+            $answers = $request->input('answers', []);
+            $groupId = $question->question_group_id;
+
+            return response()->json(
+                $this->flow->getVisibleQuestions($groupId, $answers)
+            );
     }
 
 

@@ -10,7 +10,7 @@ class QuestionFlowService
 {
     public function getVisibleQuestions(int $groupId, array $answers = []): \Illuminate\Support\Collection
     {
-        $questions = DynamicQuestionTemplate::with('group')
+         $questions = DynamicQuestionTemplate::with('group')
             ->where('question_group_id', $groupId)
             ->orderBy('order')
             ->get();
