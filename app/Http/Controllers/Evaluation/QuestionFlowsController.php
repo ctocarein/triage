@@ -48,7 +48,7 @@ class QuestionFlowsController extends Controller
         // 📦 Cas où le groupe actuel est terminé
         if (empty($visibleQuestions)) {
             // ➕ Essayer d'avancer vers le prochain groupe
-            $nextQuestion = $this->flow->goToNextGroup($session);
+            $nextQuestion = $this->flow->nextGroup($session);
 
             if (!$nextQuestion) {
                 return response()->json(['message' => '✅ Évaluation terminée.'], 200);
