@@ -25,34 +25,54 @@ class QuestionFlowsController extends Controller
         );
     }
 
-    public function flow(Request $request)
+   public function flow(Request $request)
     {
-       /** @var EvaluationSession $session */
-        $session = $request->get('current_question_id')
-            ? EvaluationSession::with('currentQuestion')->find($request->get('current_question_id'))
-            : $request->user()->evaluationSessions()->latest()->first();
+        // 🔐 On récupère la session active (par ID ou utilisateur courant)
+        /** @var EvaluationSession|null $session */
+        $session = $request->get('evaluation_session_id')
+            ? EvaluationSession::with(['answers', 'currentQuestion'])->find($request->get('evaluation_session_id'))
+            : $request->user()->evaluationSessions()->with(['answers', 'currentQuestion'])->latest()->first();
 
         if (!$session) {
             return response()->json(['error' => 'Session active non trouvée.'], 400);
         }
 
-        $session->load('currentQuestion');
-
-        $currentQuestion = $session->currentQuestion;
-
-        if (!$currentQuestion || !$currentQuestion->question_group_id) {
-            return response()->json(['error' => 'Impossible de récupérer le groupe actif.'], 400);
+        // 📍 Si aucune question courante, renvoyer une erreur claire
+        if (!$session->currentQuestion) {
+            return response()->json(['error' => 'Aucune question en cours.'], 400);
         }
 
-        $groupId = $currentQuestion->question_group_id;
-        $answers = $request->input('answers', []);
+        // 🔄 Récupérer dynamiquement les prochaines questions visibles
+        $visibleQuestions = $this->flow->getNextQuestions($session);
 
-            return response()->json(
-                $this->flow->getVisibleQuestions($groupId, $answers)
-            );
+        // 📦 Cas où le groupe actuel est terminé
+        if (empty($visibleQuestions)) {
+            // ➕ Essayer d'avancer vers le prochain groupe
+            $nextQuestion = $this->flow->goToNextGroup($session);
+
+            if (!$nextQuestion) {
+                return response()->json(['message' => '✅ Évaluation terminée.'], 200);
+            }
+
+            return response()->json([
+                'message' => '📍 Passage au groupe suivant.',
+                'question' => $nextQuestion
+            ]);
+        }
+
+        // ✅ On retourne la prochaine question visible
+        return response()->json([
+            'question' => $visibleQuestions[0],
+        ]);
     }
 
-
+    /**
+     * Récupère le prochain groupe de questions à afficher.
+     *
+     * @param Request $request
+     * @param QuestionFlowService $service
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function nextGroup(Request $request, QuestionFlowService $service)
     {
         $current = $request->query('current');
