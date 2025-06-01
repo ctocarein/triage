@@ -56,6 +56,7 @@ Route::middleware(['auth:sanctum'])->prefix('flow')->group(function () {
 Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
      Route::get('/', [EvaluationSessionController::class, 'index']);
     Route::post('/start', [EvaluationSessionController::class, 'start']);
+    Route::post('/next', [EvaluationSessionController::class, 'next']);
     Route::post('/{session}/complete', [EvaluationSessionController::class, 'complete']);
     Route::get('/{session}', [EvaluationSessionController::class, 'show']);
 });

@@ -64,6 +64,67 @@ class QuestionFlowService
     }
 
     /**
+     * Récupère le groupe de questions actif pour une session donnée.
+     *
+     * @param EvaluationSession $session Session d'évaluation en cours.
+     * @return QuestionGroup|null Le groupe de questions actif, ou null si aucun groupe n'est trouvé.
+     */
+
+    public function goToNextQuestion(EvaluationSession $session): ?DynamicQuestionTemplate
+{
+    // Récupérer toutes les réponses déjà fournies
+    $answers = $session->answers->keyBy('dynamic_question_template_id');
+    $answeredIds = $answers->keys()->all();
+
+    // Récupérer toutes les questions dans l'ordre
+    $questions = DynamicQuestionTemplate::with('group')
+        ->orderBy('order')
+        ->get();
+
+    // Appliquer la logique de filtrage (visible_if)
+    $filtered = $questions->filter(function ($question) use ($answers) {
+        $visibleIf = is_string($question->visible_if)
+            ? json_decode($question->visible_if, true)
+            : $question->visible_if;
+
+        if (!is_array($visibleIf)) return true;
+
+        foreach ($visibleIf as $condition) {
+            $qKey = $condition['question'] ?? null;
+            $expected = $condition['value'] ?? null;
+            $operator = $condition['operator'] ?? '=';
+
+            $matchedQuestion = DynamicQuestionTemplate::where('key', $qKey)->first();
+            if (!$matchedQuestion) continue;
+
+            $actual = optional($answers->get($matchedQuestion->id))->value;
+
+            switch ($operator) {
+                case '=':      if ($actual != $expected) return false; break;
+                case '!=':     if ($actual == $expected) return false; break;
+                case '>':      if (!($actual > $expected)) return false; break;
+                case '<':      if (!($actual < $expected)) return false; break;
+                case 'in':     if (!in_array($actual, (array) $expected)) return false; break;
+                case 'not_in': if (in_array($actual, (array) $expected)) return false; break;
+                default:       return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Chercher la prochaine question non encore répondue
+    foreach ($filtered as $question) {
+        if (!in_array($question->id, $answeredIds)) {
+            return $question;
+        }
+    }
+
+    // Aucune question restante = fin de session
+    return null;
+}
+
+    /**
      * Trouve le prochain groupe de questions à afficher.
      *
      * @param string|null $currentGroupKey Clé du groupe actuel, ou null pour le premier groupe.

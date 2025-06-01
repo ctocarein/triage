@@ -122,4 +122,43 @@ class EvaluationSessionController extends Controller
             ])
         );
     }
+
+  
+    /**
+     * ▶️ Passer à la question suivante
+     */
+
+    public function next(EvaluationSession $session, QuestionFlowService $flow)
+    {
+        if ($session->status !== 'in_progress') {
+            return response()->json([
+                'message' => 'Session déjà terminée.',
+                'isCompleted' => true,
+            ]);
+        }
+
+        $nextQuestion = $flow->goToNextQuestion($session);
+
+        if (!$nextQuestion) {
+            $session->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Évaluation terminée.',
+                'isCompleted' => true,
+            ]);
+        }
+
+        $session->update(['current_question_id' => $nextQuestion->id]);
+
+        return response()->json([
+            'currentQuestion' => $nextQuestion,
+            'isCompleted' => false,
+            'id' => $session->id,
+        ]);
+    }
+
+    
 }
