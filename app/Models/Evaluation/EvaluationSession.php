@@ -29,9 +29,8 @@ class EvaluationSession extends Model
     public function report() { return $this->hasOne(Report::class); }
     public function questions() { return $this->belongsToMany(DynamicQuestionTemplate::class, 'evaluation_answers'); }
     public function currentQuestion(){ return $this->belongsTo(DynamicQuestionTemplate::class, 'current_question_id');}
-
+    public function scopeInProgress($query){return $query->where('status', 'in_progress');}
+    public function isInProgress(): bool{return $this->status === 'in_progress';}
     // Scopes
-    public function scopeCompleted($query) {
-        return $query->where('status', 'completed');
-    }
+    public function scopeCompleted($query) {return $query->where('status', 'completed');}
 }

@@ -2,8 +2,8 @@
 namespace App\Services\Evaluation;
 
 use App\Models\Evaluation\EvaluationSession;
-use App\Models\Evaluation\Report;
-use App\Models\Evaluation\DecisionPath;
+use App\Models\Report;
+use App\Models\DecisionPath;
 
 class ReportGenerationService
 {
@@ -44,3 +44,5 @@ class ReportGenerationService
         ]);
     }
 }
+
+

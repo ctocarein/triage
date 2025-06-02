@@ -33,12 +33,9 @@ class EvaluationSessionController extends Controller
     public function start(Request $request)
     {
         $account = $request->user();
-    
 
         // Vérifie si une session est déjà active
-        $existing = $account->evaluationSessions()
-            ->where('status', 'in_progress')
-            ->first();
+        $existing = $account->activeEvaluationSession();
         
         if ($existing) {
             return response()->json([
@@ -131,7 +128,7 @@ class EvaluationSessionController extends Controller
 
     public function next(EvaluationSession $session, QuestionFlowService $flow)
     {
-        if ($session->status !== 'in_progress') {
+        if (!$session->isInProgress()) {
             return response()->json([
                 'message' => 'Session déjà terminée.',
                 'isCompleted' => true,

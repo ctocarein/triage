@@ -12,10 +12,7 @@ class EnsureHasActiveEvaluationSession
     {
         $account = $request->user();
 
-        $activeSession = $account->evaluationSessions()
-            ->where('status', 'in_progress')
-            ->latest()
-            ->first();
+        $activeSession = $account->activeEvaluationSession();
 
         if (!$activeSession) {
             return response()->json([

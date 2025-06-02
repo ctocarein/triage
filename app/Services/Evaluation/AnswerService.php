@@ -12,11 +12,10 @@ class AnswerService
     {
         $session = EvaluationSession::findOrFail($data['evaluation_session_id']);
         $question = DynamicQuestionTemplate::findOrFail($data['dynamic_question_template_id']);
-
-        if ($session->status !== 'in_progress') {
+        
+        if (! $session->isInProgress()) {
             throw new \Exception("Session fermée à l'enregistrement.");
         }
-
         $existing = EvaluationAnswer::where([
             'evaluation_session_id' => $session->id,
             'dynamic_question_template_id' => $question->id

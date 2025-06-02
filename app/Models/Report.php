@@ -12,14 +12,20 @@ class Report extends Model
     use HasFactory;
 
     protected $fillable = [
-        'account_id', 'evaluation_session_id', 'score', 'status',
-        'summary', 'recommendation_text', 'recommended_action', 'risk_level'
+        'account_id',
+        'evaluation_session_id',
+        'score',
+        'risk_level',
+        'recommendation',
+        'summary',
+        'decision_path_id',
     ];
 
     protected $casts = [
         'score' => 'integer',
+        'summary' => 'array',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
     ];
 
     // Relations

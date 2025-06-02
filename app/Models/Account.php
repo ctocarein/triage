@@ -37,6 +37,7 @@ class Account extends Authenticatable
     public function creator() { return $this->belongsTo(self::class, 'created_by'); }
     public function adminUser() { return $this->belongsTo(User::class, 'user_id'); }
     public function evaluationSessions() { return $this->hasMany(EvaluationSession::class); }
+    public function activeEvaluationSession(){ return $this->evaluationSessions()->inProgress()->latest()->first();}
     public function reports() { return $this->hasMany(Report::class); }
     public function appointments() { return $this->hasMany(Appointment::class); }
     public function visits() { return $this->hasMany(Visit::class); }

@@ -43,14 +43,6 @@ class MobileBoardService
             ->latest('published_at')
             ->take(6)
             ->get();
-            return [
-                'capsules' => $capsules,
-            ];
-        // else {
-        //     throw new \Exception('Profile could not be determined from the medical profile');
-        // }
-
-        // ✅ Capsules éducatives ciblées
  
 
         // ✅ Profils
