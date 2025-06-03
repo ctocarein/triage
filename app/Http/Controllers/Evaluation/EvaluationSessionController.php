@@ -128,6 +128,8 @@ class EvaluationSessionController extends Controller
 
     public function next(EvaluationSession $session, QuestionFlowService $flow)
     {
+      
+        // Vérifie si la session est en cours
         if (!$session->isInProgress()) {
             return response()->json([
                 'message' => 'Session déjà terminée.',
