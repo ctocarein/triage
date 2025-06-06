@@ -16,6 +16,9 @@ class QuestionFlowsController extends Controller
         $this->flow = $flow;
     }
 
+    /**
+     * Point d’entrée pour l’interface : récupère les questions initiales selon le contexte.
+     */
     public function entryPoints(Request $request)
     {
         $target = $request->query('answer_target');
@@ -25,61 +28,73 @@ class QuestionFlowsController extends Controller
         );
     }
 
-   public function flow(Request $request)
+    /**
+     * Gère le flux des questions (navigation par groupe/question)
+     */
+    public function flow(Request $request)
     {
-        // 🔐 On récupère la session active (par ID ou utilisateur courant)
-        /** @var EvaluationSession|null $session */
-        $session = $request->get('evaluation_session_id')
-            ? EvaluationSession::with(['answers', 'currentQuestion'])->find($request->get('evaluation_session_id'))
-            : $request->user()->evaluationSessions()->with(['answers', 'currentQuestion'])->latest()->first();
-
+        $session = $this->resolveSession($request);
         if (!$session) {
             return response()->json(['error' => 'Session active non trouvée.'], 400);
         }
 
-        // 📍 Si aucune question courante, renvoyer une erreur claire
         if (!$session->currentQuestion) {
             return response()->json(['error' => 'Aucune question en cours.'], 400);
         }
 
-        // 🔄 Récupérer dynamiquement les prochaines questions visibles
         $visibleQuestions = $this->flow->getNextQuestions($session);
 
-        // 📦 Cas où le groupe actuel est terminé
+        // Groupe terminé, on passe au suivant
         if (empty($visibleQuestions)) {
-            // ➕ Essayer d'avancer vers le prochain groupe
-            $nextQuestion = $this->flow->nextGroup($session);
+            $nextKey = $this->flow->nextGroup($session->currentQuestion->group->key ?? null, $session);
 
-            if (!$nextQuestion) {
-                return response()->json(['message' => '✅ Évaluation terminée.'], 200);
+            if (!$nextKey) {
+                // Évaluation terminée, on peut retourner un score
+                $result = $this->flow->evaluateGlobalRisk($session);
+
+                return response()->json([
+                    'message' => '✅ Évaluation terminée. backend',
+                    'score' => $result['total_score'],
+                    'level' => $result['level'],
+                    'blocs' => $result['blocs']
+                ]);
             }
 
             return response()->json([
                 'message' => '📍 Passage au groupe suivant.',
-                'question' => $nextQuestion
+                'next_group' => $nextKey
             ]);
         }
 
-        // ✅ On retourne la prochaine question visible
         return response()->json([
-            'question' => $visibleQuestions[0],
+            'question' => $visibleQuestions[0]
         ]);
     }
 
     /**
-     * Récupère le prochain groupe de questions à afficher.
-     *
-     * @param Request $request
-     * @param QuestionFlowService $service
-     * @return \Illuminate\Http\JsonResponse
+     * Retourne le prochain groupe disponible.
      */
-    public function nextGroup(Request $request, QuestionFlowService $service)
+    public function nextGroup(Request $request)
     {
         $current = $request->query('current');
-        $session = $request->user()->evaluationSessions()->latest()->first();
+        $session = $this->resolveSession($request);
 
-        $next = $service->nextGroup($current, $session);
+        if (!$session) {
+            return response()->json(['error' => 'Session non trouvée.'], 400);
+        }
+
+        $next = $this->flow->nextGroup($current, $session);
 
         return response()->json(['next_group' => $next]);
+    }
+
+    /**
+     * Méthode utilitaire pour récupérer la session active.
+     */
+    protected function resolveSession(Request $request): ?EvaluationSession
+    {
+        return $request->get('evaluation_session_id')
+            ? EvaluationSession::with(['answers', 'currentQuestion'])->find($request->get('evaluation_session_id'))
+            : $request->user()?->evaluationSessions()->with(['answers', 'currentQuestion'])->latest()->first();
     }
 }

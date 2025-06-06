@@ -7,7 +7,67 @@ use App\Models\Evaluation\EvaluationSession;
 use App\Models\Evaluation\DynamicQuestionTemplate;
 
 class QuestionFlowService
+
 {
+
+
+
+    /**
+     * Vérifie si une question est visible en fonction des réponses et du profil.
+     *
+     * @param array $visibleIf Conditions de visibilité.
+     * @param array $answers Réponses actuelles.
+     * @param array $profile Profil de l'utilisateur.
+     * @return bool True si la question est visible, false sinon.
+     */
+
+    private function hasValueInProfile(DynamicQuestionTemplate $question, array $profile): bool
+    {
+        $target = $question->answer_target;
+        $key = $question->key;
+
+        // Vérification dans medical ou personal profile
+        if (in_array($target, ['medical_profile', 'personal_profile'])) {
+            return !empty($profile[$target][$key]);
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Vérifie si une question est visible en fonction des réponses et du profil.
+     *
+     * @param array $visibleIf Conditions de visibilité.
+     * @param array $answers Réponses actuelles.
+     * @param array $profile Profil de l'utilisateur.
+     * @return bool True si la question est visible, false sinon.
+     */
+
+   private function isVisible(array $visibleIf = null, array $answers = [], array $profile = []): bool
+    {
+        if (!$visibleIf) return true;
+
+        foreach ($visibleIf as $condition) {
+            $source = $condition['source'] ?? 'question';
+            $key    = $condition['key'] ?? $condition['question'] ?? null;
+            $value  = $condition['value'] ?? null;
+            $op     = $condition['operator'] ?? '=';
+
+            $actual = match ($source) {
+                'question'         => $answers[$key] ?? null,
+                'profile.medical'  => $profile['medical'][$key] ?? null,
+                'profile.personal' => $profile['personal'][$key] ?? null,
+                default            => null,
+            };
+
+            if (!$this->compare($actual, $value, $op)) return false;
+        }
+
+        return true;
+    }
+
+
     /**
      * Récupère les questions visibles pour un groupe donné, en appliquant les logiques conditionnelles.
      *
@@ -17,39 +77,17 @@ class QuestionFlowService
      */
     public function getVisibleQuestions(int $groupId, array $answers = []): \Illuminate\Support\Collection
     {
-         $questions = DynamicQuestionTemplate::with('group')
-            ->where('question_group_id', $groupId)
+        $profile = [ // On suppose que le service reçoit une session ailleurs
+            'medical' => [], 'personal' => []
+        ];
+
+        return DynamicQuestionTemplate::where('question_group_id', $groupId)
             ->orderBy('order')
-            ->get();
-
-        // Appliquer les logiques conditionnelles de visibilité
-        return $questions->filter(function ($question) use ($answers) {
-            $visibleIf = is_string($question->visible_if)
-                ? json_decode($question->visible_if, true)
-                : $question->visible_if;
-
-            if (!is_array($visibleIf)) return true;
-
-            foreach ($visibleIf as $condition) {
-                $qKey = $condition['question'] ?? null;
-                $expected = $condition['value'] ?? null;
-                $actual = $answers[$qKey] ?? null;
-                $operator = $condition['operator'] ?? '=';
-
-                switch ($operator) {
-                    case '=':      if ($actual != $expected) return false; break;
-                    case '!=':     if ($actual == $expected) return false; break;
-                    case '>':      if (!($actual > $expected)) return false; break;
-                    case '<':      if (!($actual < $expected)) return false; break;
-                    case 'in':     if (!in_array($actual, (array)$expected)) return false; break;
-                    case 'not_in': if (in_array($actual, (array)$expected)) return false; break;
-                    default:       return false;
-                }
-            }
-            
-            return true;
-        })->values();
+            ->get()
+            ->filter(fn($q) => $this->shouldBeVisible($q, $answers, $profile))
+            ->values();
     }
+
 
 
     public function getEntryPoints(?string $target = null)
@@ -71,58 +109,26 @@ class QuestionFlowService
      */
 
     public function goToNextQuestion(EvaluationSession $session): ?DynamicQuestionTemplate
-{
-    // Récupérer toutes les réponses déjà fournies
-    $answers = $session->answers->keyBy('dynamic_question_template_id');
-    $answeredIds = $answers->keys()->all();
+    {
+        $answers = $session->answers->keyBy('dynamic_question_template_id');
+        $answeredIds = $answers->keys()->all();
 
-    // Récupérer toutes les questions dans l'ordre
-    $questions = DynamicQuestionTemplate::with('group')
-        ->orderBy('order')
-        ->get();
+        $profile = [
+            'medical' => optional($session->account->medicalProfile)->toArray() ?? [],
+            'personal' => optional($session->account->personalProfile)->toArray() ?? [],
+        ];
 
-    // Appliquer la logique de filtrage (visible_if)
-    $filtered = $questions->filter(function ($question) use ($answers) {
-        $visibleIf = is_string($question->visible_if)
-            ? json_decode($question->visible_if, true)
-            : $question->visible_if;
+        foreach (DynamicQuestionTemplate::orderBy('order')->get() as $question) {
+            if (in_array($question->id, $answeredIds)) continue;
 
-        if (!is_array($visibleIf)) return true;
-
-        foreach ($visibleIf as $condition) {
-            $qKey = $condition['question'] ?? null;
-            $expected = $condition['value'] ?? null;
-            $operator = $condition['operator'] ?? '=';
-
-            $matchedQuestion = DynamicQuestionTemplate::where('key', $qKey)->first();
-            if (!$matchedQuestion) continue;
-
-            $actual = optional($answers->get($matchedQuestion->id))->value;
-
-            switch ($operator) {
-                case '=':      if ($actual != $expected) return false; break;
-                case '!=':     if ($actual == $expected) return false; break;
-                case '>':      if (!($actual > $expected)) return false; break;
-                case '<':      if (!($actual < $expected)) return false; break;
-                case 'in':     if (!in_array($actual, (array) $expected)) return false; break;
-                case 'not_in': if (in_array($actual, (array) $expected)) return false; break;
-                default:       return false;
+            if ($this->shouldBeVisible($question, $answers->map->value()->toArray(), $profile)) {
+                return $question;
             }
         }
 
-        return true;
-    });
-
-    // Chercher la prochaine question non encore répondue
-    foreach ($filtered as $question) {
-        if (!in_array($question->id, $answeredIds)) {
-            return $question;
-        }
+        return null;
     }
 
-    // Aucune question restante = fin de session
-    return null;
-}
 
     /**
      * Trouve le prochain groupe de questions à afficher.
@@ -131,92 +137,241 @@ class QuestionFlowService
      * @param EvaluationSession $session Session d'évaluation en cours.
      * @return string|null Clé du prochain groupe, ou null si aucun groupe suivant n'existe.
      */
-    public function getNextQuestions(EvaluationSession $session): array
-    {
-        $groupId = optional($session->currentQuestion)->question_group_id;
+        public function getNextQuestions(EvaluationSession $session): array
+        {
+            $groupId = optional($session->currentQuestion)->question_group_id;
+            if (!$groupId) return [];
 
-        if (!$groupId) {
-            return [];
+            $answers = $session->answers->keyBy('dynamic_question_template_id')->map->value()->toArray();
+            $profile = [
+                'medical' => optional($session->account->medicalProfile)->toArray() ?? [],
+                'personal' => optional($session->account->personalProfile)->toArray() ?? [],
+            ];
+
+            return DynamicQuestionTemplate::where('question_group_id', $groupId)
+                ->orderBy('order')
+                ->get()
+                ->filter(fn($q) => $this->shouldBeVisible($q, $answers, $profile))
+                ->values()
+                ->all();
         }
 
-        $answers = $session->answers()->get()->keyBy('dynamic_question_template_id');
+        private function shouldBeVisible(DynamicQuestionTemplate $question, array $answers, array $profile): bool
+        {
+            if (
+                in_array($question->answer_target, ['medical_profile', 'personal_profile']) &&
+                $this->hasValueInProfile($question, $profile)
+            ) return false;
 
-        $questions = DynamicQuestionTemplate::with('group')
-            ->where('question_group_id', $groupId)
-            ->orderBy('order')
-            ->get();
-
-        return $questions->filter(function ($question) use ($answers) {
             $visibleIf = is_string($question->visible_if)
                 ? json_decode($question->visible_if, true)
                 : $question->visible_if;
 
-            if (!is_array($visibleIf)) return true;
+            return $this->isVisible($visibleIf ?? [], $answers, $profile);
+        }
 
-            foreach ($visibleIf as $condition) {
-                $qKey = $condition['question'] ?? null;
-                $expected = $condition['value'] ?? null;
-                $operator = $condition['operator'] ?? '=';
+    /** 
+     * Trouve le prochain groupe de questions à afficher.
+     *
+     * @param string|null $currentGroupKey Clé du groupe actuel, ou null pour le premier groupe.
+     * @param EvaluationSession $session Session d'évaluation en cours.
+     * @return string|null Clé du prochain groupe, ou null si aucun groupe suivant n'existe.
+     */ 
+     
+    public function nextGroup(?string $currentGroupKey, EvaluationSession $session): ?string
+    {
+        // 🔄 Récupérer tous les groupes actifs et visibles pour ce profil
+        $groups = $this->getActiveGroups($session)->pluck('key')->toArray();
 
-                $matched = DynamicQuestionTemplate::where('key', $qKey)->first();
-                if (!$matched) continue;
+        if (empty($groups)) return null;
 
-                $actual = optional($answers->get($matched->id))->value;
+        // ✅ Premier groupe par défaut
+        if (is_null($currentGroupKey)) {
+            $currentGroupKey = $session->currentQuestion?->group?->key ?? null;
+            if (is_null($currentGroupKey)) {
+                return $groups[0];
+            }
+        }
 
-                switch ($operator) {
-                    case '=':      if ($actual != $expected) return false; break;
-                    case '!=':     if ($actual == $expected) return false; break;
-                    case 'in':     if (!in_array($actual, (array) $expected)) return false; break;
-                    case 'not_in': if (in_array($actual, (array) $expected)) return false; break;
-                    case '>':      if (!($actual > $expected)) return false; break;
-                    case '<':      if (!($actual < $expected)) return false; break;
-                    default:       return false;
+        // 🔍 Trouver l’index du groupe courant
+        $index = array_search($currentGroupKey, $groups);
+        if ($index === false || $index + 1 >= count($groups)) {
+            return null; // Fin du flux
+        }
+
+        $nextKey = $groups[$index + 1];
+
+        // 🧠 Conditions personnalisées de saut (profil ou score)
+        switch ($nextKey) {
+            case 'symptom_cervix':
+                $age = optional($session->account->personalProfile)->age();
+                if ($age && $age < 22) {
+                    return $this->nextGroup($nextKey, $session); // ⏩ Skip
                 }
+                break;
+
+            case 'symptom_breast':
+                $age = optional($session->account->personalProfile)->age();
+                if ($age && $age < 25) {
+                    return $this->nextGroup($nextKey, $session); // ⛔ Enfant, pas concernée
+                }
+                break;
+
+            // ➕ Tu peux ajouter d'autres cas ici
+        }
+
+        return $nextKey;
+    }
+
+
+    /**
+     * Compare deux valeurs selon un opérateur donné.
+     *
+     * @param mixed $actual Valeur actuelle.
+     * @param mixed $expected Valeur attendue.
+     * @param string $operator Opérateur de comparaison.
+     * @return bool Résultat de la comparaison.
+     */
+    public function getGroupScore(int $groupId, EvaluationSession $session): float
+    {
+        // Récupère les questions du groupe
+        $questions = DynamicQuestionTemplate::where('question_group_id', $groupId)->get();
+
+        // Réponses existantes de la session
+        $answers = $session->answers->keyBy('dynamic_question_template_id');
+
+        $total = 0;
+
+        foreach ($questions as $question) {
+            $answer = $answers->get($question->id);
+            $value = optional($answer)->value;
+
+            // Si réponse donnée et pondération > 0
+            if ($value !== null && $question->risk_weight > 0) {
+                $total += $question->risk_weight;
+            }
+        }
+
+        return $total;
+    }
+
+
+    public function getActiveGroups(EvaluationSession $session): \Illuminate\Support\Collection
+    {
+        $groups = QuestionGroup::where('is_active', true)->orderBy('order')->get();
+
+        // Charger les données de profil
+        $profile = [
+            'medical' => optional($session->account->medicalProfile)->toArray() ?? [],
+            'personal' => optional($session->account->personalProfile)->toArray() ?? [],
+        ];
+
+        // Pas de réponses au début
+        $answers = [];
+
+        return $groups->filter(function ($group) use ($profile, $answers) {
+            $conditions = is_string($group->conditions)
+                ? json_decode($group->conditions, true)
+                : $group->conditions;
+
+            // Pas de conditions => groupe toujours visible
+            if (!is_array($conditions) || empty($conditions)) {
+                return true;
             }
 
-            return true;
-        })->values()->all();
+            // Utilise isVisible() pour vérifier la logique conditionnelle
+            return $this->isVisible($conditions, $answers, $profile);
+        })->values();
     }
 
 
-    public function nextGroup(?string $currentGroupKey, EvaluationSession $session): ?string
-{
-    // Tous les groupes actifs, triés par ordre
-    $groups = QuestionGroup::where('is_active', true)
-        ->orderBy('order')
-        ->pluck('key')
-        ->toArray();
+    public function evaluateGlobalRisk(EvaluationSession $session): array
+    {
+        $blocs = $this->calculateScore($session);
 
-    // ✅ Si aucun groupe courant n'est fourni, prendre le premier
-    if (is_null($currentGroupKey)) {
-        $currentGroupKey = $session->currentQuestion?->group?->key ?? null;
+        $totalScore = collect($blocs)->sum('score');
 
-        // Si on ne peut pas déterminer le groupe courant, démarrer au début
-        if (is_null($currentGroupKey)) {
-            return $groups[0] ?? null;
+        $level = 'non déterminé';
+        foreach (config('chereh_risk.levels') as $zone) {
+            if ($totalScore >= $zone['min'] && $totalScore <= $zone['max']) {
+                $level = $zone['name'];
+                break;
+            }
+        }
+
+        return [
+            'total_score' => $totalScore,
+            'level' => $level,
+            'blocs' => $blocs
+        ];
+    }
+
+    
+    
+    /**
+     * Calcule le score des réponses d'une session d'évaluation.
+     *
+     * @param EvaluationSession $session
+     * @return array
+     */
+    public function calculateScore(EvaluationSession $session): array
+    {
+        $answers = $session->answers->keyBy('dynamic_question_template_id');
+        $questions = DynamicQuestionTemplate::all();
+
+        // Grouper les réponses par bloc_key
+        $blocs = [];
+
+        foreach ($questions as $question) {
+            $bloc = $question->bloc_key ?? 'undefined';
+
+            $answer = $answers->get($question->id);
+            $value = optional($answer)->value;
+
+            if ($value !== null && $question->risk_weight > 0) {
+                if (!isset($blocs[$bloc])) {
+                    $blocs[$bloc] = [
+                        'score' => 0,
+                        'questions' => [],
+                        'level' => null,
+                        'meta' => $question->meta ?? []
+                    ];
+                }
+
+                $blocs[$bloc]['score'] += $question->risk_weight;
+                $blocs[$bloc]['questions'][] = $question->key;
+            }
+        }
+
+    // Déterminer le niveau de risque (léger/modéré/sévère)
+    foreach ($blocs as $bloc => &$data) {
+        $zones = $data['meta']['score_zone'] ?? null;
+        if (is_array($zones)) {
+            foreach ($zones as $z) {
+                if ($data['score'] >= $z['min'] && $data['score'] <= $z['max']) {
+                    $data['level'] = $z['level'];
+                    break;
+                }
+            }
         }
     }
 
-    // Trouver la position du groupe actuel
-    $index = array_search($currentGroupKey, $groups);
-
-    if ($index === false || $index + 1 >= count($groups)) {
-        return null; // 🚫 Fin du flux ou groupe inconnu
-    }
-
-    $nextKey = $groups[$index + 1];
-
-    // 🔍 Logique conditionnelle pour sauter certains groupes
-    if ($nextKey === 'symptom_cervix') {
-        $age = optional($session->account->personalProfile)->age();
-        if ($age && $age < 22) {
-            return $this->nextGroup($nextKey, $session); // 🔁 Sauter vers le suivant
-        }
-    }
-
-    return $nextKey;
+    return $blocs;
 }
+    
 
+private function compare($actual, $expected, string $operator): bool
+{
+    return match ($operator) {
+        '='       => $actual == $expected,
+        '!='      => $actual != $expected,
+        '>'       => $actual > $expected,
+        '<'       => $actual < $expected,
+        'in'      => in_array($actual, (array) $expected),
+        'not_in'  => !in_array($actual, (array) $expected),
+        default   => false,
+    };
+}
 
     
 }

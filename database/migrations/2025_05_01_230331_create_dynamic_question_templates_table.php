@@ -15,13 +15,21 @@ return new class extends Migration {
         $table->string('text');
         $table->string('label')->nullable(); // Peut être utile pour affichage frontend
         $table->string('placeholder')->nullable();
+        $table->string('bloc_key')->nullable(); // Ex: douleur_sein, ecoulement, etc.
+
+        // Min/Max pour les types 'scale' ou validation dynamique
+        $table->integer('min')->nullable();
+        $table->integer('max')->nullable();
+
+        // Données complémentaires (profil requis, contexte, historique)
+        $table->json('meta')->nullable(); // ex: {"source": "profile.medical", "tree_version": "sein_v1.0"}
 
         // Type de question
         $table->enum('type', [
             'boolean', 'text', 'number', 'date',
             'select_one', 'select_multiple',
             'info', 'file', 'hidden',
-            'checkbox', 'radio', 'textarea',
+            'checkbox', 'radio',
         ]);
 
         // Cible de la réponse (profil, suivi, etc.)
@@ -57,6 +65,7 @@ return new class extends Migration {
         $table->index(['is_entry_point'], 'idx_entry_point');
         $table->index('answer_target', 'idx_answer_target');
         $table->index(['order'], 'idx_order');
+
     });
 
     }

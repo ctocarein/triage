@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
         $this->call([
             QuestionGroupSeeder::class,
-            DynamicQuestionTemplateSeeder::class,
+            // DynamicQuestionTemplateSeeder::class,
             CapsuleSeeder::class,
             PersonalProfileQuestionSeeder::class,
             MedicalProfileQuestionSeeder::class,

@@ -17,6 +17,7 @@ class QuestionGroupSeeder extends Seeder
                 'icon' => 'user',
                 'color' => '#F8A734',
                 'order' => 1,
+                'conditions' => null,
             ],
             [
                 'key' => 'profile_medical',
@@ -25,6 +26,7 @@ class QuestionGroupSeeder extends Seeder
                 'icon' => 'stethoscope',
                 'color' => '#F8DC82',
                 'order' => 2,
+                'conditions' => null,
             ],
             [
                 'key' => 'symptom_breast',
@@ -33,6 +35,14 @@ class QuestionGroupSeeder extends Seeder
                 'icon' => 'activity',
                 'color' => '#C24E3A',
                 'order' => 3,
+                    'conditions' => json_encode([
+                    [
+                        'source' => 'profile.personal',
+                        'key' => 'age',
+                        'operator' => '>=',
+                        'value' => 24
+                    ]
+                ]),
             ],
             [
                 'key' => 'symptom_cervix',
@@ -41,6 +51,14 @@ class QuestionGroupSeeder extends Seeder
                 'icon' => 'droplet',
                 'color' => '#F8EBC5',
                 'order' => 4,
+                'conditions' => json_encode([
+                    [
+                        'source' => 'profile.personal',
+                        'key' => 'age',
+                        'operator' => '>=',
+                        'value' => 18
+                    ]
+                ]),
             ],
             [
                 'key' => 'lifestyle',
@@ -49,6 +67,7 @@ class QuestionGroupSeeder extends Seeder
                 'icon' => 'heart',
                 'color' => '#6C757D',
                 'order' => 5,
+                'conditions' => null,
             ],
             [
                 'key' => 'final_recommendation',
@@ -57,6 +76,7 @@ class QuestionGroupSeeder extends Seeder
                 'icon' => 'check-circle',
                 'color' => '#162447',
                 'order' => 6,
+                'conditions' => null,
             ],
         ];
 

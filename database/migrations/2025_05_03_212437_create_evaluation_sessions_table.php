@@ -26,6 +26,7 @@ return new class extends Migration
                   ->default('in_progress');
                   
             $table->string('context')->nullable(); // "col_de_l_uterus", "sein", etc.
+            $table->string('risk_level')->nullable(); // Version du profil utilisé
             $table->unsignedInteger('score')->default(0);
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
