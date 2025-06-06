@@ -121,7 +121,7 @@ class QuestionFlowService
         foreach (DynamicQuestionTemplate::orderBy('order')->get() as $question) {
             if (in_array($question->id, $answeredIds)) continue;
 
-            if ($this->shouldBeVisible($question, $answers->map->value()->toArray(), $profile)) {
+            if ($this->shouldBeVisible($question, $answers->map->value->toArray(), $profile)) {
                 return $question;
             }
         }
@@ -142,7 +142,7 @@ class QuestionFlowService
             $groupId = optional($session->currentQuestion)->question_group_id;
             if (!$groupId) return [];
 
-            $answers = $session->answers->keyBy('dynamic_question_template_id')->map->value()->toArray();
+            $answers = $session->answers->keyBy('dynamic_question_template_id')->map->value->toArray();
             $profile = [
                 'medical' => optional($session->account->medicalProfile)->toArray() ?? [],
                 'personal' => optional($session->account->personalProfile)->toArray() ?? [],
