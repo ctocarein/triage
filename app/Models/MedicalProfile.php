@@ -46,4 +46,32 @@ class MedicalProfile extends Model
         return $this->belongsTo(Account::class);
     }
 
+    
+    /**
+     * Normalize and set the menopause status attribute.
+     *
+     * The database expects one of the values: 'pre', 'post', or 'unknown'.
+     * Incoming data might be boolean or translated strings such as 'Oui'/'Non'.
+     * This mutator converts common truthy values to 'post' and falsy values to
+     * 'pre'.
+     */
+    public function setMenopauseStatusAttribute($value): void
+    {
+        $normalized = $value;
+
+        if (is_bool($value)) {
+            $normalized = $value ? 'post' : 'pre';
+        } elseif (is_string($value)) {
+            $lower = strtolower($value);
+            if (in_array($lower, ['oui', 'yes', 'true', '1'])) {
+                $normalized = 'post';
+            } elseif (in_array($lower, ['non', 'no', 'false', '0'])) {
+                $normalized = 'pre';
+            } elseif (in_array($lower, ['pre', 'post', 'unknown'])) {
+                $normalized = $lower;
+            }
+        }
+
+        $this->attributes['menopause_status'] = $normalized;
+    }
 }
