@@ -11,6 +11,22 @@ class QuestionFlowService
 {
     protected ?Collection $cachedTemplates = null;
 
+
+       /**
+     * Retourne les questions marquées comme point d'entrée.
+     */
+    public function getEntryPoints(?string $target = null): Collection
+    {
+        $collection = $this->getAllTemplates()
+            ->where('is_entry_point', true);
+
+        if ($target) {
+            $collection = $collection->where('answer_target', $target);
+        }
+
+        return $collection->values();
+    }
+
     /**
      * Charge et met en cache toutes les questions de l'application.
      */
@@ -87,6 +103,8 @@ class QuestionFlowService
             ->filter(fn($q) => $this->shouldBeVisible($q, $context['answers'], $context['profile']))
             ->values()
             ->all();
+
+    
     }
 
     /**
