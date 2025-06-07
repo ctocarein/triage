@@ -23,7 +23,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                 'is_entry_point' => true,
             ],
             [
-                'key' => 'date_of_birth',
+                'key' => 'birth_date',
                 'text' => 'Quelle est votre date de naissance ?',
                 'type' => 'date',
                 'bloc_key' => 'profil_identite',
