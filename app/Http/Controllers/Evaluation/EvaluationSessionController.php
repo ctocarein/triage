@@ -153,8 +153,8 @@ class EvaluationSessionController extends Controller
         }
 
         $session->update(['current_question_id' => $nextQuestion->id]);
-
-        $context = (new QuestionFlowService)->getSessionContext($session);
+   
+        $context = $flow->getSessionContext($session);
         $currentBloc = $nextQuestion->bloc_key ?? null;
 
         $blocQuestions = DynamicQuestionTemplate::where('bloc_key', $currentBloc)->get();

@@ -41,7 +41,7 @@ class QuestionFlowService
     /**
      * Retourne le contexte d'une session : profils, réponses, IDs répondus.
      */
-    protected function getSessionContext(EvaluationSession $session): array
+    public function getSessionContext(EvaluationSession $session): array
     {
         $answers = $session->answers->keyBy('dynamic_question_template_id')->map->value->toArray();
         return [
