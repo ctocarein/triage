@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Evaluation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Evaluation\QuestionGroup;
-use App\Services\ReportGenerationService;
 use App\Models\Evaluation\EvaluationSession;
+use App\Models\Evaluation\DynamicQuestionTemplate; // ✅ AJOUTER CECI
 use App\Services\Evaluation\QuestionFlowService;
+use App\Services\ReportGenerationService;
+
 
 class EvaluationSessionController extends Controller
 {
