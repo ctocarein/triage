@@ -54,16 +54,14 @@ class EvaluationSessionController extends Controller
 
     
         // Étape 2 – Sélectionne le premier groupe actif (ordre logique)
-        $firstGroup = QuestionGroup::query()
-            ->where('is_active', true)
-            ->orderBy('order')
-            ->first();
+        $groups = (new QuestionFlowService)->getActiveGroups($session);
+        $firstGroup = $groups->first();
+   
 
 
         // Étape 3 – Charge la première question de ce groupe
-        $firstQuestion = $firstGroup?->questions()
-            ->orderBy('order')
-            ->first();
+        $firstQuestion = (new QuestionFlowService)->goToNextQuestion($session);
+
 
         // Étape 4 – Enregistre la première question dans la session
         if ($firstQuestion) {
@@ -99,13 +97,16 @@ class EvaluationSessionController extends Controller
 
         $report = $reportService->generate($session);
 
+        $scoreDetails = (new QuestionFlowService)->evaluateGlobalRisk($session);
+
         return response()->json([
             'message' => 'Session complétée avec succès.',
-            'score' => $report->score,
-            'risk_level' => $report->risk_level,
-            'recommendation' => $report->recommendation,
+            'score' => $scoreDetails['total_score'],
+            'risk_level' => $scoreDetails['level'],
+            'blocs' => $scoreDetails['blocs'],
             'report_id' => $report->id,
-        ], 201);
+        ]);
+
     }
 
     /**
@@ -153,11 +154,21 @@ class EvaluationSessionController extends Controller
 
         $session->update(['current_question_id' => $nextQuestion->id]);
 
+        $context = (new QuestionFlowService)->getSessionContext($session);
+        $currentBloc = $nextQuestion->bloc_key ?? null;
+
+        $blocQuestions = DynamicQuestionTemplate::where('bloc_key', $currentBloc)->get();
+        $answeredIds = $context['answeredIds'];
+
         return response()->json([
             'currentQuestion' => $nextQuestion,
             'isCompleted' => false,
             'id' => $session->id,
+            'bloc_key' => $currentBloc,
+            'total' => $blocQuestions->count(),
+            'answered' => $blocQuestions->whereIn('id', $answeredIds)->count(),
         ]);
+
     }
 
     
