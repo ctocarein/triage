@@ -29,6 +29,8 @@ return new class extends Migration
             $table->string('risk_level')->nullable(); // Version du profil utilisé
             $table->unsignedInteger('score')->default(0);
             $table->timestamp('started_at')->nullable();
+             $table->string('current_bloc')->nullable();
+            $table->boolean('is_completed')->default(false);
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 
