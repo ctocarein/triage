@@ -19,7 +19,8 @@ class ProfileUpdaterService
             // On ignore les réponses aux questions qui n'ont pas de cible
             $target = $answer->question->answer_target;
             $key = $answer->question->key;
-             $value = $this->castValue($answer->question->type, $answer->value);
+            //  $value = $this->castValue($answer->question->type, $answer->value);
+            $value = $this->castValue($key, $answer->question->type, $answer->value);
 
             if ($target === 'personal_profile') {
                 $personalData[$key] = $value;
@@ -51,8 +52,26 @@ class ProfileUpdaterService
             }
 }
 
-    private function castValue(string $type, $value)
+       private function castValue(string $key, string $type, $value)
     {
+        if ($key === 'education_level') {
+            $map = [
+                'aucun' => 'none',
+                'primaire' => 'primary',
+                'secondaire' => 'secondary',
+                'supérieur' => 'university',
+                'superieur' => 'university',
+                'autodidacte' => 'university',
+                'none' => 'none',
+                'primary' => 'primary',
+                'secondary' => 'secondary',
+                'university' => 'university',
+            ];
+
+            $lower = strtolower($value);
+            return $map[$lower] ?? null;
+        }
+
         if ($type === 'boolean') {
             if (is_string($value)) {
                 $lower = strtolower($value);
