@@ -13,37 +13,33 @@ return new class extends Migration
     {
         Schema::create('evaluation_sessions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('account_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
-                  
+
+            // Liens et statut
+            $table->foreignId('account_id')->constrained()->cascadeOnDelete();
             $table->foreignId('current_question_id')
                   ->nullable()
                   ->constrained('dynamic_question_templates')
                   ->nullOnDelete();
-                  
-            $table->enum('status', ['in_progress', 'completed', 'cancelled'])
-                  ->default('in_progress');
-                  
-            $table->string('context')->nullable(); // "col_de_l_uterus", "sein", etc.
-            $table->string('risk_level')->nullable(); // Version du profil utilisé
-            $table->unsignedInteger('score')->default(0);
+            $table->enum('status', ['in_progress', 'completed', 'cancelled'])->default('in_progress');
+
+            // Données de suivi
+            $table->string('context')->nullable();        // Ex: "col_de_l_uterus", "sein"
+            $table->string('risk_level')->nullable();     // Risque global (léger/modéré/élevé)
+            $table->unsignedInteger('score')->default(0); // Score total
             $table->timestamp('started_at')->nullable();
-             $table->string('current_bloc')->nullable();
-            $table->boolean('is_completed')->default(false);
             $table->timestamp('completed_at')->nullable();
-            // Index
+            $table->boolean('is_completed')->default(false);
+
+            // Gestion des blocs dynamiques
+            $table->string('current_bloc')->nullable();     // Bloc en cours
+            $table->json('target_blocs')->nullable();       // Liste des blocs visés (null = tous)
+            $table->json('visited_blocs')->nullable();      // Historique des blocs parcourus
+
+            // Timestamps et index
+            $table->timestamps();
             $table->index('account_id');
             $table->index('status');
             $table->index('current_question_id');
-            // Bloc actuellement en cours (null = pas encore commencé)
-            $table->string('current_bloc')->nullable()->after('current_question_id');
-            // Liste des blocs à parcourir (null = tous)
-            $table->json('target_blocs')->nullable()->after('current_bloc');
-            // Historique des blocs déjà visités
-            $table->json('visited_blocs')->nullable()->after('target_blocs');
-            $table->timestamps();
-
         });
     }
 

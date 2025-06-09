@@ -12,7 +12,7 @@ class EvaluationAnswer extends Model
     use HasFactory;
 
     protected $fillable = [
-        'evaluation_session_id', 'dynamic_question_template_id', 'value', 'is_skipped'
+        'evaluation_session_id', 'dynamic_question_template_id', 'value', 'is_skipped',
     ];
 
     protected $casts = [

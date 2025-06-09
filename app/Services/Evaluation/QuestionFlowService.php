@@ -107,7 +107,7 @@ class QuestionFlowService
             ->some(fn($q) => !in_array($q->id, $answeredIds));
     }
 
-    private function shouldBeVisible(DynamicQuestionTemplate $question, array $answers, array $profile): bool
+    public function shouldBeVisible(DynamicQuestionTemplate $question, array $answers, array $profile): bool
     {
         if (in_array($question->answer_target, ['medical_profile', 'personal_profile']) && $this->hasValueInProfile($question, $profile)) {
             return false;
