@@ -32,12 +32,18 @@ return new class extends Migration
              $table->string('current_bloc')->nullable();
             $table->boolean('is_completed')->default(false);
             $table->timestamp('completed_at')->nullable();
-            $table->timestamps();
-
             // Index
             $table->index('account_id');
             $table->index('status');
             $table->index('current_question_id');
+            // Bloc actuellement en cours (null = pas encore commencé)
+            $table->string('current_bloc')->nullable()->after('current_question_id');
+            // Liste des blocs à parcourir (null = tous)
+            $table->json('target_blocs')->nullable()->after('current_bloc');
+            // Historique des blocs déjà visités
+            $table->json('visited_blocs')->nullable()->after('target_blocs');
+            $table->timestamps();
+
         });
     }
 

@@ -4,12 +4,10 @@ namespace App\Http\Controllers\Evaluation;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Evaluation\QuestionGroup;
+use App\Models\Evaluation\DynamicQuestionTemplate;
 use App\Models\Evaluation\EvaluationSession;
-use App\Models\Evaluation\DynamicQuestionTemplate; // ✅ AJOUTER CECI
 use App\Services\Evaluation\QuestionFlowService;
 use App\Services\ReportGenerationService;
-
 
 class EvaluationSessionController extends Controller
 {
@@ -21,7 +19,7 @@ class EvaluationSessionController extends Controller
         $sessions = $request->user()
             ->evaluationSessions()
             ->withCount('answers')
-            ->with('report') // charge le résumé automatiquement
+            ->with('report')
             ->latest()
             ->get();
 
@@ -29,47 +27,35 @@ class EvaluationSessionController extends Controller
     }
 
     /**
-     * 🆕 Démarrer une session (1 seule en cours autorisée)
+     * 🆕 Démarrer une nouvelle session d’évaluation
      */
-
-    public function start(Request $request)
+    public function start(Request $request, QuestionFlowService $flow)
     {
         $account = $request->user();
 
-        // Vérifie si une session est déjà active
+        // Vérifie s’il y a déjà une session active
         $existing = $account->activeEvaluationSession();
-        
         if ($existing) {
             return response()->json([
                 'message' => 'Une session est déjà en cours.',
                 'session' => $existing,
-                'question' => $existing->currentQuestion, // relation à définir si pas encore
-            ], 200);
+                'question' => $existing->currentQuestion,
+            ]);
         }
 
-        // Étape 1 – Crée la nouvelle session
+        // ➕ Crée la session
         $session = $account->evaluationSessions()->create([
             'status' => 'in_progress',
             'started_at' => now(),
             'context' => $request->input('context', []),
+            'target_blocs' => $request->input('bloc_keys', null), // tableau facultatif
         ]);
 
-    
-        // Étape 2 – Sélectionne le premier groupe actif (ordre logique)
-        $groups = (new QuestionFlowService)->getActiveGroups($session);
-        $firstGroup = $groups->first();
-   
+        // 🧭 Première question selon la logique des blocs
+        $firstQuestion = $flow->goToNextQuestion($session);
 
-
-        // Étape 3 – Charge la première question de ce groupe
-        $firstQuestion = (new QuestionFlowService)->goToNextQuestion($session);
-
-
-        // Étape 4 – Enregistre la première question dans la session
         if ($firstQuestion) {
-            $session->update([
-                'current_question_id' => $firstQuestion->id,
-            ]);
+            $session->update(['current_question_id' => $firstQuestion->id]);
         }
 
         return response()->json([
@@ -79,60 +65,11 @@ class EvaluationSessionController extends Controller
         ], 201);
     }
 
-
     /**
-     * ✅ Terminer la session et générer le rapport
+     * ▶️ Aller à la prochaine question
      */
-    public function complete(EvaluationSession $session, ReportGenerationService $reportService)
-    {
-        if ($session->status === 'completed') {
-            return response()->json([
-                'message' => 'Cette session est déjà complétée.',
-                'report' => $session->report
-            ], 200);
-        }
-
-        $session->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-        ]);
-
-        $report = $reportService->generate($session);
-
-        $scoreDetails = (new QuestionFlowService)->evaluateGlobalRisk($session);
-
-        return response()->json([
-            'message' => 'Session complétée avec succès.',
-            'score' => $scoreDetails['total_score'],
-            'risk_level' => $scoreDetails['level'],
-            'blocs' => $scoreDetails['blocs'],
-            'report_id' => $report->id,
-        ]);
-
-    }
-
-    /**
-     * 🔍 Voir une session en détail
-     */
-    public function show(EvaluationSession $session)
-    {
-        return response()->json(
-            $session->load([
-                'answers.question',
-                'report'
-            ])
-        );
-    }
-
-  
-    /**
-     * ▶️ Passer à la question suivante
-     */
-
     public function next(EvaluationSession $session, QuestionFlowService $flow)
     {
-      
-        // Vérifie si la session est en cours
         if (!$session->isInProgress()) {
             return response()->json([
                 'message' => 'Session déjà terminée.',
@@ -155,23 +92,63 @@ class EvaluationSessionController extends Controller
         }
 
         $session->update(['current_question_id' => $nextQuestion->id]);
-   
-        $context = $flow->getSessionContext($session);
-        $currentBloc = $nextQuestion->bloc_key ?? null;
 
-        $blocQuestions = DynamicQuestionTemplate::where('bloc_key', $currentBloc)->get();
-        $answeredIds = $context['answeredIds'];
+        // Infos sur la progression dans le bloc
+        $context = $flow->getSessionContext($session);
+        $blocKey = $nextQuestion->bloc_key;
+        $blocQuestions = DynamicQuestionTemplate::where('bloc_key', $blocKey)->get();
+        $answeredCount = $blocQuestions->whereIn('id', $context['answeredIds'])->count();
 
         return response()->json([
             'currentQuestion' => $nextQuestion,
             'isCompleted' => false,
             'id' => $session->id,
-            'bloc_key' => $currentBloc,
+            'bloc_key' => $blocKey,
             'total' => $blocQuestions->count(),
-            'answered' => $blocQuestions->whereIn('id', $answeredIds)->count(),
+            'answered' => $answeredCount,
+            'visited_blocs' => $session->visited_blocs ?? [],
         ]);
-
     }
 
-    
+    /**
+     * ✅ Terminer manuellement une session et générer son rapport
+     */
+    public function complete(EvaluationSession $session, ReportGenerationService $reportService, QuestionFlowService $flow)
+    {
+        if ($session->status === 'completed') {
+            return response()->json([
+                'message' => 'Cette session est déjà complétée.',
+                'report' => $session->report,
+            ]);
+        }
+
+        $session->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        $report = $reportService->generate($session);
+        $scoreDetails = $flow->evaluateGlobalRisk($session);
+
+        return response()->json([
+            'message' => 'Session complétée avec succès.',
+            'score' => $scoreDetails['total_score'],
+            'risk_level' => $scoreDetails['level'],
+            'blocs' => $scoreDetails['blocs'],
+            'report_id' => $report->id,
+        ]);
+    }
+
+    /**
+     * 🔍 Détails d’une session (admin ou historique)
+     */
+    public function show(EvaluationSession $session)
+    {
+        return response()->json(
+            $session->load([
+                'answers.question',
+                'report',
+            ])
+        );
+    }
 }

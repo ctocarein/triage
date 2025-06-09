@@ -21,6 +21,8 @@ class EvaluationSession extends Model
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'score' => 'integer',
+        'target_blocs' => 'array',
+        'visited_blocs' => 'array',
     ];
 
     // Relations
@@ -33,4 +35,45 @@ class EvaluationSession extends Model
     public function isInProgress(): bool{return $this->status === 'in_progress';}
     // Scopes
     public function scopeCompleted($query) {return $query->where('status', 'completed');}
+
+        /**
+     * Vérifie si un bloc a déjà été visité.
+     */
+    public function hasVisitedBloc(string $blocKey): bool
+    {
+        return in_array($blocKey, $this->visited_blocs ?? []);
+    }
+
+    /**
+     * Ajoute un bloc à la liste des blocs visités.
+     */
+    public function addVisitedBloc(string $blocKey): void
+    {
+        $visited = $this->visited_blocs ?? [];
+
+        if (!in_array($blocKey, $visited)) {
+            $visited[] = $blocKey;
+            $this->visited_blocs = $visited;
+            $this->save();
+        }
+    }
+
+    /**
+     * Vérifie si un bloc fait partie des blocs ciblés (ou si tous les blocs sont autorisés).
+     */
+    public function isBlocTargeted(string $blocKey): bool
+    {
+        return is_null($this->target_blocs) || in_array($blocKey, $this->target_blocs);
+    }
+
+    /**
+     * Réinitialise la progression des blocs (utile pour relancer une évaluation).
+     */
+    public function resetBlocTracking(): void
+    {
+        $this->visited_blocs = [];
+        $this->current_bloc = null;
+        $this->save();
+    }
+
 }
