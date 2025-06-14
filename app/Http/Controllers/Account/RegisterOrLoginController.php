@@ -33,6 +33,7 @@ public function __invoke(Request $request)
         return response()->json([
             'status' => 'login_required',
             'message' => 'PIN requis pour se connecter',
+            'account_id' => $account->id
         ]);
     }
 
