@@ -21,6 +21,7 @@ Route::group(['prefix' => 'account'], function () {
     Route::post('/',RegisterOrLoginController::class);
     Route::post('/anonymous', AnonymousAuthController::class);
     Route::post('/pincode', SetPinCodeController::class);
+    Route::post('/verify_pin', [SetPinCodeController::class, 'verifyPin']);
     Route::post('/request-reset', [SetPinCodeController::class, 'requestReset']);
     Route::post('/confirm-reset', [SetPinCodeController::class, 'confirmReset']);
 

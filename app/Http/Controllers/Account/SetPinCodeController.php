@@ -44,6 +44,43 @@ class SetPinCodeController extends Controller
         ]);
     }
 
+    /**
+     * Verify the PIN code for an account.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyPin(Request $request)
+    {
+        $request->validate([
+            'account_id' => 'required|exists:accounts,id',
+            'pin_code' => 'required|string|min:4|max:6',
+        ]);
+
+        $account = Account::find($request->account_id);
+
+        if (!$account->pin_code) {
+            return response()->json(['message' => 'Aucun code PIN défini pour ce compte.'], 400);
+        }
+
+        if (!\Hash::check($request->pin_code, $account->pin_code)) {
+            return response()->json(['message' => 'Code PIN incorrect'], 403);
+        }
+
+        $token = $account->createToken('account-token')->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'account' => [
+                'id' => $account->id,
+                'phone' => $account->phone,
+                'type' => $account->type,
+                'is_active' => $account->is_active,
+                'is_anonymous' => $account->is_anonymous,
+            ]
+        ]);
+    }
+
 
     /**
      * Request a PIN reset for an account.
