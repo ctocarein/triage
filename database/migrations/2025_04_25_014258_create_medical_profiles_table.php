@@ -22,7 +22,10 @@ return new class extends Migration {
             $table->boolean('family_cancer_history')->default(false);
             $table->date('last_screening_date')->nullable();
             $table->string('screening_type')->nullable();
-            $table->string('allergies')->nullable();
+            $table->boolean('has_breast_cancer')->default(false);
+            $table->boolean('has_ovarian_cancer')->default(false);
+            $table->boolean('has_cervical_cancer')->default(false);
+            $table->boolean('has_other_cancer')->default(false);
 
             // 🩺 Vie sexuelle & gynécologique
             $table->integer('first_sexual_intercourse_age')->nullable();

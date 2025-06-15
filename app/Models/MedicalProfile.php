@@ -12,6 +12,10 @@ class MedicalProfile extends Model
     protected $fillable = [
         'cmu_number',
         'account_id',
+        'has_breast_cancer',
+        'has_ovarian_cancer',
+        'has_cervical_cancer',
+        'has_other_cancer',
         'height',
         'weight',
         'blood_type',
