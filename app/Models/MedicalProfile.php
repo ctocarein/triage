@@ -30,6 +30,7 @@ class MedicalProfile extends Model
         'exposed_to_smoke',
         'exposure_type',
         'notes',
+        'allergies',
     ];
 
     protected $casts = [

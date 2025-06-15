@@ -22,6 +22,7 @@ return new class extends Migration {
             $table->boolean('family_cancer_history')->default(false);
             $table->date('last_screening_date')->nullable();
             $table->string('screening_type')->nullable();
+            $table->string('allergies')->nullable();
 
             // 🩺 Vie sexuelle & gynécologique
             $table->integer('first_sexual_intercourse_age')->nullable();
@@ -30,6 +31,14 @@ return new class extends Migration {
             $table->integer('number_of_abortions')->nullable();
             $table->integer('number_of_children')->nullable();
 
+            // 📏 Données biométriques
+            $table->string('cmu_number')->nullable(); // Numéro de CMU
+            $table->float('height')->nullable(); // Taille en cm    
+            $table->float('weight')->nullable(); // Poids en kg
+            $table->string('blood_type')->nullable(); // Groupe sanguin
+            $table->string('allergies')->nullable(); // Allergies
+    
+            
             // 🌫️ Exposition environnementale
             $table->boolean('exposed_to_smoke')->default(false);
             $table->string('exposure_type')->nullable();

@@ -69,6 +69,13 @@ class MobileBoardService
             'col' => $col,
             'reports' => $reports,
             'capsules' => $capsules,
+            'profile' => $profileData ? [
+                'id' => $profileData->id,
+                'first_name' => $profileData->first_name,
+                'age' => $age,
+                'menopause_status' => $medical?->menopause_status,
+                'cycle_regular' => $medical?->cycle_regular,
+            ] : null,
         ];
     }
 }
