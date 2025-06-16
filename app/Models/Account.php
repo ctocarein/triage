@@ -53,4 +53,58 @@ class Account extends Authenticatable
     public function isType(string $type): bool {
         return $this->type === $type;
     }
+
+     /**
+     * Vérifie si l'utilisateur a déjà complété au moins une évaluation complète.
+     */
+    public function hasCompletedFullEvaluation(): bool
+    {
+        return $this->evaluationSessions()
+            ->where('type', 'complete')
+            ->where('status', 'completed')
+            ->exists();
+    }
+
+    /**
+     * Récupère la session complète en cours (si elle existe).
+     */
+    public function getInProgressFullEvaluation(): ?EvaluationSession
+    {
+        return $this->evaluationSessions()
+            ->where('type', 'complete')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+    }
+
+    /**
+     * Vérifie si une session thématique peut être lancée.
+     */
+    public function canStartThematicEvaluation(): bool
+    {
+        return $this->hasCompletedFullEvaluation() && !$this->getInProgressFullEvaluation();
+    }
+
+    /**
+     * Retourne la dernière évaluation complète terminée (ou null si aucune).
+     */
+    public function lastCompletedFullEvaluation(): ?EvaluationSession
+    {
+        return $this->evaluationSessions()
+            ->where('type', 'complete')
+            ->where('status', 'completed')
+            ->orderByDesc('completed_at')
+            ->first();
+    }
+
+    /**
+     * Doit-on suggérer une nouvelle évaluation complète ?
+     * Par exemple, tous les 6 mois.
+     */
+    public function shouldSuggestFullEvaluation(int $months = 6): bool
+    {
+        $last = $this->lastCompletedFullEvaluation();
+        if (!$last) return true;
+        return now()->diffInMonths($last->completed_at) >= $months;
+    }
 }

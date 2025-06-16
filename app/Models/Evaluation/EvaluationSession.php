@@ -11,9 +11,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class EvaluationSession extends Model
 {
     use HasFactory;
-
-    protected $fillable = [
-        'account_id', 'status', 'context', 'score', 'started_at', 'completed_at', 'current_question_id','is_completed'
+   protected $fillable = [
+        'account_id',
+        'status',
+        'context',
+        'score',
+        'started_at',
+        'completed_at',
+        'current_question_id',
+        'is_completed',
+        'type',
+        'target_blocs',
+        'visited_blocs',
     ];
 
     protected $casts = [
@@ -35,6 +44,13 @@ class EvaluationSession extends Model
     public function isInProgress(): bool{return $this->status === 'in_progress';}
     // Scopes
     public function scopeCompleted($query) {return $query->where('status', 'completed');}
+
+    public function scopeFullEvaluation($query) { return $query->where('type', 'complete'); }
+    public function scopeThematic($query) { return $query->where('type', 'thematic'); }
+    public function isFullEvaluation(): bool { return $this->type === 'complete'; }
+    public function isThematic(): bool { return $this->type === 'thematic'; }
+
+    public static function availableTypes(): array { return ['complete', 'thematic']; }
 
         /**
      * Vérifie si un bloc a déjà été visité.
@@ -75,5 +91,15 @@ class EvaluationSession extends Model
         $this->current_bloc = null;
         $this->save();
     }
+
+    public function markCompleted(): void
+    {
+        $this->update([
+            'is_completed' => true,
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+    }
+
 
 }

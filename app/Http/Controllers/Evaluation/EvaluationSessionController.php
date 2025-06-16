@@ -29,31 +29,43 @@ class EvaluationSessionController extends Controller
     /**
      * 🆕 Démarrer une nouvelle session d’évaluation
      */
-    public function start(Request $request, QuestionFlowService $flow)
+  public function start(Request $request, QuestionFlowService $flow)
     {
         $account = $request->user();
+        $type = $request->input('type', 'complete');
 
-        // Vérifie s’il y a déjà une session active
-        $existing = $account->activeEvaluationSession();
-        if ($existing) {
+        // Refuse une thématique sans complète terminée
+        if ($type !== 'complete' && !$account->hasCompletedFullEvaluation()) {
             return response()->json([
-                'message' => 'Une session est déjà en cours.',
-                'session' => $existing,
-                'question' => $existing->currentQuestion,
-            ]);
+                'message' => 'Merci de compléter une évaluation complète avant d\'accéder aux évaluations thématiques.'
+            ], 403);
         }
 
-        // ➕ Crée la session
+        // Refuse toute création si une complète est en cours
+        $inProgressFull = $account->getInProgressFullEvaluation();
+        if ($inProgressFull && $type !== 'complete') {
+            return response()->json([
+                'message' => 'Vous avez une évaluation complète en cours. Veuillez la terminer avant de continuer.',
+                'session_id' => $inProgressFull->id
+            ], 403);
+        }
+        if ($type === 'complete' && $inProgressFull) {
+            return response()->json([
+                'message' => 'Vous avez déjà une évaluation complète en cours. Veuillez la terminer.',
+                'session_id' => $inProgressFull->id
+            ], 403);
+        }
+
+        // Crée la session avec le type explicitement
         $session = $account->evaluationSessions()->create([
             'status' => 'in_progress',
+            'type' => $type,
             'started_at' => now(),
             'context' => $request->input('context', []),
-            'target_blocs' => $request->input('bloc_keys', null), // tableau facultatif
+            'target_blocs' => $request->input('bloc_keys', null),
         ]);
 
-        // 🧭 Première question selon la logique des blocs
         $firstQuestion = $flow->goToNextQuestion($session);
-
         if ($firstQuestion) {
             $session->update(['current_question_id' => $firstQuestion->id]);
         }
@@ -64,6 +76,7 @@ class EvaluationSessionController extends Controller
             'question' => $firstQuestion,
         ], 201);
     }
+
 
     /**
      * ▶️ Aller à la prochaine question

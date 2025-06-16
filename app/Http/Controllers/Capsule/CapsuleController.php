@@ -21,16 +21,16 @@ class CapsuleController extends Controller
         $capsules = Capsule::with('items')
             ->where('is_active', true)
             ->where('published_at', '<=', now())
-            ->when($age, fn($q) =>
-                $q->where(function ($q) use ($age) {
-                    $q->whereNull('target_age_min')->orWhere('target_age_min', '<=', $age);
-                })->where(function ($q) use ($age) {
-                    $q->whereNull('target_age_max')->orWhere('target_age_max', '>=', $age);
-                })
-            )
-            ->where(function ($q) use ($profile) {
-                $q->where('audience_profile', 'all')->orWhere('audience_profile', $profile);
-            })
+            // ->when($age, fn($q) =>
+            //     $q->where(function ($q) use ($age) {
+            //         $q->whereNull('target_age_min')->orWhere('target_age_min', '<=', $age);
+            //     })->where(function ($q) use ($age) {
+            //         $q->whereNull('target_age_max')->orWhere('target_age_max', '>=', $age);
+            //     })
+            // )
+            // ->where(function ($q) use ($profile) {
+            //     $q->where('audience_profile', 'all')->orWhere('audience_profile', $profile);
+            // })
             ->orderByDesc('sponsor_priority')
             ->latest('published_at')
             ->take(10)

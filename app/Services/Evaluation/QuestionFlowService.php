@@ -47,8 +47,13 @@ class QuestionFlowService
         $context = $this->getSessionContext($session);
         $blocs = $this->getAllTemplates()->pluck('bloc_key')->filter()->unique();
 
-        if (!empty($session->target_blocs)) {
+        // Sélectionne vraiment les blocs selon le type de session
+        if ($session->type === 'thematic' && !empty($session->target_blocs)) {
             $blocs = $blocs->filter(fn($b) => in_array($b, $session->target_blocs));
+        }
+        // Pour une complète, ignore tout filtrage accidentel
+        if ($session->type === 'complete') {
+            // $session->update(['target_blocs' => null]); // optionnel : nettoyage
         }
 
         foreach ($blocs as $blocKey) {
@@ -57,23 +62,24 @@ class QuestionFlowService
                 $session->addVisitedBloc($blocKey);
                 continue;
             }
-
             $question = $this->getAllTemplates()
                 ->where('bloc_key', $blocKey)
-                ->first(fn($q) => !in_array($q->id, $context['answeredIds']) && $this->shouldBeVisible($q, $context['answers'], $context['profile']));
-
+                ->first(fn($q) =>
+                    !in_array($q->id, $context['answeredIds']) &&
+                    $this->shouldBeVisible($q, $context['answers'], $context['profile'])
+                );
             if ($question) {
                 $session->current_bloc = $blocKey;
                 $session->save();
                 return $question;
-            } else {
-                $session->addVisitedBloc($blocKey);
             }
+            $session->addVisitedBloc($blocKey);
         }
 
-        $session->update(['is_completed' => true]);
+        $session->markCompleted(); // Utilise la méthode centralisée
         return null;
     }
+
 
     public function getNextQuestions(EvaluationSession $session): array
     {
