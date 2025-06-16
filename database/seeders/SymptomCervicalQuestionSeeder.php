@@ -10,13 +10,15 @@ class SymptomCervicalQuestionSeeder extends Seeder
 {
     public function run(): void
     {
-        $group = QuestionGroup::where('key', 'symptom_cervix')->firstOrFail();
+        // On récupère le sous-groupe (saignement_anormal) ou le groupe principal
+        $subGroup = QuestionGroup::where('key', 'saignement_anormal')->first();
+        $group = $subGroup ?? QuestionGroup::where('key', 'symptom_cervix')->firstOrFail();
 
         $questions = [
             [
                 'key' => 'cervical_bleeding',
                 'bloc_key' => 'saignement_anormal',
-                'text' => 'Avez-vous des saignements vaginaux anormaux ?',
+                'text' => '🩸 Avez-vous des saignements vaginaux anormaux ?',
                 'type' => 'boolean',
                 'answer_target' => 'evaluation',
                 'risk_weight' => 4,
@@ -26,7 +28,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
             [
                 'key' => 'cervical_bleeding_postmenopausal',
                 'bloc_key' => 'saignement_anormal',
-                'text' => 'Ces saignements surviennent-ils après la ménopause ?',
+                'text' => '🌸 Ces saignements surviennent-ils après la ménopause ?',
                 'type' => 'boolean',
                 'answer_target' => 'evaluation',
                 'risk_weight' => 5,
@@ -39,7 +41,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
             [
                 'key' => 'cervical_bleeding_intercourse',
                 'bloc_key' => 'saignement_anormal',
-                'text' => 'Les saignements se produisent-ils après un rapport sexuel ?',
+                'text' => '❤️ Les saignements se produisent-ils après un rapport sexuel ?',
                 'type' => 'boolean',
                 'answer_target' => 'evaluation',
                 'risk_weight' => 3,
@@ -51,7 +53,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
             [
                 'key' => 'cervical_bleeding_duration',
                 'bloc_key' => 'saignement_anormal',
-                'text' => 'Depuis combien de temps observez-vous ces saignements ?',
+                'text' => '⏳ Depuis combien de temps observez-vous ces saignements ?',
                 'type' => 'select_one',
                 'options' => ['Moins d’une semaine', '1-4 semaines', '1-3 mois', 'Plus de 3 mois'],
                 'answer_target' => 'evaluation',
@@ -65,7 +67,10 @@ class SymptomCervicalQuestionSeeder extends Seeder
 
         foreach ($questions as $q) {
             DynamicQuestionTemplate::updateOrCreate(
-                ['key' => $q['key']],
+                [
+                    'key' => $q['key'],
+                    'answer_target' => $q['answer_target'],
+                ],
                 [
                     'question_group_id' => $group->id,
                     'text' => $q['text'],
@@ -78,8 +83,6 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     'order' => $q['order'] ?? 0,
                     'is_required' => true,
                     'is_entry_point' => $q['is_entry_point'] ?? false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
                 ]
             );
         }

@@ -10,13 +10,16 @@ class SymptomBreastQuestionSeeder extends Seeder
 {
     public function run(): void
     {
-        $group = QuestionGroup::where('key', 'symptom_breast')->firstOrFail();
+        // On récupère le SOUS-groupe douleur_sein pour lier les questions
+        $subGroup = QuestionGroup::where('key', 'douleur_sein')->first();
+        // Fallback sur le groupe principal si besoin
+        $group = $subGroup ?? QuestionGroup::where('key', 'symptom_breast')->firstOrFail();
 
         $questions = [
             [
                 'key' => 'breast_pain',
                 'bloc_key' => 'douleur_sein',
-                'text' => 'Avez-vous des douleurs au sein ?',
+                'text' => '😣 Avez-vous des douleurs au sein ?',
                 'type' => 'boolean',
                 'answer_target' => 'evaluation',
                 'is_entry_point' => true,
@@ -26,7 +29,7 @@ class SymptomBreastQuestionSeeder extends Seeder
             [
                 'key' => 'breast_pain_cycle',
                 'bloc_key' => 'douleur_sein',
-                'text' => 'Cette douleur est-elle liée à votre cycle menstruel ?',
+                'text' => '🩸 Cette douleur est-elle liée à votre cycle menstruel ?',
                 'type' => 'select_one',
                 'options' => ['Oui', 'Non', 'Je suis ménopausée', 'Je ne sais pas'],
                 'answer_target' => 'evaluation',
@@ -40,7 +43,7 @@ class SymptomBreastQuestionSeeder extends Seeder
             [
                 'key' => 'breast_pain_location',
                 'bloc_key' => 'douleur_sein',
-                'text' => 'Où ressentez-vous cette douleur ?',
+                'text' => '📍 Où ressentez-vous cette douleur ?',
                 'type' => 'select_one',
                 'options' => ['Sein gauche', 'Sein droit', 'Les deux', 'Autre'],
                 'answer_target' => 'evaluation',
@@ -54,7 +57,10 @@ class SymptomBreastQuestionSeeder extends Seeder
 
         foreach ($questions as $q) {
             DynamicQuestionTemplate::updateOrCreate(
-                ['key' => $q['key']],
+                [
+                    'key' => $q['key'],
+                    'answer_target' => $q['answer_target'],
+                ],
                 [
                     'question_group_id' => $group->id,
                     'text' => $q['text'],
@@ -67,8 +73,6 @@ class SymptomBreastQuestionSeeder extends Seeder
                     'order' => $q['order'] ?? 0,
                     'is_entry_point' => $q['is_entry_point'] ?? false,
                     'is_required' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
                 ]
             );
         }

@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('key')->unique();         // Clé d'identification logique
             $table->string('label');                // Nom affiché
+            $table->string('parent_key')->nullable()->index(); // Clé du parent pour hiérarchie
             $table->string('icon')->nullable();     // Pour l'affichage frontend
             $table->string('color')->nullable();    // Pour UI
             $table->text('description')->nullable();
