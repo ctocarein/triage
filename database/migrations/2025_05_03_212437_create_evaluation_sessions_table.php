@@ -23,7 +23,7 @@ return new class extends Migration
             $table->enum('status', ['in_progress', 'completed', 'cancelled'])->default('in_progress');
 
             // Données de suivi
-            $table->string('type')->default('complete')->after('status')->index();
+            $table->string('type')->default('complete');
             $table->string('context')->nullable();        // Ex: "col_de_l_uterus", "sein"
             $table->string('risk_level')->nullable();     // Risque global (léger/modéré/élevé)
             $table->unsignedInteger('score')->default(0); // Score total
