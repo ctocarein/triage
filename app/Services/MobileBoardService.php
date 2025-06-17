@@ -28,22 +28,28 @@ class MobileBoardService
             
              $capsules = Capsule::with('items')
             ->where('is_active', true)
-            ->where('published_at', '<=', now())
-            ->when($age, fn($q) =>
-                $q->where(function ($q) use ($age) {
-                    $q->whereNull('target_age_min')->orWhere('target_age_min', '<=', $age);
-                })->where(function ($q) use ($age) {
-                    $q->whereNull('target_age_max')->orWhere('target_age_max', '>=', $age);
-                })
-            )
-            ->where(function ($q) use ($profile) {
-                $q->where('audience_profile', 'all')->orWhere('audience_profile', $profile);
-            })
+            // ->where('published_at', '<=', now())
+            // ->when($age, fn($q) =>
+            //     $q->where(function ($q) use ($age) {
+            //         $q->whereNull('target_age_min')->orWhere('target_age_min', '<=', $age);
+            //     })->where(function ($q) use ($age) {
+            //         $q->whereNull('target_age_max')->orWhere('target_age_max', '>=', $age);
+            //     })
+            // )
+            // ->where(function ($q) use ($profile) {
+            //     $q->where('audience_profile', 'all')->orWhere('audience_profile', $profile);
+            // })
             ->orderByDesc('sponsor_priority')
             ->latest('published_at')
             ->take(6)
             ->get();
  
+            //Evaluation Status
+        $hasCompletedFull = $account->evaluationSessions()
+            ->where('type', 'complete')
+            ->where('status', 'completed')
+            ->exists();
+
 
         // ✅ Profils
         $profileData = $account->personalProfile;
@@ -75,6 +81,7 @@ class MobileBoardService
                 'age' => $age,
                 'menopause_status' => $medical?->menopause_status,
             ] : null,
+            'has_completed_full' => $hasCompletedFull,
         ];
     }
 }
