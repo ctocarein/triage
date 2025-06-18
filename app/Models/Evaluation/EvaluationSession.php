@@ -2,6 +2,7 @@
 
 namespace App\Models\Evaluation;
 
+use App\Models\Report;
 use App\Models\Account;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Evaluation\EvaluationAnswer;

@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Evaluation;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Evaluation\DynamicQuestionTemplate;
+use App\Models\Evaluation\QuestionGroup;
+use App\Services\ReportGenerationService;
 use App\Models\Evaluation\EvaluationSession;
 use App\Services\Evaluation\QuestionFlowService;
-use App\Services\ReportGenerationService;
+use App\Models\Evaluation\DynamicQuestionTemplate;
 
 class EvaluationSessionController extends Controller
 {
@@ -16,15 +17,39 @@ class EvaluationSessionController extends Controller
      */
     public function index(Request $request)
     {
-        $sessions = $request->user()
-            ->evaluationSessions()
-            ->withCount('answers')
-            ->with('report')
-            ->latest()
-            ->get();
+        $query = $request->user()->evaluationSessions()->withCount('answers')->with('report')->latest();
+
+        if ($status = $request->input('status')) $query->where('status', $status);
+        if ($type = $request->input('type')) $query->where('type', $type);
+
+        $groupLabels = QuestionGroup::pluck('label', 'key');
+
+        $sessions = $query->get()->map(function ($session) use ($groupLabels) {
+            $thematics = $session->target_blocs
+                ? collect($session->target_blocs)->map(fn($k) => $groupLabels[$k] ?? $k)->toArray()
+                : null;
+            return [
+                'id' => $session->id,
+                'type' => $session->type,
+                'status' => $session->status,
+                'started_at' => $session->started_at,
+                'completed_at' => $session->completed_at,
+                'target_blocs' => $session->target_blocs,
+                'thematics' => $thematics,
+                'title' => $session->type === 'complete'
+                                ? "Évaluation complète"
+                                : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
+                'answers_count' => $session->answers_count ?? $session->answers()->count(),
+                'title' => $session->type === 'complete'
+                    ? "Évaluation complète"
+                    : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
+                'report_id' => $session->report->id ?? null,
+            ];
+        });
 
         return response()->json($sessions);
     }
+
 
     /**
      * 🆕 Démarrer une nouvelle session d’évaluation

@@ -69,6 +69,40 @@ class MobileBoardService
         ->take(5)
         ->get();
 
+        // ✅ Liste des recentes évaluations
+
+        $query = $request->user()->evaluationSessions()->withCount('answers')->with('report')->take(3)->latest();
+
+        if ($status = $request->input('status')) $query->where('status', $status);
+        if ($type = $request->input('type')) $query->where('type', $type);
+
+        $groupLabels = QuestionGroup::pluck('label', 'key');
+
+        $sessions = $query->get()->map(function ($session) use ($groupLabels) {
+            $thematics = $session->target_blocs
+                ? collect($session->target_blocs)->map(fn($k) => $groupLabels[$k] ?? $k)->toArray()
+                : null;
+            return [
+                'id' => $session->id,
+                'type' => $session->type,
+                'status' => $session->status,
+                'started_at' => $session->started_at,
+                'completed_at' => $session->completed_at,
+                'target_blocs' => $session->target_blocs,
+                'thematics' => $thematics,
+                'title' => $session->type === 'complete'
+                                ? "Évaluation complète"
+                                : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
+                'answers_count' => $session->answers_count ?? $session->answers()->count(),
+                'title' => $session->type === 'complete'
+                    ? "Évaluation complète"
+                    : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
+                'report_id' => $session->report->id ?? null,
+            ];
+        });
+
+
+
         return [
             'mammo' => $mammo,
             'palpation' => $palpation,
@@ -82,6 +116,7 @@ class MobileBoardService
                 'menopause_status' => $medical?->menopause_status,
             ] : null,
             'has_completed_full' => $hasCompletedFull,
+            'recent_sessions' => $sessions,
         ];
     }
 }
