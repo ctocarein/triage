@@ -76,31 +76,34 @@ class MobileBoardService
         if ($status = $request->input('status')) $query->where('status', $status);
         if ($type = $request->input('type')) $query->where('type', $type);
 
+        // Récupération des labels de groupes de questions
+        // ✅ Récupération des labels de groupes de questions
         $groupLabels = QuestionGroup::pluck('label', 'key');
-
-        $sessions = $query->get()->map(function ($session) use ($groupLabels) {
-            $thematics = $session->target_blocs
-                ? collect($session->target_blocs)->map(fn($k) => $groupLabels[$k] ?? $k)->toArray()
-                : null;
-            return [
-                'id' => $session->id,
-                'type' => $session->type,
-                'status' => $session->status,
-                'started_at' => $session->started_at,
-                'completed_at' => $session->completed_at,
-                'target_blocs' => $session->target_blocs,
-                'thematics' => $thematics,
-                'title' => $session->type === 'complete'
-                                ? "Évaluation complète"
-                                : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
-                'answers_count' => $session->answers_count ?? $session->answers()->count(),
-                'title' => $session->type === 'complete'
-                    ? "Évaluation complète"
-                    : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
-                'report_id' => $session->report->id ?? null,
-            ];
-        });
-
+        $sessions = $account->evaluationSessions()
+            ->withCount('answers')
+            ->with('report')
+            ->latest()
+            ->take(3)
+            ->get()
+            ->map(function ($session) use ($groupLabels) {
+                $thematics = $session->target_blocs
+                    ? collect($session->target_blocs)->map(fn($k) => $groupLabels[$k] ?? $k)->toArray()
+                    : null;
+                return [
+                    'id' => $session->id,
+                    'type' => $session->type,
+                    'status' => $session->status,
+                    'started_at' => $session->started_at,
+                    'completed_at' => $session->completed_at,
+                    'target_blocs' => $session->target_blocs,
+                    'thematics' => $thematics,
+                    'title' => $session->type === 'complete'
+                        ? "Évaluation complète"
+                        : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
+                    'answers_count' => $session->answers_count ?? $session->answers()->count(),
+                    'report_id' => $session->report->id ?? null,
+                ];
+            });
 
 
         return [
