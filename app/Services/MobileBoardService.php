@@ -71,7 +71,7 @@ class MobileBoardService
 
         // ✅ Liste des recentes évaluations
 
-        $query = $request->user()->evaluationSessions()->withCount('answers')->with('report')->take(3)->latest();
+        $query = $account->evaluationSessions()->withCount('answers')->with('report')->take(3)->latest();
 
         if ($status = $request->input('status')) $query->where('status', $status);
         if ($type = $request->input('type')) $query->where('type', $type);
