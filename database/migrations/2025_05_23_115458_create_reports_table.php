@@ -4,24 +4,26 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateReportsTable extends Migration
 {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-       Schema::create('reports', function (Blueprint $table) {
+        Schema::create('reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('account_id')->constrained(); // Cette ligne doit exister
+
+            // Relations principales
+            $table->foreignId('account_id')->constrained()->onDelete('cascade');
             $table->foreignId('evaluation_session_id')->constrained()->onDelete('cascade');
+            $table->foreignId('decision_path_id')->nullable()->constrained()->onDelete('set null');
 
-            $table->unsignedInteger('score')->default(0);
-            $table->enum('risk_level', ['low', 'moderate', 'high'])->default('low');
-            $table->text('recommendation')->nullable();
+            // Données du rapport
+            $table->integer('score')->default(0);
+            $table->string('risk_level', 24);
+            $table->text('recommendation'); // Pour JSON, voir plus bas
             $table->json('summary')->nullable();
-
-            $table->foreignId('decision_path_id')->nullable()->constrained()->nullOnDelete();
 
             $table->timestamps();
         });
@@ -34,4 +36,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('reports');
     }
-};
+}

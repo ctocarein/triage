@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Evaluation;
 
 use App\Models\Evaluation\EvaluationSession;
@@ -7,6 +8,12 @@ use App\Models\DecisionPath;
 
 class ReportGenerationService
 {
+    /**
+     * Génère et persiste un rapport à partir d'une session d'évaluation.
+     *
+     * @param EvaluationSession $session
+     * @return Report
+     */
     public function generate(EvaluationSession $session): Report
     {
         $answers = $session->answers()->with('question')->get();
@@ -19,7 +26,7 @@ class ReportGenerationService
                 $score += $answer->question->risk_weight;
                 $summary[] = [
                     'question' => $answer->question->key,
-                    'value' => $answer->value
+                    'value'    => $answer->value,
                 ];
             }
         }
@@ -28,21 +35,31 @@ class ReportGenerationService
         $risk_level = match (true) {
             $score >= 20 => 'high',
             $score >= 10 => 'moderate',
-            default => 'low',
+            default      => 'low',
         };
+
+        // Recommandations par défaut si pas de chemin trouvé
+        $defaultRecommendations = [
+            'high'     => 'Veuillez consulter un spécialiste rapidement.',
+            'moderate' => 'Un contrôle médical est recommandé.',
+            'low'      => 'Continuez la surveillance régulière.',
+        ];
 
         // Chercher un chemin de décision correspondant (optionnel)
         $decisionPath = DecisionPath::where('risk_level', $risk_level)->first();
 
+        // Utiliser la recommandation du DecisionPath si disponible, sinon fallback
+        $recommendation = $decisionPath->recommendation ?? $defaultRecommendations[$risk_level];
+
+        // Créer le rapport (en liant au compte et à la session)
         return Report::create([
-            'evaluation_session_id' => $session->id,
-            'score' => $score,
-            'risk_level' => $risk_level,
-            'recommendation' => $decisionPath->recommendation ?? 'Veuillez consulter un médecin.',
-            'decision_path_id' => $decisionPath?->id,
-            'summary' => $summary,
+            'account_id'             => $session->account_id,
+            'evaluation_session_id'  => $session->id,
+            'score'                  => $score,
+            'risk_level'             => $risk_level,
+            'recommendation'         => $recommendation,
+            'decision_path_id'       => $decisionPath?->id,
+            'summary'                => $summary,
         ]);
     }
 }
-
-
