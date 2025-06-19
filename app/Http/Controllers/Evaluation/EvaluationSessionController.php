@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Evaluation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Evaluation\QuestionGroup;
-use App\Services\ReportGenerationService;
 use App\Models\Evaluation\EvaluationSession;
 use App\Services\Evaluation\QuestionFlowService;
 use App\Models\Evaluation\DynamicQuestionTemplate;
+use App\Services\Evaluation\ReportGenerationService;
 
 class EvaluationSessionController extends Controller
 {
@@ -151,64 +151,69 @@ class EvaluationSessionController extends Controller
     /**
      * ✅ Terminer manuellement une session et générer son rapport
      */
-   public function complete(
-    EvaluationSession $session,
-    ReportGenerationService $reportService,
-    QuestionFlowService $flow) 
+  /**
+ * Terminer une session et générer le rapport associé.
+ */
+    public function complete(
+        EvaluationSession $session,
+        ReportGenerationService $reportService,
+        QuestionFlowService $flow
+    ) 
     {
-    // Vérification : la session appartient bien à l'utilisateur connecté
-            $user = auth()->user();
-            if ($session->account_id !== ($user->account_id ?? $user->account->id ?? null)) {
-                return response()->json([
-                    'message' => "Accès interdit à cette session."
-                ], 403);
-            }
+        $account = auth()->user();
 
-            // Idempotence : si déjà complétée, retourne le rapport existant
-            if ($session->status === 'completed') {
-                $report = $session->report;
-                return response()->json([
-                    'message'      => 'Cette session est déjà complétée.',
-                    'report_id'    => $report->id ?? null,
-                    'recommendation' => $report->recommendation ?? null,
-                    'risk_level'   => $report->risk_level ?? null,
-                    'score'        => $report->score ?? null,
-                    'created_at'   => $report->created_at ?? null,
-                ]);
-            }
-
-            // Transaction : pour cohérence (session + rapport)
-            \DB::beginTransaction();
-            try {
-                $session->update([
-                    'status'       => 'completed',
-                    'completed_at' => now(),
-                ]);
-
-                // Génération du rapport
-                $report = $reportService->generate($session);
-
-                // Calcul des détails (optionnel)
-                $scoreDetails = $flow->evaluateGlobalRisk($session);
-
-                \DB::commit();
-
-                return response()->json([
-                    'message'        => 'Session complétée avec succès.',
-                    'report_id'      => $report->id,
-                    'recommendation' => $report->recommendation,
-                    'risk_level'     => $report->risk_level,
-                    'score'          => $report->score,
-                    'created_at'     => $report->created_at,
-                    'score_details'  => $scoreDetails, // Données enrichies, adaptables selon besoin front
-                ], 201);
-            } catch (\Throwable $e) {
-                \DB::rollBack();
-                return response()->json([
-                    'message' => "Erreur lors de la complétion de la session : " . $e->getMessage()
-                ], 500);
-            }
+        // Vérifier que la session appartient bien à l'utilisateur connecté
+        if ($session->account_id !== ($account->id ?? null)) {
+            return response()->json([
+                'message' => "Accès interdit à cette session."
+            ], 403);
         }
+
+        // Idempotence : retourne le rapport s'il existe déjà
+        if ($session->status === 'completed') {
+            $report = $session->report; // doit exister une relation report() sur EvaluationSession
+            return response()->json([
+                'message'        => 'Cette session est déjà complétée.',
+                'report_id'      => $report->id ?? null,
+                'recommendation' => $report->recommendation ?? null,
+                'risk_level'     => $report->risk_level ?? null,
+                'score'          => $report->score ?? null,
+                'created_at'     => $report->created_at ?? null,
+            ]);
+        }
+
+        // Transaction pour cohérence
+        \DB::beginTransaction();
+        try {
+            $session->update([
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            // Générer le rapport
+            $report = $reportService->generate($session);
+
+            // Calculer les détails du score si nécessaire
+            $scoreDetails = $flow->evaluateGlobalRisk($session);
+
+            \DB::commit();
+
+            return response()->json([
+                'message'        => 'Session complétée avec succès.',
+                'report_id'      => $report->id,
+                'recommendation' => $report->recommendation,
+                'risk_level'     => $report->risk_level,
+                'score'          => $report->score,
+                'created_at'     => $report->created_at,
+                'score_details'  => $scoreDetails,
+            ], 201);
+        } catch (\Throwable $e) {
+            \DB::rollBack();
+            return response()->json([
+                'message' => "Erreur lors de la complétion de la session : " . $e->getMessage()
+            ], 500);
+        }
+    }
 
 
     /**

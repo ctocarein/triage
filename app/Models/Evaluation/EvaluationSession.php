@@ -37,8 +37,8 @@ class EvaluationSession extends Model
 
     // Relations
     public function account() { return $this->belongsTo(Account::class); }
-    public function answers() { return $this->hasMany(EvaluationAnswer::class); }
-    public function report() { return $this->hasOne(Report::class); }
+    public function answers() { return $this->hasMany(EvaluationAnswer::class,'evaluation_session_id'); }
+    public function report() { return $this->hasOne(Report::class,'evaluation_session_id'); }
     public function questions() { return $this->belongsToMany(DynamicQuestionTemplate::class, 'evaluation_answers'); }
     public function currentQuestion(){ return $this->belongsTo(DynamicQuestionTemplate::class, 'current_question_id');}
     public function scopeInProgress($query){return $query->where('status', 'in_progress');}

@@ -93,11 +93,49 @@ class ReportController extends Controller
             ], 404);
         }
 
+        // Vérifie l'existence d'un rapport
+        $existingReport = $session->report;
+        if ($existingReport) {
+            return response()->json([
+                'data' => $existingReport,
+                'message' => "Un rapport existe déjà pour cette session.",
+            ], 200);
+        }
+
         // Génération du rapport via le service dédié
         $report = $this->reportGenerationService->generate($session);
 
         return response()->json([
             'data' => $report,
+            'message' => "Rapport généré avec succès.",
         ], 201);
+    }
+    /**
+     * Supprimer un rapport
+     */
+    public function destroy(Request $request, $id)
+    {
+        $user = $request->user();
+        $accountId = $user->account_id ?? $user->account->id ?? null;
+
+        if (!$accountId) {
+            return response()->json([
+                'message' => 'Aucun compte lié à cet utilisateur.'
+            ], 403);
+        }
+
+        $report = Report::where('account_id', $accountId)->find($id);
+        if (!$report) {
+            return response()->json([
+                'message' => 'Rapport non trouvé ou accès interdit.'
+            ], 404);
+        }
+
+        // Suppression du rapport
+        $report->delete();
+
+        return response()->json([
+            'message' => 'Rapport supprimé avec succès.',
+        ]);
     }
 }

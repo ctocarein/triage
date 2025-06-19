@@ -13,17 +13,24 @@ class ReportGenerationService
      *
      * @param EvaluationSession $session
      * @return Report
+     * @throws \Exception
      */
     public function generate(EvaluationSession $session): Report
     {
+        if (!$session) {
+            throw new \Exception("Session d’évaluation introuvable.");
+        }
+
+        // Toujours obtenir une Collection, même vide
         $answers = $session->answers()->with('question')->get();
 
         $score = 0;
         $summary = [];
 
         foreach ($answers as $answer) {
-            if (!$answer->is_skipped && $answer->question) {
-                $score += $answer->question->risk_weight;
+            // Attention : si le cast 'is_skipped' n'est pas booléen, compare à 1/0 ou cast en bool
+            if (empty($answer->is_skipped) && $answer->question) {
+                $score += $answer->question->risk_weight ?? 0;
                 $summary[] = [
                     'question' => $answer->question->key,
                     'value'    => $answer->value,
@@ -49,7 +56,7 @@ class ReportGenerationService
         $decisionPath = DecisionPath::where('risk_level', $risk_level)->first();
 
         // Utiliser la recommandation du DecisionPath si disponible, sinon fallback
-        $recommendation = $decisionPath->recommendation ?? $defaultRecommendations[$risk_level];
+        $recommendation = $decisionPath?->recommendation ?? $defaultRecommendations[$risk_level];
 
         // Créer le rapport (en liant au compte et à la session)
         return Report::create([
