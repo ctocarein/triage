@@ -43,7 +43,7 @@ class EvaluationSessionController extends Controller
                 'title' => $session->type === 'complete'
                     ? "Évaluation complète"
                     : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
-                'report_id' => $session->report->id ?? null,
+                'report' => $session->report->recommendation ?? null,
             ];
         });
 
