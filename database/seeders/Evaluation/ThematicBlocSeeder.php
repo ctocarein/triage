@@ -31,13 +31,13 @@ class ThematicBlocSeeder extends Seeder
                 'question_group_key' => 'symptom_breast_lump',
             ],
             [
-                'key' => 'symptom_cervix_pain',
+                'key' => 'symptom_cervix',
                 'label' => 'Douleurs cervicales',
                 'color' => '#FFB74D',
                 'icon'  => 'alert-triangle',
                 'description' => 'Questions sur les douleurs au col de l’utérus.',
                 'order' => 3,
-                'question_group_key' => 'symptom_cervix_pain',
+                'question_group_key' => 'symptom_cervix',
             ],
             [
                 'key' => 'lifestyle',
@@ -55,7 +55,7 @@ class ThematicBlocSeeder extends Seeder
                 'icon'  => 'users',
                 'description' => 'Questions sur les antécédents familiaux.',
                 'order' => 5,
-                'question_group_key' => 'profil_familial',
+                'question_group_key' => 'profile_personal',
             ],
             // ... Ajoute d’autres blocs selon besoins ...
         ];
