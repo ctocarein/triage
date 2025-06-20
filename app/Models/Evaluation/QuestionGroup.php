@@ -2,7 +2,7 @@
 
 namespace App\Models\Evaluation;
 
-use App\Models\ThematicBloc;
+use App\Models\Evaluation\ThematicBloc;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 

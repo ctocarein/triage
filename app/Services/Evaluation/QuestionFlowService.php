@@ -46,44 +46,67 @@ class QuestionFlowService
     {
         $context = $this->getSessionContext($session);
 
-        // 1️⃣ — On travaille sur les questions actives
-        $allTemplates = $this->getAllTemplates(); // Doit retourner une collection de toutes les questions valides
+        // 1️⃣ — Récupère tous les templates actifs
+        $allTemplates = $this->getAllTemplates();
 
-        // 2️⃣ — Filtrage par groupe si éval thématique
+        // 2️⃣ — Filtrage par groupe si "thematic"
         if ($session->type === 'thematic' && !empty($groupIds)) {
             $allTemplates = $allTemplates->whereIn('question_group_id', $groupIds);
         }
 
-        // 3️⃣ — Filtrage par bloc si fourni (optionnel, pour compat ascendante)
-        if ($session->type === 'thematic' && !empty($session->target_blocs)) {
-            $allTemplates = $allTemplates->whereIn('bloc_key', $session->target_blocs);
-        }
+        // ❗️On retire le filtre bloc_key ici pour éviter de trop restreindre (sauf si tu en as vraiment besoin ET que toutes les questions ont bloc_key)
+        // if ($session->type === 'thematic' && !empty($session->target_blocs)) {
+        //     $allTemplates = $allTemplates->whereIn('bloc_key', $session->target_blocs);
+        // }
 
-        // 4️⃣ — Liste ordonnée des blocs à parcourir (unique)
+        // 3️⃣ — Liste des blocs uniques présents
         $blocs = $allTemplates->pluck('bloc_key')->filter()->unique();
 
+        // 4️⃣ — Boucle sur chaque bloc, cherche la 1ʳᵉ question non répondue et visible
         foreach ($blocs as $blocKey) {
             if ($session->hasVisitedBloc($blocKey)) continue;
             if ($this->shouldSkipBloc($blocKey, $session)) {
                 $session->addVisitedBloc($blocKey);
                 continue;
             }
-            // 5️⃣ — Cherche la 1ère question non répondue et visible de ce bloc
-            $question = $allTemplates
-                ->where('bloc_key', $blocKey)
-                ->first(fn($q) =>
-                    !in_array($q->id, $context['answeredIds']) &&
-                    $this->shouldBeVisible($q, $context['answers'], $context['profile'])
-                );
-            if ($question) {
-                $session->current_bloc = $blocKey;
-                $session->save();
-                return $question;
+
+            // 5️⃣ — On filtre sur les non-répondues, ET la visibilité (mais on LOGUE si aucune question n’est visible)
+            $candidates = $allTemplates->where('bloc_key', $blocKey)
+                ->filter(fn($q) => !in_array($q->id, $context['answeredIds']));
+            
+            if ($candidates->isEmpty()) {
+                \Log::info("Aucune question non répondue dans le bloc $blocKey pour la session #$session->id");
+                $session->addVisitedBloc($blocKey);
+                continue;
             }
-            $session->addVisitedBloc($blocKey);
+
+            $question = $candidates->first(fn($q) =>
+                $this->shouldBeVisible($q, $context['answers'], $context['profile'])
+            );
+
+            if (!$question) {
+                \Log::info("Aucune question visible dans le bloc $blocKey pour la session #$session->id", [
+                    'blocKey' => $blocKey,
+                    'candidates' => $candidates->pluck('id', 'text')->toArray(),
+                    'context' => $context,
+                ]);
+                $session->addVisitedBloc($blocKey);
+                continue;
+            }
+
+            $session->current_bloc = $blocKey;
+            $session->save();
+            return $question;
         }
 
-        $session->markCompleted(); // Marque la session comme terminée
+        // 6️⃣ — Si rien n’a été trouvé, log le diagnostic et termine la session
+        \Log::warning('Aucune question trouvée pour cette session, complétion automatique.', [
+            'session_id' => $session->id,
+            'groupIds' => $groupIds,
+            'blocs' => $blocs,
+            'context' => $context,
+        ]);
+        $session->markCompleted();
         return null;
     }
 
