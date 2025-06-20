@@ -65,8 +65,8 @@ Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
 
 //this route is Thematic bloc route. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
 Route::middleware(['auth:sanctum'])->prefix('thematic-blocs')->group(function () {
-  Route::get('/thematic-blocs', [ThematicBlocController::class, 'index']);
-Route::get('/thematic-blocs/{keyOrId}', [ThematicBlocController::class, 'show']);
+  Route::get('/', [ThematicBlocController::class, 'index']);
+Route::get('/{keyOrId}', [ThematicBlocController::class, 'show']);
 
 });
 
