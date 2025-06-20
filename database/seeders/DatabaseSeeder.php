@@ -3,11 +3,15 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Database\Seeders\CapsuleSeeder;
-use Database\Seeders\MedicalProfileQuestionSeeder;
-use Database\Seeders\PersonalProfileQuestionSeeder;
+use Database\Seeders\Evaluation\ThematicBlocSeeder;
+use Database\Seeders\Evaluation\QuestionGroupSeeder;
+use Database\Seeders\Evaluation\SymptomBreastQuestionSeeder;
+use Database\Seeders\Evaluation\MedicalProfileQuestionSeeder;
+use Database\Seeders\Evaluation\PersonalProfileQuestionSeeder;
+use Database\Seeders\Evaluation\SymptomCervicalQuestionSeeder;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,15 +23,12 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
         $this->call([
             QuestionGroupSeeder::class,
-            // DynamicQuestionTemplateSeeder::class,
             CapsuleSeeder::class,
             PersonalProfileQuestionSeeder::class,
             MedicalProfileQuestionSeeder::class,
             SymptomBreastQuestionSeeder::class,
             SymptomCervicalQuestionSeeder::class,
-            // PathologySymptomSeeder::class,
-            // UserSeeder::class,
-            // Add other seeders here
+            ThematicBlocSeeder::class,  
         ]);
 
     }

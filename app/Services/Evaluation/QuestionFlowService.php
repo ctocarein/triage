@@ -42,19 +42,25 @@ class QuestionFlowService
         ];
     }
 
-    public function goToNextQuestion(EvaluationSession $session): ?DynamicQuestionTemplate
+    public function goToNextQuestion(EvaluationSession $session, $groupIds = []): ?DynamicQuestionTemplate
     {
         $context = $this->getSessionContext($session);
-        $blocs = $this->getAllTemplates()->pluck('bloc_key')->filter()->unique();
 
-        // Sélectionne vraiment les blocs selon le type de session
+        // 1️⃣ — On travaille sur les questions actives
+        $allTemplates = $this->getAllTemplates(); // Doit retourner une collection de toutes les questions valides
+
+        // 2️⃣ — Filtrage par groupe si éval thématique
+        if ($session->type === 'thematic' && !empty($groupIds)) {
+            $allTemplates = $allTemplates->whereIn('question_group_id', $groupIds);
+        }
+
+        // 3️⃣ — Filtrage par bloc si fourni (optionnel, pour compat ascendante)
         if ($session->type === 'thematic' && !empty($session->target_blocs)) {
-            $blocs = $blocs->filter(fn($b) => in_array($b, $session->target_blocs));
+            $allTemplates = $allTemplates->whereIn('bloc_key', $session->target_blocs);
         }
-        // Pour une complète, ignore tout filtrage accidentel
-        if ($session->type === 'complete') {
-            // $session->update(['target_blocs' => null]); // optionnel : nettoyage
-        }
+
+        // 4️⃣ — Liste ordonnée des blocs à parcourir (unique)
+        $blocs = $allTemplates->pluck('bloc_key')->filter()->unique();
 
         foreach ($blocs as $blocKey) {
             if ($session->hasVisitedBloc($blocKey)) continue;
@@ -62,7 +68,8 @@ class QuestionFlowService
                 $session->addVisitedBloc($blocKey);
                 continue;
             }
-            $question = $this->getAllTemplates()
+            // 5️⃣ — Cherche la 1ère question non répondue et visible de ce bloc
+            $question = $allTemplates
                 ->where('bloc_key', $blocKey)
                 ->first(fn($q) =>
                     !in_array($q->id, $context['answeredIds']) &&
@@ -76,7 +83,7 @@ class QuestionFlowService
             $session->addVisitedBloc($blocKey);
         }
 
-        $session->markCompleted(); // Utilise la méthode centralisée
+        $session->markCompleted(); // Marque la session comme terminée
         return null;
     }
 

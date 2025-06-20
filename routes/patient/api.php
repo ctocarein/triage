@@ -11,6 +11,7 @@ use App\Http\Controllers\Account\MedicalProfileController;
 use App\Http\Controllers\Account\PersonalProfileController;
 use App\Http\Controllers\Account\RegisterOrLoginController;
 use App\Http\Controllers\Evaluation\DecisionPathController;
+use App\Http\Controllers\Evaluation\ThematicBlocController;
 use App\Http\Controllers\Evaluation\QuestionFlowsController;
 use App\Http\Controllers\Evaluation\EvaluationAnswerController;
 use App\Http\Controllers\Evaluation\EvaluationSessionController;
@@ -60,6 +61,13 @@ Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
     Route::post('/{session}/next', [EvaluationSessionController::class, 'next']);
     Route::post('/{session}/complete', [EvaluationSessionController::class, 'complete']);
     Route::get('/{session}', [EvaluationSessionController::class, 'show']);
+});
+
+//this route is Thematic bloc route. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
+Route::middleware(['auth:sanctum'])->prefix('thematic-blocs')->group(function () {
+  Route::get('/thematic-blocs', [ThematicBlocController::class, 'index']);
+Route::get('/thematic-blocs/{keyOrId}', [ThematicBlocController::class, 'show']);
+
 });
 
 // This route is for submitting answers to the evaluation. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.

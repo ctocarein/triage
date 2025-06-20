@@ -54,19 +54,21 @@ class EvaluationSessionController extends Controller
     /**
      * 🆕 Démarrer une nouvelle session d’évaluation
      */
-  public function start(Request $request, QuestionFlowService $flow)
+    public function start(Request $request, QuestionFlowService $flow)
     {
         $account = $request->user();
-        $type = $request->input('type', 'complete');
+        $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
+        $blocKeys = $request->input('bloc_keys', []);
+        $groupIds = null;
 
-        // Refuse une thématique sans complète terminée
+        // 1️⃣ — Empêche d’accéder aux thématiques sans avoir fini la complète
         if ($type !== 'complete' && !$account->hasCompletedFullEvaluation()) {
             return response()->json([
                 'message' => 'Merci de compléter une évaluation complète avant d\'accéder aux évaluations thématiques.'
             ], 403);
         }
 
-        // Refuse toute création si une complète est en cours
+        // 2️⃣ — Refuse si une session complète est en cours
         $inProgressFull = $account->getInProgressFullEvaluation();
         if ($inProgressFull && $type !== 'complete') {
             return response()->json([
@@ -81,20 +83,46 @@ class EvaluationSessionController extends Controller
             ], 403);
         }
 
-        // Crée la session avec le type explicitement
+        // 3️⃣ — Gestion spécifique pour les thématiques
+        if ($type === 'thematic') {
+            if (empty($blocKeys)) {
+                return response()->json([
+                    'message' => "Veuillez sélectionner au moins un bloc thématique."
+                ], 422);
+            }
+            // Vérifie les clés et récupère les blocs actifs
+            $blocs = ThematicBloc::whereIn('key', $blocKeys)->where('is_active', true)->get();
+            if ($blocs->isEmpty() || count($blocs) !== count($blocKeys)) {
+                return response()->json([
+                    'message' => "Un ou plusieurs blocs sélectionnés ne sont pas valides ou actifs."
+                ], 422);
+            }
+            // Récupère les IDs des groupes liés à ces blocs
+            $groupIds = $blocs->pluck('question_group_id')->unique()->values();
+        }
+
+        // 4️⃣ — Stocke la sélection et le contexte dans la session
+        $context = $request->input('context', []);
+        if ($type === 'thematic') {
+            $context['selected_blocs'] = $blocKeys;
+            $context['selected_group_ids'] = $groupIds;
+        }
+
         $session = $account->evaluationSessions()->create([
             'status' => 'in_progress',
             'type' => $type,
             'started_at' => now(),
-            'context' => $request->input('context', []),
-            'target_blocs' => $request->input('bloc_keys', null),
+            'context' => $context,
+            'target_blocs' => $type === 'thematic' ? $blocKeys : null,
         ]);
 
-        $firstQuestion = $flow->goToNextQuestion($session);
+        // 5️⃣ — Récupère la 1ʳᵉ question à poser (selon les groupes si thématique)
+        $firstQuestion = $flow->goToNextQuestion($session, $groupIds ?? []);
         if ($firstQuestion) {
             $session->update(['current_question_id' => $firstQuestion->id]);
         }
 
+        // 6️⃣ — Retourne la session et la question au front
         return response()->json([
             'message' => 'Session démarrée.',
             'session' => $session,
