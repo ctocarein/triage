@@ -2,6 +2,7 @@
 
 namespace App\Models\Evaluation;
 
+use App\Models\ThematicBloc;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -17,5 +18,10 @@ class QuestionGroup extends Model
     // Helpers
     public function getDisplayNameAttribute(): string {
         return $this->label ?? str_replace('_', ' ', $this->key);
+    }
+
+    public function thematicBlocs()
+    {
+        return $this->hasMany(ThematicBloc::class, 'question_group_id');
     }
 }
