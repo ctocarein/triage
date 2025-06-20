@@ -2,8 +2,8 @@
 
 namespace Database\Seeders\Evaluation;
 
-use App\Models\ThematicBloc;
 use Illuminate\Database\Seeder;
+use App\Models\Evaluation\ThematicBloc;
 use App\Models\Evaluation\QuestionGroup;
 
 class ThematicBlocSeeder extends Seeder
