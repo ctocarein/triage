@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Evaluation;
+
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Evaluation\QuestionGroup;

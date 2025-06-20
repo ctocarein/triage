@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Evaluation;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Evaluation\ThematicBloc;
 use App\Models\Evaluation\QuestionGroup;
 use App\Models\Evaluation\EvaluationSession;
 use App\Services\Evaluation\QuestionFlowService;
