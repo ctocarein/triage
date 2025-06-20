@@ -46,36 +46,29 @@ class QuestionFlowService
     {
         $context = $this->getSessionContext($session);
 
-        // 1️⃣ — Récupère tous les templates actifs
+        // ⚠️ Toujours récupérer les bons groupIds si non passés explicitement
+        if (empty($groupIds) && isset($session->context['selected_group_ids'])) {
+            $groupIds = $session->context['selected_group_ids'];
+        }
+
         $allTemplates = $this->getAllTemplates();
 
-        // 2️⃣ — Filtrage par groupe si "thematic"
         if ($session->type === 'thematic' && !empty($groupIds)) {
             $allTemplates = $allTemplates->whereIn('question_group_id', $groupIds);
         }
 
-        // ❗️On retire le filtre bloc_key ici pour éviter de trop restreindre (sauf si tu en as vraiment besoin ET que toutes les questions ont bloc_key)
-        // if ($session->type === 'thematic' && !empty($session->target_blocs)) {
-        //     $allTemplates = $allTemplates->whereIn('bloc_key', $session->target_blocs);
-        // }
-
-        // 3️⃣ — Liste des blocs uniques présents
         $blocs = $allTemplates->pluck('bloc_key')->filter()->unique();
 
-        // 4️⃣ — Boucle sur chaque bloc, cherche la 1ʳᵉ question non répondue et visible
         foreach ($blocs as $blocKey) {
             if ($session->hasVisitedBloc($blocKey)) continue;
             if ($this->shouldSkipBloc($blocKey, $session)) {
                 $session->addVisitedBloc($blocKey);
                 continue;
             }
-
-            // 5️⃣ — On filtre sur les non-répondues, ET la visibilité (mais on LOGUE si aucune question n’est visible)
             $candidates = $allTemplates->where('bloc_key', $blocKey)
                 ->filter(fn($q) => !in_array($q->id, $context['answeredIds']));
-            
+
             if ($candidates->isEmpty()) {
-                \Log::info("Aucune question non répondue dans le bloc $blocKey pour la session #$session->id");
                 $session->addVisitedBloc($blocKey);
                 continue;
             }
@@ -83,13 +76,7 @@ class QuestionFlowService
             $question = $candidates->first(fn($q) =>
                 $this->shouldBeVisible($q, $context['answers'], $context['profile'])
             );
-
             if (!$question) {
-                \Log::info("Aucune question visible dans le bloc $blocKey pour la session #$session->id", [
-                    'blocKey' => $blocKey,
-                    'candidates' => $candidates->pluck('id', 'text')->toArray(),
-                    'context' => $context,
-                ]);
                 $session->addVisitedBloc($blocKey);
                 continue;
             }
@@ -99,26 +86,26 @@ class QuestionFlowService
             return $question;
         }
 
-        // 6️⃣ — Si rien n’a été trouvé, log le diagnostic et termine la session
-        \Log::warning('Aucune question trouvée pour cette session, complétion automatique.', [
-            'session_id' => $session->id,
-            'groupIds' => $groupIds,
-            'blocs' => $blocs,
-            'context' => $context,
-        ]);
         $session->markCompleted();
         return null;
     }
 
-
     public function getNextQuestions(EvaluationSession $session): array
     {
         $context = $this->getSessionContext($session);
-        $blocs = $this->getAllTemplates()->pluck('bloc_key')->unique()->values();
+
+        // Filtrage thématique (ajoute cette partie)
+        $groupIds = $session->context['selected_group_ids'] ?? [];
+        $allTemplates = $this->getAllTemplates();
+        if ($session->type === 'thematic' && !empty($groupIds)) {
+            $allTemplates = $allTemplates->whereIn('question_group_id', $groupIds);
+        }
+
+        $blocs = $allTemplates->pluck('bloc_key')->unique()->values();
         $blocActuel = $session->current_bloc;
 
-        if (!$blocActuel || !$this->blocHasRemainingQuestions($blocActuel, $context['answeredIds'])) {
-            $blocActuel = $blocs->first(fn($bloc) => $this->blocHasRemainingQuestions($bloc, $context['answeredIds']));
+        if (!$blocActuel || !$this->blocHasRemainingQuestionsFrom($blocActuel, $context['answeredIds'], $allTemplates)) {
+            $blocActuel = $blocs->first(fn($bloc) => $this->blocHasRemainingQuestionsFrom($bloc, $context['answeredIds'], $allTemplates));
             $session->current_bloc = $blocActuel;
             $session->save();
         }
@@ -128,7 +115,7 @@ class QuestionFlowService
             return [];
         }
 
-        return $this->getAllTemplates()
+        return $allTemplates
             ->where('bloc_key', $blocActuel)
             ->sortBy('order')
             ->filter(fn($q) => $this->shouldBeVisible($q, $context['answers'], $context['profile']))
@@ -136,12 +123,14 @@ class QuestionFlowService
             ->all();
     }
 
-    protected function blocHasRemainingQuestions(string $blocKey, array $answeredIds): bool
+    protected function blocHasRemainingQuestionsFrom(string $blocKey, array $answeredIds, $allTemplates): bool
     {
-        return $this->getAllTemplates()
+        return $allTemplates
             ->where('bloc_key', $blocKey)
             ->some(fn($q) => !in_array($q->id, $answeredIds));
     }
+
+   
 
     public function shouldBeVisible(DynamicQuestionTemplate $question, array $answers, array $profile): bool
     {

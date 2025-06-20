@@ -55,81 +55,85 @@ class EvaluationSessionController extends Controller
     /**
      * 🆕 Démarrer une nouvelle session d’évaluation
      */
-    public function start(Request $request, QuestionFlowService $flow)
-    {
-        $account = $request->user();
-        $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
-        $blocKeys = $request->input('bloc_keys', []);
-        $groupIds = null;
+/**
+ * 🆕 Démarrer une nouvelle session d’évaluation (complète ou thématique)
+ */
+public function start(Request $request, QuestionFlowService $flow)
+{
+    $account = $request->user();
+    $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
+    $blocKeys = $request->input('bloc_keys', []);
+    $groupIds = null;
 
-        // 1️⃣ — Empêche d’accéder aux thématiques sans avoir fini la complète
-        if ($type !== 'complete' && !$account->hasCompletedFullEvaluation()) {
-            return response()->json([
-                'message' => 'Merci de compléter une évaluation complète avant d\'accéder aux évaluations thématiques.'
-            ], 403);
-        }
-
-        // 2️⃣ — Refuse si une session complète est en cours
-        $inProgressFull = $account->getInProgressFullEvaluation();
-        if ($inProgressFull && $type !== 'complete') {
-            return response()->json([
-                'message' => 'Vous avez une évaluation complète en cours. Veuillez la terminer avant de continuer.',
-                'session_id' => $inProgressFull->id
-            ], 403);
-        }
-        if ($type === 'complete' && $inProgressFull) {
-            return response()->json([
-                'message' => 'Vous avez déjà une évaluation complète en cours. Veuillez la terminer.',
-                'session_id' => $inProgressFull->id
-            ], 403);
-        }
-
-        // 3️⃣ — Gestion spécifique pour les thématiques
-        if ($type === 'thematic') {
-            if (empty($blocKeys)) {
-                return response()->json([
-                    'message' => "Veuillez sélectionner au moins un bloc thématique."
-                ], 422);
-            }
-            // Vérifie les clés et récupère les blocs actifs
-            $blocs = ThematicBloc::whereIn('key', $blocKeys)->where('is_active', true)->get();
-            if ($blocs->isEmpty() || count($blocs) !== count($blocKeys)) {
-                return response()->json([
-                    'message' => "Un ou plusieurs blocs sélectionnés ne sont pas valides ou actifs."
-                ], 422);
-            }
-            // Récupère les IDs des groupes liés à ces blocs
-            $groupIds = $blocs->pluck('question_group_id')->unique()->values();
-        }
-
-        // 4️⃣ — Stocke la sélection et le contexte dans la session
-        $context = $request->input('context', []);
-        if ($type === 'thematic') {
-            $context['selected_blocs'] = $blocKeys;
-            $context['selected_group_ids'] = $groupIds;
-        }
-
-        $session = $account->evaluationSessions()->create([
-            'status' => 'in_progress',
-            'type' => $type,
-            'started_at' => now(),
-            'context' => $context,
-            'target_blocs' => $type === 'thematic' ? $blocKeys : null,
-        ]);
-
-        // 5️⃣ — Récupère la 1ʳᵉ question à poser (selon les groupes si thématique)
-        $firstQuestion = $flow->goToNextQuestion($session, $groupIds ?? []);
-        if ($firstQuestion) {
-            $session->update(['current_question_id' => $firstQuestion->id]);
-        }
-
-        // 6️⃣ — Retourne la session et la question au front
+    // 1️⃣ — Empêche d’accéder aux thématiques sans avoir fini la complète
+    if ($type !== 'complete' && !$account->hasCompletedFullEvaluation()) {
         return response()->json([
-            'message' => 'Session démarrée.',
-            'session' => $session,
-            'question' => $firstQuestion,
-        ], 201);
+            'message' => 'Merci de compléter une évaluation complète avant d\'accéder aux évaluations thématiques.'
+        ], 403);
     }
+
+    // 2️⃣ — Refuse si une session complète est en cours
+    $inProgressFull = $account->getInProgressFullEvaluation();
+    if ($inProgressFull && $type !== 'complete') {
+        return response()->json([
+            'message' => 'Vous avez une évaluation complète en cours. Veuillez la terminer avant de continuer.',
+            'session_id' => $inProgressFull->id
+        ], 403);
+    }
+    if ($type === 'complete' && $inProgressFull) {
+        return response()->json([
+            'message' => 'Vous avez déjà une évaluation complète en cours. Veuillez la terminer.',
+            'session_id' => $inProgressFull->id
+        ], 403);
+    }
+
+    // 3️⃣ — Gestion spécifique pour les thématiques
+    if ($type === 'thematic') {
+        if (empty($blocKeys)) {
+            return response()->json([
+                'message' => "Veuillez sélectionner au moins un bloc thématique."
+            ], 422);
+        }
+        // Vérifie les clés et récupère les blocs actifs
+        $blocs = ThematicBloc::whereIn('key', $blocKeys)->where('is_active', true)->get();
+        if ($blocs->isEmpty() || count($blocs) !== count($blocKeys)) {
+            return response()->json([
+                'message' => "Un ou plusieurs blocs sélectionnés ne sont pas valides ou actifs."
+            ], 422);
+        }
+        // Récupère les IDs des groupes liés à ces blocs
+        $groupIds = $blocs->pluck('question_group_id')->unique()->values();
+    }
+
+    // 4️⃣ — Stocke la sélection et le contexte dans la session (toujours prêt pour next)
+    $context = $request->input('context', []);
+    if ($type === 'thematic') {
+        $context['selected_blocs'] = $blocKeys;
+        $context['selected_group_ids'] = $groupIds;
+    }
+
+    $session = $account->evaluationSessions()->create([
+        'status' => 'in_progress',
+        'type' => $type,
+        'started_at' => now(),
+        'context' => $context,
+        'target_blocs' => $type === 'thematic' ? $blocKeys : null,
+    ]);
+
+    // 5️⃣ — Récupère la 1ʳᵉ question à poser (selon les groupes si thématique)
+    $firstQuestion = $flow->goToNextQuestion($session, $groupIds ?? []);
+    if ($firstQuestion) {
+        $session->update(['current_question_id' => $firstQuestion->id]);
+    }
+
+    // 6️⃣ — Retourne la session et la question au front
+    return response()->json([
+        'message' => 'Session démarrée.',
+        'session' => $session,
+        'question' => $firstQuestion,
+    ], 201);
+}
+
 
 
     /**
@@ -137,6 +141,7 @@ class EvaluationSessionController extends Controller
      */
     public function next(EvaluationSession $session, QuestionFlowService $flow)
     {
+        // 1️⃣ — Vérifie l’état de la session
         if (!$session->isInProgress()) {
             return response()->json([
                 'message' => 'Session déjà terminée.',
@@ -144,8 +149,16 @@ class EvaluationSessionController extends Controller
             ]);
         }
 
-        $nextQuestion = $flow->goToNextQuestion($session);
+        // 2️⃣ — Récupère les filtres depuis le contexte pour thématique
+        $groupIds = [];
+        if ($session->type === 'thematic') {
+            $groupIds = $session->context['selected_group_ids'] ?? [];
+        }
 
+        // 3️⃣ — Passe toujours les bons filtres au flow
+        $nextQuestion = $flow->goToNextQuestion($session, $groupIds);
+
+        // 4️⃣ — Si plus de question, termine la session proprement
         if (!$nextQuestion) {
             $session->update([
                 'status' => 'completed',
@@ -158,9 +171,10 @@ class EvaluationSessionController extends Controller
             ]);
         }
 
+        // 5️⃣ — Met à jour la session avec la nouvelle question
         $session->update(['current_question_id' => $nextQuestion->id]);
 
-        // Infos sur la progression dans le bloc
+        // 6️⃣ — Infos de progression dans le bloc courant
         $context = $flow->getSessionContext($session);
         $blocKey = $nextQuestion->bloc_key;
         $blocQuestions = DynamicQuestionTemplate::where('bloc_key', $blocKey)->get();
@@ -176,6 +190,7 @@ class EvaluationSessionController extends Controller
             'visited_blocs' => $session->visited_blocs ?? [],
         ]);
     }
+
 
     /**
      * ✅ Terminer manuellement une session et générer son rapport
