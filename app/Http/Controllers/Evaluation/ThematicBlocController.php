@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Evaluation;
 
-use App\Models\ThematicBloc;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Evaluation\ThematicBloc;
 
 class ThematicBlocController extends Controller
 {
