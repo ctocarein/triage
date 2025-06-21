@@ -38,12 +38,9 @@ class EvaluationSessionController extends Controller
                 'target_blocs' => $session->target_blocs,
                 'thematics' => $thematics,
                 'title' => $session->type === 'complete'
-                                ? "Évaluation complète"
-                                : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
+                                ? "Votre évaluation complète réussie"
+                                : ($thematics ? implode(', ', $thematics) : ''),
                 'answers_count' => $session->answers_count ?? $session->answers()->count(),
-                'title' => $session->type === 'complete'
-                    ? "Évaluation complète"
-                    : "Éval. thématique : " . ($thematics ? implode(', ', $thematics) : ''),
                 'report' => $session->report->recommendation ?? null,
             ];
         });
