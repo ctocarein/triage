@@ -22,6 +22,7 @@ return new class extends Migration {
             // Index
             $table->index('evaluation_session_id');
             $table->index('dynamic_question_template_id');
+            $table->unsignedInteger('order')->nullable();
         });
     }
 

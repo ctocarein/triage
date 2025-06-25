@@ -33,7 +33,9 @@ public function __invoke(Request $request)
         return response()->json([
             'status' => 'login_required',
             'message' => 'PIN requis pour se connecter',
-            'account_id' => $account->id
+            'account_id' => $account->id,
+            'type' => $account->type,
+            'needs_assistance' => $account->needs_assistance,
         ]);
     }
 
@@ -58,12 +60,16 @@ public function __invoke(Request $request)
         'needs_assistance' => $data['needs_assistance'] ?? false,
         'is_active' => true,
         'status' => 'active', // à ne pas oublier si utilisé
+    
     ]);
 
     return response()->json([
         'status' => 'set_pin_required',
         'message' => 'Nouveau compte créé. Définissez un code PIN.',
-        'account_id' => $newAccount->id
+        'account_id' => $newAccount->id,
+        'type' => $newAccount->type,
+        'needs_assistance' => $newAccount->needs_assistance,
+
     ], 201);
 }
 

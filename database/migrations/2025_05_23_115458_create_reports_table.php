@@ -13,20 +13,21 @@ class CreateReportsTable extends Migration
     {
         Schema::create('reports', function (Blueprint $table) {
             $table->id();
-
-            // Relations principales
-            $table->foreignId('account_id')->constrained()->onDelete('cascade');
-            $table->foreignId('evaluation_session_id')->constrained()->onDelete('cascade');
-            $table->foreignId('decision_path_id')->nullable()->constrained()->onDelete('set null');
-
-            // Données du rapport
-            $table->integer('score')->default(0);
-            $table->string('risk_level', 24);
-            $table->text('recommendation'); // Pour JSON, voir plus bas
-            $table->json('summary')->nullable();
-
+            $table->foreignId('evaluation_session_id')->nullable()->constrained('evaluation_sessions')->nullOnDelete();
+            $table->foreignId('decision_path_id')->nullable()->constrained('decision_paths')->nullOnDelete();
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+            $table->string('report_code')->nullable();      // ex: RPT-2025-00123
+            $table->string('title');
+            $table->text('summary')->nullable();            // synthèse globale
+            $table->json('answers')->nullable();            // toutes les réponses, clé:valeur
+            $table->float('score')->nullable();
+            $table->unsignedInteger('max_score')->nullable();
+            $table->string('risk_level')->nullable();       // "low", "moderate", "high"
+            $table->json('specialties')->nullable();
+            $table->text('recommendation')->nullable();
             $table->timestamps();
         });
+
     }
 
     /**
