@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Database\Seeders\CapsuleSeeder;
+use Database\Seeders\DecisionPathBreastPainSeeder;
 use Database\Seeders\Evaluation\ThematicBlocSeeder;
 use Database\Seeders\Evaluation\QuestionGroupSeeder;
 use Database\Seeders\Evaluation\SymptomBreastQuestionSeeder;
@@ -28,7 +29,9 @@ class DatabaseSeeder extends Seeder
             MedicalProfileQuestionSeeder::class,
             SymptomBreastQuestionSeeder::class,
             SymptomCervicalQuestionSeeder::class,
-            ThematicBlocSeeder::class,  
+            ThematicBlocSeeder::class, 
+            DecisionPathBreastPainSeeder::class, 
+            
         ]);
 
     }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Evaluation;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Decisions\DecisionPath;
+use App\Services\Decisions\DecisionPathEngine;
 use App\Models\Evaluation\ThematicBloc;
 use App\Models\Evaluation\QuestionGroup;
 use App\Models\Evaluation\EvaluationSession;
@@ -55,17 +57,17 @@ class EvaluationSessionController extends Controller
 /**
  * 🆕 Démarrer une nouvelle session d’évaluation (complète ou thématique)
  */
-public function start(Request $request, QuestionFlowService $flow)
+public function start(Request $request)
 {
     $account = $request->user();
     $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
     $blocKeys = $request->input('bloc_keys', []);
-    $groupIds = null;
+    $decisionPath = null;
 
-    // 1️⃣ — Empêche d’accéder aux thématiques sans avoir fini la complète
+    // 1️⃣ — Bloque les thématiques si pas de full déjà complétée
     if ($type !== 'complete' && !$account->hasCompletedFullEvaluation()) {
         return response()->json([
-            'message' => 'Merci de compléter une évaluation complète avant d\'accéder aux évaluations thématiques.'
+            'message' => "Merci de compléter une évaluation complète avant d'accéder aux évaluations thématiques."
         ], 403);
     }
 
@@ -73,201 +75,210 @@ public function start(Request $request, QuestionFlowService $flow)
     $inProgressFull = $account->getInProgressFullEvaluation();
     if ($inProgressFull && $type !== 'complete') {
         return response()->json([
-            'message' => 'Vous avez une évaluation complète en cours. Veuillez la terminer avant de continuer.',
+            'message' => "Vous avez une évaluation complète en cours. Veuillez la terminer avant de continuer.",
             'session_id' => $inProgressFull->id
         ], 403);
     }
     if ($type === 'complete' && $inProgressFull) {
         return response()->json([
-            'message' => 'Vous avez déjà une évaluation complète en cours. Veuillez la terminer.',
+            'message' => "Vous avez déjà une évaluation complète en cours. Veuillez la terminer.",
             'session_id' => $inProgressFull->id
         ], 403);
     }
 
-    // 3️⃣ — Gestion spécifique pour les thématiques
-    if ($type === 'thematic') {
+    // 3️⃣ — Gestion DecisionPath
+    if ($type === 'complete') {
+        // On prend le chemin d’éval complète
+        $decisionPath = DecisionPath::where('key', 'dp_full_assessment')->firstOrFail();
+    } else { // "thematic"
         if (empty($blocKeys)) {
             return response()->json([
                 'message' => "Veuillez sélectionner au moins un bloc thématique."
             ], 422);
         }
-        // Vérifie les clés et récupère les blocs actifs
-        $blocs = ThematicBloc::whereIn('key', $blocKeys)->where('is_active', true)->get();
-        if ($blocs->isEmpty() || count($blocs) !== count($blocKeys)) {
+        // Ici on suppose une correspondance 1:1 bloc <=> DecisionPath (ou on prend le premier si plusieurs)
+        $paths = DecisionPath::whereIn('key', $blocKeys)->where('is_active', true)->get();
+        if ($paths->isEmpty() || count($paths) !== count($blocKeys)) {
             return response()->json([
-                'message' => "Un ou plusieurs blocs sélectionnés ne sont pas valides ou actifs."
+                'message' => "Un ou plusieurs DecisionPath ne sont pas valides ou actifs."
             ], 422);
         }
-        // Récupère les IDs des groupes liés à ces blocs
-        $groupIds = $blocs->pluck('question_group_id')->unique()->values();
+        $decisionPath = $paths->first();
     }
 
-    // 4️⃣ — Stocke la sélection et le contexte dans la session (toujours prêt pour next)
-    $context = $request->input('context', []);
-    if ($type === 'thematic') {
-        $context['selected_blocs'] = $blocKeys;
-        $context['selected_group_ids'] = $groupIds;
-    }
-
+    // 4️⃣ — Création de la session
     $session = $account->evaluationSessions()->create([
-        'status' => 'in_progress',
+        'decision_path_id' => $decisionPath->id,
         'type' => $type,
+        'status' => 'in_progress',
         'started_at' => now(),
-        'context' => $context,
-        'target_blocs' => $type === 'thematic' ? $blocKeys : null,
+        'context' => [
+            'bloc_keys' => $blocKeys,
+        ],
     ]);
 
-    // 5️⃣ — Récupère la 1ʳᵉ question à poser (selon les groupes si thématique)
-    $firstQuestion = $flow->goToNextQuestion($session, $groupIds ?? []);
-    if ($firstQuestion) {
-        $session->update(['current_question_id' => $firstQuestion->id]);
+    // 5️⃣ — Démarrage du chemin : 1ère question
+    $engine = new DecisionPathEngine($decisionPath);
+    $firstNode = $engine->getFirstNode();
+
+    if ($firstNode && $firstNode->question_id) {
+        $session->update(['current_question_id' => $firstNode->question_id]);
     }
 
-    // 6️⃣ — Retourne la session et la question au front
+    // 6️⃣ — Retourne la réponse clean
     return response()->json([
         'message' => 'Session démarrée.',
-        'session' => $session,
-        'question' => $firstQuestion,
+        'session_id' => $session->id,
+        'decision_path_id' => $decisionPath->id,
+        'question' => $firstNode ? $firstNode->getQuestionPayload() : null,
     ], 201);
 }
 
 
 
-    /**
-     * ▶️ Aller à la prochaine question
-     */
-    public function next(EvaluationSession $session, QuestionFlowService $flow)
-    {
-        // 1️⃣ — Vérifie l’état de la session
-        if (!$session->isInProgress()) {
-            return response()->json([
-                'message' => 'Session déjà terminée.',
-                'isCompleted' => true,
-            ]);
-        }
 
-        // 2️⃣ — Récupère les filtres depuis le contexte pour thématique
-        $groupIds = [];
-        if ($session->type === 'thematic') {
-            $groupIds = $session->context['selected_group_ids'] ?? [];
-        }
-
-        // 3️⃣ — Passe toujours les bons filtres au flow
-        $nextQuestion = $flow->goToNextQuestion($session, $groupIds);
-
-        // 4️⃣ — Si plus de question, termine la session proprement
-        if (!$nextQuestion) {
-            $session->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
-
-            return response()->json([
-                'message' => 'Évaluation terminée.',
-                'isCompleted' => true,
-            ]);
-        }
-
-        // 5️⃣ — Met à jour la session avec la nouvelle question
-        $session->update(['current_question_id' => $nextQuestion->id]);
-
-        // 6️⃣ — Infos de progression dans le bloc courant
-        $context = $flow->getSessionContext($session);
-        $blocKey = $nextQuestion->bloc_key;
-        $blocQuestions = DynamicQuestionTemplate::where('bloc_key', $blocKey)->get();
-        $answeredCount = $blocQuestions->whereIn('id', $context['answeredIds'])->count();
-
+   /**
+ * ▶️ Aller à la prochaine question (DecisionPath Engine)
+ */
+public function next(EvaluationSession $session)
+{
+    // 1️⃣ — Vérifie l’état de la session
+    if (!$session->isInProgress()) {
         return response()->json([
-            'currentQuestion' => $nextQuestion,
-            'isCompleted' => false,
-            'id' => $session->id,
-            'bloc_key' => $blocKey,
-            'total' => $blocQuestions->count(),
-            'answered' => $answeredCount,
-            'visited_blocs' => $session->visited_blocs ?? [],
+            'message' => 'Session déjà terminée.',
+            'isCompleted' => true,
         ]);
     }
 
+    // 2️⃣ — Instancie le moteur décisionnel (DecisionPath)
+    $decisionPath = $session->decisionPath;
+    $engine = new DecisionPathEngine($decisionPath);
 
-    /**
-     * ✅ Terminer manuellement une session et générer son rapport
-     */
+    // 3️⃣ — Récupère la prochaine “node” selon les réponses accumulées
+    $nextNode = $engine->getNextNode($session);
+
+    // 4️⃣ — S’il n’y a plus de question (fin du flow)
+    if (!$nextNode) {
+        $session->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Évaluation terminée.',
+            'isCompleted' => true,
+        ]);
+    }
+
+    // 5️⃣ — Si le node est de type “end”/“recommendation”
+    if ($nextNode->node_type === 'end' || $nextNode->node_type === 'recommendation') {
+        $session->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'current_question_id' => null,
+        ]);
+        // Génère le rapport en live si tu veux (optionnel)
+        // $report = app(ReportGenerationService::class)->generate($session);
+        return response()->json([
+            'message' => $nextNode->outcome_message ?? 'Fin du parcours.',
+            'isCompleted' => true,
+            // 'report' => $report, // Optionnel : retour du rapport direct
+        ]);
+    }
+
+    // 6️⃣ — Sinon, c’est une nouvelle question
+    $session->update(['current_question_id' => $nextNode->question_id]);
+
+    // 7️⃣ — Retourne le payload question/étape
+    $questionPayload = $nextNode->getQuestionPayload();
+
+    // Progression : tu peux enrichir si tu veux afficher la progression UX
+    // (bloc_key, total, answered, etc.)
+
+    return response()->json([
+        'currentQuestion' => $questionPayload,
+        'isCompleted' => false,
+        'id' => $session->id,
+        // ... autres infos utiles pour le front ...
+    ]);
+}
+
+
   /**
  * Terminer une session et générer le rapport associé.
  */
-        public function complete(
-            EvaluationSession $session,
-            ReportGenerationService $reportService,
-            QuestionFlowService $flow
-        ) {
-            $account = auth()->user();
+ public function complete(
+        EvaluationSession $session,
+        ReportGenerationService $reportService,
+        QuestionFlowService $flow
+    ) {
+    $account = auth()->user();
 
-            // Vérifier que la session appartient bien à l'utilisateur connecté
-            if ($session->account_id !== ($account->id ?? null)) {
-                return response()->json([
-                    'message' => "Accès interdit à cette session."
-                ], 403);
-            }
+    // 1️⃣ — Sécurité : la session appartient-elle bien à l'utilisateur ?
+    if ($session->account_id !== ($account->id ?? null)) {
+        return response()->json([
+            'message' => "Accès interdit à cette session."
+        ], 403);
+    }
 
-            // Idempotence : si déjà complétée, retourne le rapport existant OU le génère à la volée si manquant
-            if ($session->status === 'completed') {
-                $report = $session->report;
-                if (!$report) {
-                    // Rattrapage : générer le rapport si la session est complétée mais le rapport manquant
-                    try {
-                        $report = $reportService->generate($session);
-                    } catch (\Throwable $e) {
-                        return response()->json([
-                            'message' => "Session complétée mais erreur lors de la génération du rapport : " . $e->getMessage()
-                        ], 500);
-                    }
-                }
-                return response()->json([
-                    'message'        => 'Cette session est déjà complétée.',
-                    'report_id'      => $report->id ?? null,
-                    'recommendation' => $report->recommendation ?? null,
-                    'risk_level'     => $report->risk_level ?? null,
-                    'score'          => $report->score ?? null,
-                    'created_at'     => $report->created_at ?? null,
-                ]);
-            }
-
-            // Transaction pour cohérence (update + génération rapport)
-            \DB::beginTransaction();
+    // 2️⃣ — Idempotence : si déjà complétée, retourne le rapport (ou tente de le générer si absent)
+    if ($session->status === 'completed') {
+        $report = $session->report;
+        if (!$report) {
+            // Rattrapage : génère le rapport si session complétée mais rapport manquant
             try {
-                $session->update([
-                    'status'       => 'completed',
-                    'completed_at' => now(),
-                ]);
-
-                // Générer le rapport (normal)
                 $report = $reportService->generate($session);
-                if (!$report) {
-                    throw new \Exception("Erreur lors de la génération du rapport.");
-                }
-
-                // Calcul des détails du score si nécessaire
-                $scoreDetails = $flow->evaluateGlobalRisk($session);
-
-                \DB::commit();
-
-                return response()->json([
-                    'message'        => 'Session complétée avec succès.',
-                    'report_id'      => $report->id,
-                    'recommendation' => $report->recommendation,
-                    'risk_level'     => $report->risk_level,
-                    'score'          => $report->score,
-                    'created_at'     => $report->created_at,
-                    'score_details'  => $scoreDetails,
-                ], 201);
             } catch (\Throwable $e) {
-                \DB::rollBack();
                 return response()->json([
-                    'message' => "Erreur lors de la complétion de la session : " . $e->getMessage()
+                    'message' => "Session complétée mais erreur lors de la génération du rapport : " . $e->getMessage()
                 ], 500);
             }
         }
+        return response()->json([
+            'message'        => 'Cette session est déjà complétée.',
+            'report_id'      => $report->id ?? null,
+            'recommendation' => $report->recommendation ?? null,
+            'risk_level'     => $report->risk_level ?? null,
+            'score'          => $report->score ?? null,
+            'created_at'     => $report->created_at ?? null,
+        ]);
+    }
 
+    // 3️⃣ — Transaction pour la complétion et la génération du rapport
+    \DB::beginTransaction();
+    try {
+        $session->update([
+            'status'       => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        // Génère le rapport (normal)
+        $report = $reportService->generate($session);
+        if (!$report) {
+            throw new \Exception("Erreur lors de la génération du rapport.");
+        }
+
+        // Détail du score si besoin
+        $scoreDetails = $flow->evaluateGlobalRisk($session);
+
+        \DB::commit();
+
+        return response()->json([
+            'message'        => 'Session complétée avec succès.',
+            'report_id'      => $report->id,
+            'recommendation' => $report->recommendation,
+            'risk_level'     => $report->risk_level,
+            'score'          => $report->score,
+            'created_at'     => $report->created_at,
+            'score_details'  => $scoreDetails,
+        ], 201);
+    } catch (\Throwable $e) {
+        \DB::rollBack();
+        return response()->json([
+            'message' => "Erreur lors de la complétion de la session : " . $e->getMessage()
+        ], 500);
+    }
+}
 
 
     /**

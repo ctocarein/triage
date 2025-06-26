@@ -12,26 +12,17 @@ class Report extends Model
 {
     use HasFactory;
 
-    // Champs pouvant être remplis en masse
-    protected $fillable = [
-        'account_id',
-        'evaluation_session_id',
-        'decision_path_id',
-        'score',
-        'risk_level',
-        'recommendation',
-        'summary',
+ protected $fillable = [
+        'evaluation_session_id', 'decision_path_id', 'account_id',
+        'report_code', 'title', 'summary', 'answers',
+        'score', 'max_score', 'risk_level', 'specialties', 'recommendation'
     ];
 
-    // Casts pour les types automatiques
     protected $casts = [
-        'score'        => 'integer',
-        'summary'      => 'array',
-        'created_at'   => 'datetime',
-        'updated_at'   => 'datetime',
-        // Si recommendation est au format JSON :
-        // 'recommendation' => 'array',
+        'answers' => 'array',
+        'specialties' => 'array',
     ];
+
 
     /**
      * Lien vers le compte utilisateur concerné
@@ -54,7 +45,7 @@ class Report extends Model
      */
     public function decisionPath()
     {
-        return $this->belongsTo(DecisionPath::class);
+        return $this->belongsTo(DecisionPath::class, 'decision_path_id');
     }
 
     /**
