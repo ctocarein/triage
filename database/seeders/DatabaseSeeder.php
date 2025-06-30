@@ -10,6 +10,7 @@ use Database\Seeders\GreetingSeeder;
 use Database\Seeders\DecisionPathBreastPainSeeder;
 use Database\Seeders\Evaluation\ThematicBlocSeeder;
 use Database\Seeders\Evaluation\QuestionGroupSeeder;
+use Database\Seeders\DecisionPathFullAssessmentSeeder;
 use Database\Seeders\Evaluation\SymptomBreastQuestionSeeder;
 use Database\Seeders\Evaluation\MedicalProfileQuestionSeeder;
 use Database\Seeders\Evaluation\PersonalProfileQuestionSeeder;
@@ -32,9 +33,10 @@ class DatabaseSeeder extends Seeder
             SymptomBreastQuestionSeeder::class,
             SymptomCervicalQuestionSeeder::class,
             ThematicBlocSeeder::class, 
-            DecisionPathBreastPainSeeder::class, 
             CommuneSeeder::class,   
             GreetingSeeder::class,    
+            DecisionPathBreastPainSeeder::class,
+            DecisionPathFullAssessmentSeeder::class, 
         ]);
 
     }

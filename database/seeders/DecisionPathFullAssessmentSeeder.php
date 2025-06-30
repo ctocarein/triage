@@ -2,84 +2,80 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Decisions\DecisionNode;
+use App\Models\Decisions\DecisionPath;
+use App\Models\Evaluation\DynamicQuestionTemplate;
 
 class DecisionPathFullAssessmentSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run()
     {
-        // 1️⃣ — Crée ou met à jour le DecisionPath complet
+        // Création/MAJ du chemin complet
         $path = DecisionPath::updateOrCreate([
             'key' => 'dp_full_assessment',
         ], [
             'title' => 'Évaluation complète CHEREH',
-            'description' => 'Parcours global intégrant tous les principaux blocs thématiques (identité, habitudes, symptômes mammaires/gynéco, facteurs de risque…)',
+            'description' => 'Parcours global intégrant identité, risques, symptômes mammaires, gynécologiques, habitudes de vie...',
             'category' => 'complete',
-            'source_guideline' => 'OMS, HAS 2023',
+            'source_guideline' => 'OMS, HAS, INCa 2024',
             'version' => '1.0',
             'is_active' => true,
         ]);
 
-        // 2️⃣ — Prépare les questions dynamiques utilisées dans le flow
-        $q_identity       = DynamicQuestionTemplate::where('key', 'first_name')->firstOrFail();
-        $q_age            = DynamicQuestionTemplate::where('key', 'birth_date')->firstOrFail();
-        $q_cmu            = DynamicQuestionTemplate::where('key', 'cmu')->firstOrFail();
-        $q_breast_pain    = DynamicQuestionTemplate::where('key', 'breast_pain')->firstOrFail();
-        $q_bleeding       = DynamicQuestionTemplate::where('key', 'cervical_bleeding')->firstOrFail();
-        $q_lifestyle      = DynamicQuestionTemplate::where('key', 'smoking')->firstOrFail();
-        $q_family_history = DynamicQuestionTemplate::where('key', 'family_history_cancer')->firstOrFail();
+        // Associer chaque question à une variable (vérifie qu'elles existent bien en DB)
+        $q_firstname         = DynamicQuestionTemplate::where('key', 'first_name')->firstOrFail();
+  
+        $q_birthdate         = DynamicQuestionTemplate::where('key', 'birth_date')->firstOrFail();
+        $q_commune           = DynamicQuestionTemplate::where('key', 'commune')->firstOrFail();
+        $q_cmu               = DynamicQuestionTemplate::where('key', 'cmu')->firstOrFail();
+        $q_family_history    = DynamicQuestionTemplate::where('key', 'family_cancer_history')->firstOrFail();
+        $q_breast_pain       = DynamicQuestionTemplate::where('key', 'breast_pain')->firstOrFail();
+        $q_breast_mass       = DynamicQuestionTemplate::where('key', 'breast_mass')->firstOrFail();
+        $q_gyneco_bleeding   = DynamicQuestionTemplate::where('key', 'vaginal_bleeding_abnormal')->firstOrFail();
+              if (!DynamicQuestionTemplate::where('key', 'exposed_to_smoke')->exists()) {
+    throw new \Exception('La question first_name n’existe pas dans dynamic_question_templates.');
+}
+        $q_lifestyle         = DynamicQuestionTemplate::where('key', 'exposed_to_smoke')->firstOrFail();
 
-        // 3️⃣ — Entrée : Profil identité (bloc 1)
+        // --- Bloc Identité
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
-            'node_key' => 'node_identity_name',
+            'node_key' => 'node_first_name',
         ], [
-            'dynamic_question_template_id' => $q_identity->id,
+            'dynamic_question_template_id' => $q_firstname->id,
             'order' => 1,
-            'branches' => json_encode(['default' => 'node_identity_age']),
+            'branches' => json_encode(['default' => 'node_birth_date']),
             'node_type' => 'question',
         ]);
-
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
-            'node_key' => 'node_identity_age',
+            'node_key' => 'node_birth_date',
         ], [
-            'dynamic_question_template_id' => $q_age->id,
+            'dynamic_question_template_id' => $q_birthdate->id,
             'order' => 2,
+            'branches' => json_encode(['default' => 'node_commune']),
+            'node_type' => 'question',
+        ]);
+        DecisionNode::updateOrCreate([
+            'decision_path_id' => $path->id,
+            'node_key' => 'node_commune',
+        ], [
+            'dynamic_question_template_id' => $q_commune->id,
+            'order' => 3,
             'branches' => json_encode(['default' => 'node_cmu']),
             'node_type' => 'question',
         ]);
-
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
             'node_key' => 'node_cmu',
         ], [
             'dynamic_question_template_id' => $q_cmu->id,
-            'order' => 3,
-            'branches' => json_encode(['default' => 'node_breast_pain']),
-            'node_type' => 'question',
-        ]);
-
-        // 4️⃣ — Bloc symptômes mammaires (bloc 2)
-        DecisionNode::updateOrCreate([
-            'decision_path_id' => $path->id,
-            'node_key' => 'node_breast_pain',
-        ], [
-            'dynamic_question_template_id' => $q_breast_pain->id,
             'order' => 4,
-            'branches' => json_encode([
-                'oui' => 'node_family_history',
-                'non' => 'node_bleeding',
-                'default' => 'node_bleeding'
-            ]),
+            'branches' => json_encode(['default' => 'node_family_history']),
             'node_type' => 'question',
         ]);
-
-        // 5️⃣ — Bloc facteurs de risque familiaux (ramifié)
+        // Bloc Risque familial
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
             'node_key' => 'node_family_history',
@@ -87,75 +83,97 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             'dynamic_question_template_id' => $q_family_history->id,
             'order' => 5,
             'branches' => json_encode([
-                'oui' => 'node_end_risk',
-                'non' => 'node_bleeding',
-                'default' => 'node_bleeding'
+                true  => 'node_end_risk',    // Si ATCD familiaux => haut risque
+                false => 'node_breast_pain',
+                'default' => 'node_breast_pain'
             ]),
             'node_type' => 'question',
         ]);
-
-        // 6️⃣ — Bloc symptômes gynécologiques (bloc 3)
+        // Bloc Symptômes mammaires
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
-            'node_key' => 'node_bleeding',
+            'node_key' => 'node_breast_pain',
         ], [
-            'dynamic_question_template_id' => $q_bleeding->id,
+            'dynamic_question_template_id' => $q_breast_pain->id,
             'order' => 6,
             'branches' => json_encode([
-                'oui' => 'node_end_checkup',
-                'non' => 'node_lifestyle',
+                true  => 'node_breast_mass',
+                false => 'node_gyneco_bleeding',
+                'default' => 'node_gyneco_bleeding'
+            ]),
+            'node_type' => 'question',
+        ]);
+        DecisionNode::updateOrCreate([
+            'decision_path_id' => $path->id,
+            'node_key' => 'node_breast_mass',
+        ], [
+            'dynamic_question_template_id' => $q_breast_mass->id,
+            'order' => 7,
+            'branches' => json_encode([
+                true  => 'node_end_risk', // Masse mammaire = risque élevé
+                false => 'node_gyneco_bleeding',
+                'default' => 'node_gyneco_bleeding'
+            ]),
+            'node_type' => 'question',
+        ]);
+        // Bloc Symptômes gynéco
+        DecisionNode::updateOrCreate([
+            'decision_path_id' => $path->id,
+            'node_key' => 'node_gyneco_bleeding',
+        ], [
+            'dynamic_question_template_id' => $q_gyneco_bleeding->id,
+            'order' => 8,
+            'branches' => json_encode([
+                true  => 'node_end_checkup',
+                false => 'node_lifestyle',
                 'default' => 'node_lifestyle'
             ]),
             'node_type' => 'question',
         ]);
-
-        // 7️⃣ — Bloc habitudes de vie (bloc 4)
+        // Bloc Habitudes de vie
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
             'node_key' => 'node_lifestyle',
         ], [
             'dynamic_question_template_id' => $q_lifestyle->id,
-            'order' => 7,
+            'order' => 9,
             'branches' => json_encode(['default' => 'node_end_normal']),
             'node_type' => 'question',
         ]);
-
-        // 8️⃣ — Nœuds de fin/issue
+        // Nœuds de fin
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
             'node_key' => 'node_end_risk',
         ], [
             'dynamic_question_template_id' => null,
-            'order' => 20,
+            'order' => 100,
             'branches' => null,
             'node_type' => 'end',
-            'outcome_message' => "Risque familial élevé identifié. Consultez un spécialiste sans tarder.",
-            'risk_weight' => 15,
-            'specialties' => json_encode(['génétique', 'gynécologie']),
+            'outcome_message' => "Risque élevé ou masse identifiée. Consultez un spécialiste rapidement.",
+            'risk_weight' => 20,
+            'specialties' => json_encode(['gynécologie', 'oncologie']),
         ]);
-
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
             'node_key' => 'node_end_checkup',
         ], [
             'dynamic_question_template_id' => null,
-            'order' => 21,
+            'order' => 101,
             'branches' => null,
             'node_type' => 'end',
-            'outcome_message' => "Anomalie gynécologique détectée. Un contrôle médical est conseillé.",
-            'risk_weight' => 10,
+            'outcome_message' => "Symptôme gynécologique détecté. Consultez un centre de santé pour un contrôle.",
+            'risk_weight' => 12,
             'specialties' => json_encode(['gynécologie']),
         ]);
-
         DecisionNode::updateOrCreate([
             'decision_path_id' => $path->id,
             'node_key' => 'node_end_normal',
         ], [
             'dynamic_question_template_id' => null,
-            'order' => 22,
+            'order' => 102,
             'branches' => null,
             'node_type' => 'end',
-            'outcome_message' => "Aucun risque significatif détecté. Continuez la surveillance régulière.",
+            'outcome_message' => "Aucun risque significatif. Restez vigilante et continuez la surveillance.",
             'risk_weight' => 0,
             'specialties' => null,
         ]);
