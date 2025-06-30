@@ -11,107 +11,84 @@ class MedicalProfileQuestionSeeder extends Seeder
     public function run(): void
     {
         // Récupère tous les groupes utiles (parent + sous-groupes)
-        $groups = QuestionGroup::whereIn('key', [
-            'profile_medical', 'profil_repro', 'profil_familial'
-        ])->get()->keyBy('key');
-
-        $questions = [
+         $questions = [
             [
-                'key' => 'menstruation_age',
-                'text' => '🩸 À quel âge avez-vous eu vos premières règles ?',
-                'type' => 'number',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
+                'key' => 'first_name',
+                'text' => 'Quel est votre prénom ?',
+                'type' => 'text',
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
+                'is_entry_point' => true,
                 'order' => 1,
+                'is_required' => true,
             ],
             [
-                'key' => 'menopause_status',
-                'text' => '🌸 Êtes-vous ménopausée ?',
-                'type' => 'boolean',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
+                'key' => 'last_name',
+                'text' => 'Quel est votre nom de famille ?',
+                'type' => 'text',
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
                 'order' => 2,
+                'is_required' => false,
             ],
             [
-                'key' => 'menopause_age',
-                'text' => '🎂 Si oui, à quel âge avez-vous eu la ménopause ?',
-                'type' => 'number',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
-                'visible_if' => [
-                    ['source' => 'question', 'key' => 'menopause_status', 'value' => true, 'operator' => '=']
-                ],
+                'key' => 'birth_date',
+                'text' => 'Quelle est votre date de naissance ?',
+                'type' => 'date',
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
                 'order' => 3,
+                'is_required' => true,
             ],
             [
-                'key' => 'family_history_cancer',
-                'text' => '👩‍👧‍👧 Y a-t-il des antécédents de cancer du sein ou du col dans votre famille ?',
-                'type' => 'boolean',
-                'bloc_key' => 'profil_familial',
-                'answer_target' => 'medical_profile',
-                'risk_weight' => 3,
+                'key' => 'commune',
+                'text' => 'Dans quelle commune habitez-vous ?',
+                'type' => 'text',
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
                 'order' => 4,
+                'is_required' => false,
             ],
             [
-                'key' => 'hormonal_contraception',
-                'text' => '💊 Avez-vous déjà utilisé une contraception hormonale (pilule, implant, etc.) ?',
+                'key' => 'cmu',
+                'text' => 'Bénéficiez-vous de la Couverture Maladie Universelle (CMU) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
                 'order' => 5,
+                'is_required' => false,
             ],
             [
-                'key' => 'hormonal_duration',
-                'text' => '📅 Combien d’années avez-vous utilisé une contraception hormonale ?',
-                'type' => 'number',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
-                'visible_if' => [
-                    ['source' => 'question', 'key' => 'hormonal_contraception', 'value' => true, 'operator' => '=']
-                ],
+                'key' => 'education_level',
+                'text' => 'Quel est votre niveau d’éducation ?',
+                'type' => 'select_one',
+                'options' => json_encode([
+                    ['value' => 'none', 'label' => 'Aucun'],
+                    ['value' => 'primary', 'label' => 'Primaire'],
+                    ['value' => 'secondary', 'label' => 'Secondaire'],
+                    ['value' => 'superior', 'label' => 'Supérieur'],
+                    ['value' => 'self', 'label' => 'Autodidacte'],
+                ]),
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
                 'order' => 6,
+                'is_required' => false,
             ],
             [
-                'key' => 'pregnancy_history',
-                'text' => '🤰 Avez-vous déjà été enceinte ?',
-                'type' => 'boolean',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
+                'key' => 'occupation',
+                'text' => 'Quelle est votre profession ou activité principale ?',
+                'type' => 'text',
+                'bloc_key' => 'profile_personal',
+                'answer_target' => 'personal_profile',
                 'order' => 7,
-            ],
-            [
-                'key' => 'breastfeeding_history',
-                'text' => '🍼 Avez-vous allaité vos enfants ?',
-                'type' => 'boolean',
-                'bloc_key' => 'profil_repro',
-                'answer_target' => 'medical_profile',
-                'order' => 8,
+                'is_required' => false,
             ],
         ];
-
+        // Ajoute les questions au modèle DynamicQuestionTemplate
         foreach ($questions as $q) {
-            $questionGroup = $groups[$q['bloc_key']] ?? $groups['profile_medical'] ?? null;
-            if (!$questionGroup) {
-                throw new \Exception("Groupe manquant pour la question : {$q['key']} (bloc_key : {$q['bloc_key']})");
-            }
             DynamicQuestionTemplate::updateOrCreate(
-                [
-                    'key' => $q['key'],
-                    'answer_target' => $q['answer_target'],
-                ],
-                [
-                    'text' => $q['text'],
-                    'type' => $q['type'],
-                    'bloc_key' => $q['bloc_key'] ?? null,
-                    'question_group_id' => $questionGroup->id,
-                    'answer_target' => $q['answer_target'],
-                    'options' => isset($q['options']) ? json_encode($q['options']) : null,
-                    'visible_if' => isset($q['visible_if']) ? json_encode($q['visible_if']) : null,
-                    'risk_weight' => $q['risk_weight'] ?? 0,
-                    'order' => $q['order'] ?? 0,
-                    'is_entry_point' => $q['is_entry_point'] ?? false,
-                    'is_required' => true,
-                ]
+                ['key' => $q['key']],
+                $q
             );
         }
 

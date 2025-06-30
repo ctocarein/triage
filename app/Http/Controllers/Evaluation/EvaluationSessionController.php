@@ -59,6 +59,7 @@ class EvaluationSessionController extends Controller
  */
 public function start(Request $request)
 {
+  
     $account = $request->user();
     $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
     $blocKeys = $request->input('bloc_keys', []);
@@ -293,4 +294,9 @@ public function next(EvaluationSession $session)
             ])
         );
     }
+
+
+    
+
+    
 }

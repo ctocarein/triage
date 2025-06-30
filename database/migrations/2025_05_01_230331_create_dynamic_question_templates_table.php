@@ -30,12 +30,15 @@ return new class extends Migration {
             'select_one', 'select_multiple',
             'info', 'file', 'hidden',
             'checkbox', 'radio',
+            'slider', 'scale', 'textarea',
+            'dynamic', 'custom',
+            'map'
         ]);
 
         // Cible de la réponse (profil, suivi, etc.)
         $table->enum('answer_target', [
             'personal_profile', 'medical_profile',
-            'evaluation', 'followup', 'tracking', 'survey'
+            'evaluation', 'followup', 'tracking', 'survey','greeting', 'custom'
         ])->nullable();
 
         // Groupe de questions

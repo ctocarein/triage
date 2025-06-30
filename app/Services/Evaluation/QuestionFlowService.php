@@ -173,16 +173,64 @@ class QuestionFlowService
 
     private function compare($actual, $expected, string $operator): bool
     {
-        return match ($operator) {
-            '=' => $actual == $expected,
-            '!=' => $actual != $expected,
-            '>' => $actual > $expected,
-            '<' => $actual < $expected,
-            'in' => in_array($actual, (array) $expected),
-            'not_in' => !in_array($actual, (array) $expected),
-            default => false,
-        };
+        // Standardisation : string vers trim/lower si utile (optionnel)
+        if (is_string($actual)) {
+            $actual = trim($actual);
+        }
+
+        switch ($operator) {
+            case '=':
+                return $actual == $expected;
+            case '!=':
+                return $actual != $expected;
+            case '>':
+                return $actual > $expected;
+            case '<':
+                return $actual < $expected;
+            case '>=':
+                return $actual >= $expected;
+            case '<=':
+                return $actual <= $expected;
+            case 'in':
+                return in_array($actual, (array) $expected);
+            case 'not_in':
+                return !in_array($actual, (array) $expected);
+
+            // Gestion des comparaisons d'âge dynamiques
+            case 'age_gte': // Greater than or equal
+            case 'age_gt':  // Greater than strict
+            case 'age_lte': // Less than or equal
+            case 'age_lt':  // Less than strict
+            case 'age_eq':  // Égalité stricte
+                // $actual est une date de naissance (string)
+                if (!$actual) return false;
+                try {
+                    $date = \Carbon\Carbon::parse($actual);
+                    $age = $date->age;
+                } catch (\Exception $e) {
+                    return false;
+                }
+                return match ($operator) {
+                    'age_gte' => $age >= $expected,
+                    'age_gt'  => $age >  $expected,
+                    'age_lte' => $age <= $expected,
+                    'age_lt'  => $age <  $expected,
+                    'age_eq'  => $age == $expected,
+                };
+
+            // Exemple : opérateur "empty" pour vérifier un champ vide
+            case 'empty':
+                return empty($actual);
+            case 'not_empty':
+                return !empty($actual);
+
+            // Tu peux ajouter d'autres opérateurs spécifiques ici...
+
+            default:
+                return false;
+        }
     }
+
 
     public function calculateScore(EvaluationSession $session): array
     {
@@ -194,19 +242,34 @@ class QuestionFlowService
             $answer = $answers->get($question->id);
             $value = optional($answer)->value;
 
-            if ($value !== null && $question->risk_weight > 0) {
+            // Applique la logique booléenne spécifique
+            if ($question->type === 'boolean' && $question->risk_weight > 0) {
+                // Si la réponse est "oui"/true, on ajoute le poids, sinon non
+                if (in_array($value, [true, 1, "1", "oui", "yes"], true)) {
+                    $blocs[$bloc] ??= [
+                        'score' => 0,
+                        'questions' => [],
+                        'level' => null,
+                        'meta' => $question->meta ?? []
+                    ];
+                    $blocs[$bloc]['score'] += $question->risk_weight;
+                    $blocs[$bloc]['questions'][] = $question->key;
+                }
+            }
+            // Autres types : si répondu et risk_weight > 0
+            elseif ($value !== null && $question->risk_weight > 0) {
                 $blocs[$bloc] ??= [
                     'score' => 0,
                     'questions' => [],
                     'level' => null,
                     'meta' => $question->meta ?? []
                 ];
-
                 $blocs[$bloc]['score'] += $question->risk_weight;
                 $blocs[$bloc]['questions'][] = $question->key;
             }
         }
 
+        // Niveau de risque/bloc si zones définies
         foreach ($blocs as $bloc => &$data) {
             $zones = $data['meta']['score_zone'] ?? null;
             if (is_array($zones)) {

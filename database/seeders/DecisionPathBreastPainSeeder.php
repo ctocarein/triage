@@ -26,8 +26,8 @@ class DecisionPathBreastPainSeeder extends Seeder
 
         // 2️⃣ — Prépare tes questions dynamiques (doivent déjà exister en base !)
         $q_breast_pain       = DynamicQuestionTemplate::where('key', 'breast_pain')->firstOrFail();
-        $q_pain_duration     = DynamicQuestionTemplate::where('key', 'breast_pain_duration')->firstOrFail();
-        $q_family_history    = DynamicQuestionTemplate::where('key', 'family_history_cancer')->firstOrFail();
+        // $q_pain_duration     = DynamicQuestionTemplate::where('key', 'breast_pain_duration')->firstOrFail();
+        // $q_family_history    = DynamicQuestionTemplate::where('key', 'family_history_cancer')->firstOrFail();
 
         // 3️⃣ — Les nodes
         DecisionNode::updateOrCreate([
@@ -43,31 +43,31 @@ class DecisionPathBreastPainSeeder extends Seeder
             'node_type' => 'question',
         ]);
 
-        DecisionNode::updateOrCreate([
-            'decision_path_id' => $path->id,
-            'node_key' => 'node_duration',
-        ], [
-            'dynamic_question_template_id' => $q_pain_duration->id,
-            'order' => 2,
-            'branches' => json_encode([
-                '>=7' => 'node_family_history', // Si la douleur dure 7 jours ou plus
-                '<7'  => 'node_end_normal',
-            ]),
-            'node_type' => 'question',
-        ]);
+        // DecisionNode::updateOrCreate([
+        //     'decision_path_id' => $path->id,
+        //     'node_key' => 'node_duration',
+        // ], [
+        //     'dynamic_question_template_id' => $q_pain_duration->id,
+        //     'order' => 2,
+        //     'branches' => json_encode([
+        //         '>=7' => 'node_family_history', // Si la douleur dure 7 jours ou plus
+        //         '<7'  => 'node_end_normal',
+        //     ]),
+        //     'node_type' => 'question',
+        // ]);
 
-        DecisionNode::updateOrCreate([
-            'decision_path_id' => $path->id,
-            'node_key' => 'node_family_history',
-        ], [
-            'dynamic_question_template_id' => $q_family_history->id,
-            'order' => 3,
-            'branches' => json_encode([
-                'oui' => 'node_end_risk',
-                'non' => 'node_end_checkup',
-            ]),
-            'node_type' => 'question',
-        ]);
+        // DecisionNode::updateOrCreate([
+        //     'decision_path_id' => $path->id,
+        //     'node_key' => 'node_family_history',
+        // ], [
+        //     'dynamic_question_template_id' => $q_family_history->id,
+        //     'order' => 3,
+        //     'branches' => json_encode([
+        //         'oui' => 'node_end_risk',
+        //         'non' => 'node_end_checkup',
+        //     ]),
+        //     'node_type' => 'question',
+        // ]);
 
         // Nœud de fin : normal
         DecisionNode::updateOrCreate([
