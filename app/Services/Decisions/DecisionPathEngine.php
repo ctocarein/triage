@@ -2,10 +2,14 @@
 
 namespace App\Services\Decisions;
 
-use App\Models\DecisionPath;
-use App\Models\DecisionNode;
-use App\Models\EvaluationSession;
+use App\Models\Decisions\DecisionNode;
+use App\Models\Decisions\DecisionPath;
+use App\Models\Evaluation\EvaluationSession;
 
+/**
+ * DecisionPathEngine gère la logique de parcours d'un DecisionPath.
+ * Il permet de naviguer dans les nodes en fonction des réponses fournies.
+ */
 class DecisionPathEngine
 {
     protected DecisionPath $decisionPath;
@@ -17,15 +21,19 @@ class DecisionPathEngine
 
     /**
      * Récupère le premier node du parcours (entrée de l’arbre)
+     *
+     * @return DecisionNode|null
      */
     public function getFirstNode(): ?DecisionNode
     {
         // Suppose que le premier node a order = 1, ou un flag "is_entry"
         return $this->decisionPath->nodes()->orderBy('order')->first();
+        
     }
 
     /**
      * À partir de la session, retourne le node/question suivant.
+     *
      * @param EvaluationSession $session
      * @return DecisionNode|null
      */

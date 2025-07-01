@@ -51,15 +51,12 @@ class EvaluationSessionController extends Controller
     }
 
 
-    /**
-     * 🆕 Démarrer une nouvelle session d’évaluation
-     */
+ 
 /**
  * 🆕 Démarrer une nouvelle session d’évaluation (complète ou thématique)
  */
 public function start(Request $request)
 {
-  
     $account = $request->user();
     $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
     $blocKeys = $request->input('bloc_keys', []);
@@ -89,15 +86,23 @@ public function start(Request $request)
 
     // 3️⃣ — Gestion DecisionPath
     if ($type === 'complete') {
-        // On prend le chemin d’éval complète
-        $decisionPath = DecisionPath::where('key', 'dp_full_assessment')->firstOrFail();
+        $decisionPath = DecisionPath::where('key', 'dp_full_assessment')->first();
+        if (!$decisionPath) {
+            return response()->json([
+                'message' => "Le parcours d'évaluation complète n'existe pas (clé dp_full_assessment manquante en base)."
+            ], 500);
+        }
+        if (!$decisionPath->is_active) {
+            return response()->json([
+                'message' => "Le parcours d'évaluation complète n'est pas actif."
+            ], 422);
+        }
     } else { // "thematic"
         if (empty($blocKeys)) {
             return response()->json([
                 'message' => "Veuillez sélectionner au moins un bloc thématique."
             ], 422);
         }
-        // Ici on suppose une correspondance 1:1 bloc <=> DecisionPath (ou on prend le premier si plusieurs)
         $paths = DecisionPath::whereIn('key', $blocKeys)->where('is_active', true)->get();
         if ($paths->isEmpty() || count($paths) !== count($blocKeys)) {
             return response()->json([
@@ -105,6 +110,11 @@ public function start(Request $request)
             ], 422);
         }
         $decisionPath = $paths->first();
+        if (!$decisionPath) {
+            return response()->json([
+                'message' => "Aucun parcours thématique actif trouvé."
+            ], 500);
+        }
     }
 
     // 4️⃣ — Création de la session
@@ -123,8 +133,21 @@ public function start(Request $request)
 
     $firstNode = $engine->getFirstNode();
 
-    if ($firstNode && $firstNode->question_id) {
+    // Vérifie l'existence du premier node et de la question liée
+    if (!$firstNode) {
+        return response()->json([
+            'message' => "Le parcours d'évaluation n'a pas de première étape définie.",
+            'session_id' => $session->id,
+            'decision_path_id' => $decisionPath->id,
+            'question' => null,
+        ], 500);
+    }
+
+    if (method_exists($firstNode, 'getQuestionPayload') && $firstNode->question_id) {
         $session->update(['current_question_id' => $firstNode->question_id]);
+        $questionPayload = $firstNode->getQuestionPayload();
+    } else {
+        $questionPayload = null;
     }
 
     // 6️⃣ — Retourne la réponse clean
@@ -132,14 +155,13 @@ public function start(Request $request)
         'message' => 'Session démarrée.',
         'session_id' => $session->id,
         'decision_path_id' => $decisionPath->id,
-        'question' => $firstNode ? $firstNode->getQuestionPayload() : null,
+        'question' => $questionPayload,
     ], 201);
 }
 
 
 
-
-   /**
+ /**
  * ▶️ Aller à la prochaine question (DecisionPath Engine)
  */
 public function next(EvaluationSession $session)
@@ -152,14 +174,15 @@ public function next(EvaluationSession $session)
         ]);
     }
 
-    // 2️⃣ — Instancie le moteur décisionnel (DecisionPath)
+    // 2️⃣ — Vérifie la validité du parcours
     $decisionPath = $session->decisionPath;
-    // if (!$decisionPath) {
-    //     return response()->json([
-    //         'message' => 'Chemin décisionnel introuvable pour cette session.',
-    //     ], 404);
-    // }
-   
+    if (!$decisionPath) {
+        return response()->json([
+            'message' => 'Aucun parcours décisionnel associé à cette session.',
+            'isCompleted' => true,
+        ], 500);
+    }
+
     $engine = new DecisionPathEngine($decisionPath);
 
     // 3️⃣ — Récupère la prochaine “node” selon les réponses accumulées
@@ -170,6 +193,7 @@ public function next(EvaluationSession $session)
         $session->update([
             'status' => 'completed',
             'completed_at' => now(),
+            'current_question_id' => null,
         ]);
 
         return response()->json([
@@ -179,14 +203,15 @@ public function next(EvaluationSession $session)
     }
 
     // 5️⃣ — Si le node est de type “end”/“recommendation”
-    if ($nextNode->node_type === 'end' || $nextNode->node_type === 'recommendation') {
+    if (in_array($nextNode->node_type, ['end', 'recommendation'])) {
         $session->update([
             'status' => 'completed',
             'completed_at' => now(),
             'current_question_id' => null,
         ]);
-        // Génère le rapport en live si tu veux (optionnel)
+        // Génère le rapport si tu veux
         // $report = app(ReportGenerationService::class)->generate($session);
+
         return response()->json([
             'message' => $nextNode->outcome_message ?? 'Fin du parcours.',
             'isCompleted' => true,
@@ -195,22 +220,41 @@ public function next(EvaluationSession $session)
     }
 
     // 6️⃣ — Sinon, c’est une nouvelle question
-    $session->update(['current_question_id' => $nextNode->question_id]);
+    // ATTENTION : question_id doit être présent sinon bug front
+    $question_id = $nextNode->question_id ?? $nextNode->dynamic_question_template_id ?? null;
+
+    if (!$question_id) {
+        return response()->json([
+            'message' => "Problème de configuration: node sans question_id.",
+            'isCompleted' => false,
+        ], 500);
+    }
+
+    $session->update(['current_question_id' => $question_id]);
 
     // 7️⃣ — Retourne le payload question/étape
-    $questionPayload = $nextNode->getQuestionPayload();
+    $questionPayload = method_exists($nextNode, 'getQuestionPayload')
+        ? $nextNode->getQuestionPayload()
+        : null;
 
-    // Progression : tu peux enrichir si tu veux afficher la progression UX
-    // (bloc_key, total, answered, etc.)
+    if (!$questionPayload) {
+        return response()->json([
+            'message' => "Impossible de générer la question, données manquantes.",
+            'isCompleted' => false,
+        ], 500);
+    }
+
+    // 8️⃣ — (Optionnel) Calcul de progression, infos UX, etc.
+    // $progress = ...
 
     return response()->json([
         'currentQuestion' => $questionPayload,
         'isCompleted' => false,
         'id' => $session->id,
+        // 'progress' => $progress,
         // ... autres infos utiles pour le front ...
     ]);
 }
-
 
   /**
  * Terminer une session et générer le rapport associé.
