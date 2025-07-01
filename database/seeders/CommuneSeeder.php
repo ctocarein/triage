@@ -165,6 +165,6 @@ class CommuneSeeder extends Seeder
     ['name' => 'Zouan-Hounien'],
     ['name' => 'Zoukougbeu'],
     ['name' => 'Zouan'],
-]);
+        ]);
     }
 }

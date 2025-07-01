@@ -11,7 +11,7 @@ class DecisionPathFullAssessmentSeeder extends Seeder
 {
     public function run()
     {
-        // Création/MAJ du chemin complet
+        // Création/Màj du DecisionPath
         $path = DecisionPath::updateOrCreate([
             'key' => 'dp_full_assessment',
         ], [
@@ -23,20 +23,38 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Associer chaque question à une variable (vérifie qu'elles existent bien en DB)
-        $q_firstname         = DynamicQuestionTemplate::where('key', 'first_name')->firstOrFail();
-  
-        $q_birthdate         = DynamicQuestionTemplate::where('key', 'birth_date')->firstOrFail();
-        $q_commune           = DynamicQuestionTemplate::where('key', 'commune')->firstOrFail();
-        $q_cmu               = DynamicQuestionTemplate::where('key', 'cmu')->firstOrFail();
-        $q_family_history    = DynamicQuestionTemplate::where('key', 'family_cancer_history')->firstOrFail();
-        $q_breast_pain       = DynamicQuestionTemplate::where('key', 'breast_pain')->firstOrFail();
-        $q_breast_mass       = DynamicQuestionTemplate::where('key', 'breast_mass')->firstOrFail();
-        $q_gyneco_bleeding   = DynamicQuestionTemplate::where('key', 'vaginal_bleeding_abnormal')->firstOrFail();
-              if (!DynamicQuestionTemplate::where('key', 'exposed_to_smoke')->exists()) {
-    throw new \Exception('La question first_name n’existe pas dans dynamic_question_templates.');
-}
-        $q_lifestyle         = DynamicQuestionTemplate::where('key', 'exposed_to_smoke')->firstOrFail();
+        // 1️⃣ Liste des clés de questions attendues
+        $questionKeys = [
+            'first_name',
+            'birth_date',
+            'commune',
+            'cmu',
+            // 'family_cancer_history',
+            'breast_pain',
+            'breast_mass',
+            'vaginal_bleeding_abnormal',
+            // 'exposed_to_smoke'
+        ];
+
+        // 2️⃣ Récupération de toutes les questions attendues en une seule requête
+        $questions = DynamicQuestionTemplate::whereIn('key', $questionKeys)->get()->keyBy('key');
+
+        // 3️⃣ Vérification des clés manquantes
+        $missing = array_diff($questionKeys, $questions->keys()->toArray());
+        if (count($missing)) {
+            throw new \Exception("Les clés de questions suivantes sont manquantes dans dynamic_question_templates: " . implode(', ', $missing));
+        }
+
+        // 4️⃣ Affectation aux variables
+        $q_firstname         = $questions['first_name'];
+        $q_birthdate         = $questions['birth_date'];
+        $q_commune           = $questions['commune'];
+        $q_cmu               = $questions['cmu'];
+        // $q_family_history    = $questions['family_cancer_history'];
+        $q_breast_pain       = $questions['breast_pain'];
+        $q_breast_mass       = $questions['breast_mass'];
+        $q_gyneco_bleeding   = $questions['vaginal_bleeding_abnormal'];
+        // $q_lifestyle         = $questions['exposed_to_smoke'];
 
         // --- Bloc Identité
         DecisionNode::updateOrCreate([
@@ -80,7 +98,7 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             'decision_path_id' => $path->id,
             'node_key' => 'node_family_history',
         ], [
-            'dynamic_question_template_id' => $q_family_history->id,
+            'dynamic_question_template_id' => null, // Pas de question ici, on utilise un nœud de type "question"
             'order' => 5,
             'branches' => json_encode([
                 true  => 'node_end_risk',    // Si ATCD familiaux => haut risque
@@ -135,7 +153,7 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             'decision_path_id' => $path->id,
             'node_key' => 'node_lifestyle',
         ], [
-            'dynamic_question_template_id' => $q_lifestyle->id,
+            'dynamic_question_template_id' => null, // Pas de question ici, on utilise un nœud de type "question"
             'order' => 9,
             'branches' => json_encode(['default' => 'node_end_normal']),
             'node_type' => 'question',

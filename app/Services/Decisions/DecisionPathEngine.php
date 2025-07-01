@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Decisions;
 
 use App\Models\DecisionPath;
 use App\Models\DecisionNode;

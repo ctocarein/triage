@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Evaluation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Decisions\DecisionPath;
-use App\Services\Decisions\DecisionPathEngine;
 use App\Models\Evaluation\ThematicBloc;
 use App\Models\Evaluation\QuestionGroup;
 use App\Models\Evaluation\EvaluationSession;
+use App\Services\Decisions\DecisionPathEngine;
 use App\Services\Evaluation\QuestionFlowService;
 use App\Models\Evaluation\DynamicQuestionTemplate;
 use App\Services\Evaluation\ReportGenerationService;
@@ -120,6 +120,7 @@ public function start(Request $request)
 
     // 5️⃣ — Démarrage du chemin : 1ère question
     $engine = new DecisionPathEngine($decisionPath);
+
     $firstNode = $engine->getFirstNode();
 
     if ($firstNode && $firstNode->question_id) {
@@ -153,6 +154,12 @@ public function next(EvaluationSession $session)
 
     // 2️⃣ — Instancie le moteur décisionnel (DecisionPath)
     $decisionPath = $session->decisionPath;
+    // if (!$decisionPath) {
+    //     return response()->json([
+    //         'message' => 'Chemin décisionnel introuvable pour cette session.',
+    //     ], 404);
+    // }
+   
     $engine = new DecisionPathEngine($decisionPath);
 
     // 3️⃣ — Récupère la prochaine “node” selon les réponses accumulées
