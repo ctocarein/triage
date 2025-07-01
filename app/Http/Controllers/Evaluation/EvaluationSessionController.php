@@ -143,8 +143,9 @@ public function start(Request $request)
         ], 500);
     }
 
-    if (method_exists($firstNode, 'getQuestionPayload') && $firstNode->question_id) {
-        $session->update(['current_question_id' => $firstNode->question_id]);
+    
+    if (method_exists($firstNode, 'getQuestionPayload') && $firstNode->dynamic_question_template_id) {
+        $session->update(['current_question_id' => $firstNode->dynamic_question_template_id]);
         $questionPayload = $firstNode->getQuestionPayload();
     } else {
         $questionPayload = null;

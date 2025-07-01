@@ -2,7 +2,9 @@
 
 namespace App\Models\Decisions;
 
+use App\Models\Decisions\DecisionPath;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Evaluation\DynamicQuestionTemplate;
 
 class DecisionNode extends Model
 {
