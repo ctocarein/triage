@@ -25,8 +25,12 @@ class DecisionPathFullAssessmentSeeder extends Seeder
 
         // 2️⃣ Liste ordonnée des blocs à inclure (à adapter selon ton projet !)
         $blocKeys = [
-            'greeting',           // Bloc accueil (optionnel)
-            'personal_profile',   // Identité
+            'greeting', 
+            'profil_identite',          // Bloc accueil (optionnel)
+            'profil_socio',            // Bloc socio-économique
+            'profil_sante',            // Bloc santé (optionnel)
+            'profile_personal',
+            // 'personal_profile',   // Identité
             'medical_profile',    // Antécédents
             'symptom_breast',     // Symptômes mammaires
             'symptom_cervical',   // Symptômes gynécologiques
