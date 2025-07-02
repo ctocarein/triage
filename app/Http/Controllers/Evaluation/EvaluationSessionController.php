@@ -185,7 +185,27 @@ public function next(EvaluationSession $session)
             'isCompleted' => true,
         ], 500);
     }
+ // 🔄 S'assure que la question courante a une réponse avant d'avancer
+    if ($session->current_question_id) {
+        $hasAnswer = $session->answers()
+            ->where('dynamic_question_template_id', $session->current_question_id)
+            ->exists();
 
+        if (!$hasAnswer) {
+            $node = $decisionPath->nodes()
+                ->where('dynamic_question_template_id', $session->current_question_id)
+                ->first();
+
+            if ($node && method_exists($node, 'getQuestionPayload')) {
+                return response()->json([
+                    'currentQuestion' => $node->getQuestionPayload(),
+                    'isCompleted' => false,
+                    'id' => $session->id,
+                ]);
+            }
+        }
+    }
+    // 2️⃣ — Instancie le moteur de décision avec le parcours
     $engine = new DecisionPathEngine($decisionPath);
 
     // 3️⃣ — Récupère la prochaine “node” selon les réponses accumulées
