@@ -167,6 +167,7 @@ public function start(Request $request)
  */
 public function next(EvaluationSession $session)
 {
+  
     // 1️⃣ — Vérifie l’état de la session
     if (!$session->isInProgress()) {
         return response()->json([
@@ -177,6 +178,7 @@ public function next(EvaluationSession $session)
 
     // 2️⃣ — Vérifie la validité du parcours
     $decisionPath = $session->decisionPath;
+
     if (!$decisionPath) {
         return response()->json([
             'message' => 'Aucun parcours décisionnel associé à cette session.',

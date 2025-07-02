@@ -4,6 +4,7 @@ namespace App\Models\Evaluation;
 
 use App\Models\Report;
 use App\Models\Account;
+use App\Models\Decisions\DecisionPath;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Evaluation\EvaluationAnswer;
 use App\Models\Evaluation\DynamicQuestionTemplate;
@@ -24,6 +25,7 @@ class EvaluationSession extends Model
         'type',
         'target_blocs',
         'visited_blocs',
+        'decision_path_id',
     ];
 
     protected $casts = [
@@ -50,6 +52,8 @@ class EvaluationSession extends Model
     public function scopeThematic($query) { return $query->where('type', 'thematic'); }
     public function isFullEvaluation(): bool { return $this->type === 'complete'; }
     public function isThematic(): bool { return $this->type === 'thematic'; }
+
+    public function decisionPath(){ return $this->belongsTo(DecisionPath::class, 'decision_path_id');}
 
     public static function availableTypes(): array { return ['complete', 'thematic']; }
 

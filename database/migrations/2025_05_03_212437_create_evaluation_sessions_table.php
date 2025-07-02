@@ -41,6 +41,7 @@ return new class extends Migration
             $table->index('account_id');
             $table->index('status');
             $table->index('current_question_id');
+            $table->unsignedBigInteger('decision_path_id')->nullable(false);
         });
     }
 
