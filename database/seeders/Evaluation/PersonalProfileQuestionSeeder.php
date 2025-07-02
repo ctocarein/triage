@@ -64,7 +64,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'key' => 'height',
                     'text' => '📏 Quelle est votre taille (en cm) ?',
                     'type' => 'number',
-                    'bloc_key' => 'profil_sante',
+                    'bloc_key' => 'medical_profile',
                     'answer_target' => 'personal_profile',
                     'order' => 6,
                 ],
