@@ -232,13 +232,13 @@ public function next(EvaluationSession $session)
             'completed_at' => now(),
             'current_question_id' => null,
         ]);
-        // Génère le rapport si tu veux
-        // $report = app(ReportGenerationService::class)->generate($session);
+        // Génération immédiate du rapport
+        $report = app(ReportGenerationService::class)->generate($session);
 
         return response()->json([
-            'message' => $nextNode->outcome_message ?? 'Fin du parcours.',
-            'isCompleted' => true,
-            // 'report' => $report, // Optionnel : retour du rapport direct
+            'message'    => $nextNode->outcome_message ?? 'Fin du parcours.',
+            'isCompleted'=> true,
+            'report'     => $report,
         ]);
     }
 
