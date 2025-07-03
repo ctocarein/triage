@@ -291,7 +291,7 @@ class QuestionFlowService
         $totalScore = collect($blocs)->sum('score');
 
         $level = 'non déterminé';
-        foreach (config('chereh_risk.levels') as $zone) {
+        foreach (config('risk-level.levels') as $zone) {
             if ($totalScore >= $zone['min'] && $totalScore <= $zone['max']) {
                 $level = $zone['name'];
                 break;

@@ -123,4 +123,5 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'risk-level' => require __DIR__.'/risk-level.php',
 ];
