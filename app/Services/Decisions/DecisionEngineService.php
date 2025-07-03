@@ -63,5 +63,22 @@ class DecisionEngineService
         $last = $account->medicalProfile?->last_cervical_screening_date;
         return $this->evaluateScreening($account, $age, $last, $this->colRules, 'frottis');
     }
+
+    
+    /**
+     * Basic evaluation for breast self examination (palpation).
+     *
+     * At the moment the application does not store any last palpation
+     * information. This method therefore simply reminds the user of the
+     * recommended practice without performing a date based calculation.
+     */
+    public function evaluatePalpation($account): array
+    {
+        return [
+            'status' => 'reminder',
+            'message' => "Pensez à effectuer une auto-palpation chaque mois.",
+            'next' => null,
+        ];
+    }
 }
 
