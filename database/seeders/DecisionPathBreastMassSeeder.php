@@ -22,71 +22,78 @@ class DecisionPathBreastMassSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $questions = DynamicQuestionTemplate::where('bloc_key', 'symptom_breast')
-            ->where(function($query) {
-                $query->where('key', 'like', 'breast_mass%');
-            })
-            ->orderBy('order')
-            ->get()
-            ->keyBy('key');
+        // 1️⃣ — Définis ici toutes les clés patterns que tu veux inclure dans ce parcours
+        $keyArray = [
+            'breast_mass%',
+            'breast_nipple_bleeding%',     // Ex : si tu veux tout ce qui commence par ces prefixes
+            'breast_skin_change%',     // Ex : si tu veux tout ce qui commence par ces prefixes
+            'breast_asymmetry%',     // Ex : si tu veux tout ce qui commence par ces prefixes
+            'axillary_ganglion%',     // Ex : si tu veux tout ce qui commence par ces prefixes
+            // Ajoute autant que nécessaire selon l’évolution des questions
+        ];
 
+        // 2️⃣ — Récupère toutes les questions concernées dynamiquement
+        $query = DynamicQuestionTemplate::where('bloc_key', 'symptom_breast');
+        $query->where(function ($q) use ($keyArray) {
+            foreach ($keyArray as $pattern) {
+                $q->orWhere('key', 'like', $pattern);
+            }
+        });
+        $questions = $query->orderBy('order')->get()->keyBy('key');
+
+        // 3️⃣ — Génère dynamiquement les DecisionNodes en fonction des questions trouvées
         $order = 1;
+        $prevNodeKey = null;
 
-        // 1️⃣ — Node: "Avez-vous remarqué une boule ou une masse dans le sein ?"
-        $first = $questions['breast_mass'] ?? null;
-        if ($first) {
+        foreach ($questions as $qKey => $q) {
+            $nodeKey = "node_" . $qKey;
             DecisionNode::updateOrCreate([
                 'decision_path_id' => $path->id,
-                'node_key' => 'node_breast_mass',
+                'node_key' => $nodeKey,
             ], [
-                'dynamic_question_template_id' => $first->id,
+                'dynamic_question_template_id' => $q->id,
                 'order' => $order++,
                 'node_type' => 'question',
-                'branches' => json_encode(['default' => 'node_breast_mass_duration']),
+                'branches' => json_encode(['default' => null]), // Ajoute ta logique de branchement ici si besoin
             ]);
+
+            // Branche le node précédent vers ce node
+            if ($prevNodeKey) {
+                $prevNode = DecisionNode::where('decision_path_id', $path->id)->where('node_key', $prevNodeKey)->first();
+                if ($prevNode) {
+                    $branches = $prevNode->branches ?? [];
+                    if (!is_array($branches)) $branches = json_decode($branches, true) ?? [];
+                    $branches['default'] = $nodeKey;
+                    $prevNode->branches = json_encode($branches);
+                    $prevNode->save();
+                }
+            }
+            $prevNodeKey = $nodeKey;
         }
 
-        // 2️⃣ — Node: "Depuis combien de temps avez-vous remarqué cette masse ?"
-        $duration = $questions['breast_mass_duration'] ?? null;
-        if ($duration) {
-            // On branche selon la valeur choisie
-            DecisionNode::updateOrCreate([
-                'decision_path_id' => $path->id,
-                'node_key' => 'node_breast_mass_duration',
-            ], [
-                'dynamic_question_template_id' => $duration->id,
-                'order' => $order++,
-                'node_type' => 'question',
-                // Ici, la clé 'more_3m' de la réponse pointe vers alerte
-                'branches' => json_encode([
-                    'more_3m' => 'node_end_breast_mass_urgent',
-                    'default' => 'node_end_breast_mass',
-                ]),
-            ]);
+        // 4️⃣ — Ajoute un node de fin pour terminer le flow
+        $endNodeKey = 'node_end_breast_mass';
+        DecisionNode::updateOrCreate([
+            'decision_path_id' => $path->id,
+            'node_key' => $endNodeKey,
+        ], [
+            'order' => $order,
+            'node_type' => 'end',
+            'outcome_message' => "Masse mammaire détectée, consultez un spécialiste.",
+            'risk_weight' => 20,
+            'specialties' => json_encode(['gynécologie', 'oncologie']),
+        ]);
+
+        // Branche le dernier node question vers le node de fin
+        if ($prevNodeKey) {
+            $lastNode = DecisionNode::where('decision_path_id', $path->id)->where('node_key', $prevNodeKey)->first();
+            if ($lastNode) {
+                $branches = $lastNode->branches ?? [];
+                if (!is_array($branches)) $branches = json_decode($branches, true) ?? [];
+                $branches['default'] = $endNodeKey;
+                $lastNode->branches = json_encode($branches);
+                $lastNode->save();
+            }
         }
-
-        // 3️⃣ — Node de fin “suivi standard”
-        DecisionNode::updateOrCreate([
-            'decision_path_id' => $path->id,
-            'node_key' => 'node_end_breast_mass',
-        ], [
-            'order' => 99,
-            'node_type' => 'end',
-            'outcome_message' => "Masse mammaire récente. Consultation spécialisée conseillée.",
-            'risk_weight' => 15,
-            'specialties' => json_encode(['gynécologie']),
-        ]);
-
-        // 4️⃣ — Node de fin “urgence”
-        DecisionNode::updateOrCreate([
-            'decision_path_id' => $path->id,
-            'node_key' => 'node_end_breast_mass_urgent',
-        ], [
-            'order' => 100,
-            'node_type' => 'end',
-            'outcome_message' => "Masse présente depuis plus de 3 mois. Urgence : consultation rapide en oncologie.",
-            'risk_weight' => 25,
-            'specialties' => json_encode(['oncologie']),
-        ]);
     }
 }
