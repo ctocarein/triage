@@ -55,12 +55,18 @@ class EvaluationSessionController extends Controller
 /**
  * 🆕 Démarrer une nouvelle session d’évaluation (complète ou thématique)
  */
-public function start(Request $request)
+ public function start(Request $request)
 {
-    $account = $request->user();
-    $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
-    $blocKeys = $request->input('bloc_keys', []);
-    $decisionPath = null;
+       $account = $request->user();
+        $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
+        $blocKeys = $request->input('bloc_keys', []);
+        if (is_string($blocKeys)) {
+            $blocKeys = array_filter(array_map('trim', explode(',', $blocKeys)));
+        }
+        if (!is_array($blocKeys)) {
+            $blocKeys = [$blocKeys];
+        }
+        $decisionPath = null;
 
     // 1️⃣ — Bloque les thématiques si pas de full déjà complétée
     if ($type !== 'complete' && !$account->hasCompletedFullEvaluation()) {

@@ -16,7 +16,7 @@ class DecisionPathBreastMassSeeder extends Seeder
         ], [
             'title' => 'Masse mammaire',
             'description' => 'Parcours d’évaluation en cas de masse/boule dans le sein.',
-            'category' => 'breast',
+            'category' => 'thematics',
             'source_guideline' => 'OMS, HAS',
             'version' => '1.0',
             'is_active' => true,
