@@ -4,19 +4,30 @@ namespace App\Http\Controllers\Evaluation;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Evaluation\ThematicBloc;
+use App\Models\Decisions\DecisionPath;
+
 
 class ThematicBlocController extends Controller
 {
-   /**
-     * Liste des blocs actifs avec leur groupe associé (pour le frontend).
-     */
-    public function index()
+   public function index()
     {
-        $blocs = ThematicBloc::with('questionGroup')->activeOrdered()->get();
+        $thematics = DecisionPath::where('category', 'thematic')
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get([
+                'id',
+                'key',
+                'title',
+                'description',
+                'color',
+                'icon',
+                'image_url',
+                'order',
+                'version',
+            ]);
 
         return response()->json([
-            'data' => $blocs
+            'data' => $thematics
         ]);
     }
 }
