@@ -21,6 +21,7 @@ class Report extends Model
     protected $casts = [
         'answers' => 'array',
         'specialties' => 'array',
+        'summary' => 'array',
     ];
 
 
