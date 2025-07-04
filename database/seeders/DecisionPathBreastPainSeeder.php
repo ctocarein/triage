@@ -17,7 +17,7 @@ class DecisionPathBreastPainSeeder extends Seeder
         ], [
             'title' => 'Douleur au sein',
             'description' => 'Triage rapide et orienté en cas de douleur mammaire',
-            'category' => 'thematics',
+            'category' => 'Sein',
             'source_guideline' => 'OMS, HAS',
             'version' => '1.0',
             'is_active' => true,
