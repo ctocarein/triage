@@ -11,7 +11,7 @@ class ThematicBlocController extends Controller
 {
    public function index()
     {
-        $thematics = DecisionPath::where('is_active', true)
+        $thematics = DecisionPath::where('category','thematics')->where('is_active', true)
             ->orderBy('order')
             ->get([
                 'id',
