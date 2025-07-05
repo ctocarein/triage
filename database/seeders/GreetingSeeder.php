@@ -23,15 +23,16 @@ class GreetingSeeder extends Seeder
                 'is_entry_point' => true,
                 'order' => 1,
             ],
-            [
+           [
                 'key' => 'greeting_intro',
-                'text' => 'Nous allons vous poser quelques questions pour mieux comprendre votre situation de santé et vous accompagner au mieux.',
-                'type' => 'info',
+                'text' => "Nous allons vous poser quelques questions pour mieux comprendre votre situation de santé et vous accompagner au mieux.\n\n**Merci** de répondre sincèrement : vos réponses sont confidentielles et permettent des conseils personnalisés.",
+                'type' => 'custom',
                 'bloc_key' => 'greeting',
                 'answer_target' => 'greeting',
                 'is_entry_point' => false,
                 'order' => 2,
             ],
+
             [
                 'key' => 'greeting_confidential',
                 'text' => '🔒 Toutes vos réponses resteront strictement confidentielles et sécurisées.',
@@ -41,15 +42,7 @@ class GreetingSeeder extends Seeder
                 'is_entry_point' => false,
                 'order' => 3,
             ],
-            [
-                'key' => 'greeting_encourage',
-                'text' => 'N\'hésitez pas à répondre sincèrement. Plus vos réponses sont précises, plus nos recommandations seront adaptées !',
-                'type' => 'info',
-                'bloc_key' => 'greeting',
-                'answer_target' => 'greeting',
-                'is_entry_point' => false,
-                'order' => 4,
-            ],
+
         ];
 
           foreach ($greetingInfos as $q) {
