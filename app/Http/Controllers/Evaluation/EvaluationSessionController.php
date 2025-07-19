@@ -57,9 +57,15 @@ class EvaluationSessionController extends Controller
  */
  public function start(Request $request)
 {
-       $account = $request->user();
-        $type = $request->input('type', 'complete'); // 'complete' ou 'thematic'
-        $blocKeys = $request->input('bloc_keys', []);
+        $validated = $request->validate([
+            'type' => 'required|in:complete,thematic',
+            'bloc_keys' => 'array|required_if:type,thematic',
+            'bloc_keys.*' => 'string',
+        ]);
+
+        $account = $request->user();
+        $type = $validated['type'];
+        $blocKeys = $validated['bloc_keys'] ?? [];
         if (is_string($blocKeys)) {
             $blocKeys = array_filter(array_map('trim', explode(',', $blocKeys)));
         }
