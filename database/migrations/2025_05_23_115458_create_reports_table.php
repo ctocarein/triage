@@ -17,7 +17,7 @@ class CreateReportsTable extends Migration
             $table->foreignId('decision_path_id')->nullable()->constrained('decision_paths')->nullOnDelete();
             $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->string('report_code')->nullable();      // ex: RPT-2025-00123
-            $table->string('title');
+            $table->string('title')->nullable();          // titre du rapport
             $table->text('summary')->nullable();            // synthèse globale
             $table->json('answers')->nullable();            // toutes les réponses, clé:valeur
             $table->float('score')->nullable();
