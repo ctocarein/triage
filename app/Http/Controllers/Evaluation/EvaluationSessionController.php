@@ -90,10 +90,23 @@ class EvaluationSessionController extends Controller
         ], 403);
     }
     if ($type === 'complete' && $inProgressFull) {
+        $node = null;
+        $decisionPath = $inProgressFull->decisionPath;
+        if ($decisionPath && $inProgressFull->current_question_id) {
+            $node = $decisionPath->nodes()
+                ->where('dynamic_question_template_id', $inProgressFull->current_question_id)
+                ->first();
+        }
+
+        $questionPayload = $node && method_exists($node, 'getQuestionPayload')
+            ? $node->getQuestionPayload()
+            : null;
         return response()->json([
-            'message' => "Vous avez déjà une évaluation complète en cours. Veuillez la terminer.",
-            'session_id' => $inProgressFull->id
-        ], 403);
+            'message' => 'Session déjà en cours.',
+            'session_id' => $inProgressFull->id,
+            'decision_path_id' => $inProgressFull->decision_path_id,
+            'question' => $questionPayload,
+        ], 200);;
     }
 
     // 3️⃣ — Gestion DecisionPath
