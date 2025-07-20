@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Account;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\MedicalProfile;
+use App\Http\Controllers\Controller;
 
 class MedicalProfileController extends Controller
 {

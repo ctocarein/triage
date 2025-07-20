@@ -2,6 +2,7 @@
 
 namespace App\Models\Evaluation;
 
+use App\Support\ComparesValues;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Evaluation\QuestionGroup;
 use App\Models\Evaluation\EvaluationAnswer;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class DynamicQuestionTemplate extends Model
 {
-    use HasFactory;
+    use HasFactory, ComparesValues;
 
     protected $fillable = [
         'key', 'text', 'type', 'answer_target', 'question_group_id',
@@ -53,7 +54,7 @@ class DynamicQuestionTemplate extends Model
                 default => null
             };
 
-            if (!compare($actual, $operator, $value)) {
+            if (!$this->compare($actual, $value, $operator)) {
                 return false;
             }
         }

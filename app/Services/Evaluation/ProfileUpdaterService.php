@@ -19,7 +19,6 @@ class ProfileUpdaterService
             // On ignore les réponses aux questions qui n'ont pas de cible
             $target = $answer->question->answer_target;
             $key = $answer->question->key;
-            //  $value = $this->castValue($answer->question->type, $answer->value);
             $value = $this->castValue($key, $answer->question->type, $answer->value);
 
             if ($target === 'personal_profile') {
@@ -29,27 +28,18 @@ class ProfileUpdaterService
             if ($target === 'medical_profile') {
                 $medicalData[$key] = $value;
             }
-            $account = $session->account;
-
-            if (!empty($personalData)) {
-                $account->personalProfile()->updateOrCreate([], $personalData);
-            }
-
-            if (!empty($medicalData)) {
-                $account->medicalProfile()->updateOrCreate([], $medicalData);
-            }
         }
 
-            // On récupère les profils liés à l’utilisateur
-            $account = $session->account;
+        // On récupère les profils liés à l'utilisateur
+        $account = $session->account;
 
-            if (!empty($personalData)) {
-                $account->personalProfile()->updateOrCreate([], $personalData);
-            }
+        if (!empty($personalData)) {
+            $account->personalProfile()->updateOrCreate([], $personalData);
+        }
 
-            if (!empty($medicalData)) {
-                $account->medicalProfile()->updateOrCreate([], $medicalData);
-            }
+        if (!empty($medicalData)) {
+            $account->medicalProfile()->updateOrCreate([], $medicalData);
+        }
 }
 
        private function castValue(string $key, string $type, $value)

@@ -7,9 +7,12 @@ use App\Models\Evaluation\QuestionGroup;
 use App\Models\Evaluation\EvaluationSession;
 use App\Models\Evaluation\DynamicQuestionTemplate;
 use Illuminate\Support\Collection;
+use App\Support\ComparesValues;
+
 
 class QuestionFlowService
 {
+    use ComparesValues;
     protected ?Collection $cachedTemplates = null;
     protected BlocRulesService $blocRules;
 
@@ -169,66 +172,6 @@ class QuestionFlowService
         }
 
         return true;
-    }
-
-    private function compare($actual, $expected, string $operator): bool
-    {
-        // Standardisation : string vers trim/lower si utile (optionnel)
-        if (is_string($actual)) {
-            $actual = trim($actual);
-        }
-
-        switch ($operator) {
-            case '=':
-                return $actual == $expected;
-            case '!=':
-                return $actual != $expected;
-            case '>':
-                return $actual > $expected;
-            case '<':
-                return $actual < $expected;
-            case '>=':
-                return $actual >= $expected;
-            case '<=':
-                return $actual <= $expected;
-            case 'in':
-                return in_array($actual, (array) $expected);
-            case 'not_in':
-                return !in_array($actual, (array) $expected);
-
-            // Gestion des comparaisons d'âge dynamiques
-            case 'age_gte': // Greater than or equal
-            case 'age_gt':  // Greater than strict
-            case 'age_lte': // Less than or equal
-            case 'age_lt':  // Less than strict
-            case 'age_eq':  // Égalité stricte
-                // $actual est une date de naissance (string)
-                if (!$actual) return false;
-                try {
-                    $date = \Carbon\Carbon::parse($actual);
-                    $age = $date->age;
-                } catch (\Exception $e) {
-                    return false;
-                }
-                return match ($operator) {
-                    'age_gte' => $age >= $expected,
-                    'age_gt'  => $age >  $expected,
-                    'age_lte' => $age <= $expected,
-                    'age_lt'  => $age <  $expected,
-                    'age_eq'  => $age == $expected,
-                };
-
-            // Exemple : opérateur "empty" pour vérifier un champ vide
-            case 'empty':
-                return empty($actual);
-            case 'not_empty':
-                return !empty($actual);
-
-            // Tu peux ajouter d'autres opérateurs spécifiques ici...
-
-            default:
-                return false;
-        }
     }
 
 
