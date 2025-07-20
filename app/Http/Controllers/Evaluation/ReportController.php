@@ -31,7 +31,10 @@ class ReportController extends Controller
             ], 403);
         }
 
-        $reports = "report data";
+        $reports = Report::where('account_id', $accountId)
+            ->with(['evaluationSession', 'decisionPath'])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'data' => $reports,
