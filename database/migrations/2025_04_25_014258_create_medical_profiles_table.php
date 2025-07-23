@@ -20,7 +20,6 @@ return new class extends Migration {
 
             // 🧬 Historique médical
             $table->boolean('family_cancer_history')->default(false);
-            $table->date('last_screening_date')->nullable();
             $table->string('screening_type')->nullable();
             $table->boolean('has_breast_cancer')->default(false);
             $table->boolean('has_ovarian_cancer')->default(false);
@@ -34,6 +33,12 @@ return new class extends Migration {
             $table->integer('number_of_abortions')->nullable();
             $table->integer('number_of_children')->nullable();
 
+            // 🩺 Dates clés pour la prévention intelligente/reminders
+            $table->date('last_self_exam_date')->nullable();
+            $table->date('last_menstruation_date')->nullable();
+            $table->unsignedTinyInteger('fixed_self_exam_day')->nullable();
+            $table->date('last_screening_date')->nullable();
+            $table->date('last_cervical_screening_date')->nullable();
             // 📏 Données biométriques
             $table->string('cmu_number')->nullable(); // Numéro de CMU
             $table->float('height')->nullable(); // Taille en cm    

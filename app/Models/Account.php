@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\UserReminder;
 use App\Models\MedicalProfile;
 use App\Models\PersonalProfile;
 use Laravel\Sanctum\HasApiTokens;
@@ -106,5 +107,15 @@ class Account extends Authenticatable
         $last = $this->lastCompletedFullEvaluation();
         if (!$last) return true;
         return now()->diffInMonths($last->completed_at) >= $months;
+    }
+
+    /**
+     * Retourne les rappels de l'utilisateur.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function reminders()
+    {
+        return $this->hasMany(UserReminder::class, 'user_id');
     }
 }

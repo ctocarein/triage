@@ -35,6 +35,10 @@ return new class extends Migration {
             'map'
         ]);
 
+       // Intelligence reminder / activation contextuelle
+        $table->string('question_type')->default('question'); 
+        $table->json('activation_condition')->nullable();     
+        $table->string('period')->nullable();                 
         // Cible de la réponse (profil, suivi, etc.)
         $table->enum('answer_target', [
             'personal_profile', 'medical_profile',
@@ -59,15 +63,15 @@ return new class extends Migration {
         $table->unsignedInteger('order')->default(0);
         $table->unsignedInteger('risk_weight')->default(0);
 
-        // Timestamps
-        $table->timestamps();
-
         // Indexation
         $table->index(['question_group_id'], 'idx_group');
         $table->index(['question_group_id', 'order'], 'idx_group_order');
         $table->index(['is_entry_point'], 'idx_entry_point');
         $table->index('answer_target', 'idx_answer_target');
         $table->index(['order'], 'idx_order');
+
+        // Timestamps
+        $table->timestamps();
 
     });
 

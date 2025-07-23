@@ -79,8 +79,13 @@ Route::prefix('answers')
         Route::delete('/{id}', [EvaluationAnswerController::class, 'destroy']);
     });
 
+    //Reminders routes
+    Route::middleware('auth:sanctum')->prefix('reminders')->group(function() {
+        Route::get('/', [ReminderController::class, 'index']);
+        Route::post('/validate', [ReminderController::class, 'validateReminder']);
+    });
 
-    // Report routes & Decision Path routes
+// Report routes & Decision Path routes
 
 Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     Route::get('/', [ReportController::class, 'index']);
