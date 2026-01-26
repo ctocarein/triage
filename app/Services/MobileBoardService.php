@@ -3,27 +3,27 @@
 namespace App\Services;
 
 use Carbon\Carbon;
-use App\Models\Report;
-use App\Models\Capsule\Capsule;
-use App\Models\Evaluation\QuestionGroup;
-use App\Models\Evaluation\EvaluationSession;
+use App\Domains\Report\Models\Report;
+use App\Domains\Recommendation\Models\Capsule;
+use App\Domains\Evaluation\Models\QuestionGroup;
+use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Services\Decisions\DecisionEngineService;
 
 class MobileBoardService
 {
-    public function buildDashboard($account): array
+    public function buildDashboard($identity): array
     {
-        if (!$account) {
-            throw new \Exception('Account not provided');
+        if (!$identity) {
+            throw new \Exception('Identity not provided');
         }
 
         // Vérifier si l'utilisateur a un profil personnel
-        if ($account->personalProfile?->getAgeAttribute() == null && !$account->personalProfile?->menopause_status) {
+        if ($identity->personalProfile?->getAgeAttribute() == null && !$identity->personalProfile?->menopause_status) {
             return ['message' => "Veuillez compléter votre profil personnel"];
         }
 
-        $age = $account->personalProfile?->getAgeAttribute();
-        $profile = $account->medicalProfile?->menopause_status ? 'menopause' : 'cycle_regular';
+        $age = $identity->personalProfile?->getAgeAttribute();
+        $profile = $identity->medicalProfile?->menopause_status ? 'menopause' : 'cycle_regular';
 
         $capsules = Capsule::with('items')
             ->where('is_active', true)
@@ -33,21 +33,21 @@ class MobileBoardService
             ->get();
 
         // Evaluation Status
-        $hasCompletedFull = $account->evaluationSessions()
+        $hasCompletedFull = $identity->evaluationSessions()
             ->where('type', 'complete')
             ->where('status', 'completed')
             ->exists();
 
-        $profileData = $account->personalProfile;
-        $medical = $account->medicalProfile;
+        $profileData = $identity->personalProfile;
+        $medical = $identity->medicalProfile;
         $age = $profileData?->birth_date ? Carbon::parse($profileData->birth_date)->age : null;
 
-        $mammo = app(DecisionEngineService::class)->evaluateMammo($account, $age);
-        $palpation = app(DecisionEngineService::class)->evaluatePalpation($account);
-        $col = app(DecisionEngineService::class)->evaluateCol($account, $age);
+        $mammo = app(DecisionEngineService::class)->evaluateMammo($identity, $age);
+        $palpation = app(DecisionEngineService::class)->evaluatePalpation($identity);
+        $col = app(DecisionEngineService::class)->evaluateCol($identity, $age);
 
-        $reports = Report::whereHas('evaluationSession', function($query) use ($account) {
-            $query->where('account_id', $account->id);
+        $reports = Report::whereHas('evaluationSession', function($query) use ($identity) {
+            $query->where('identity_id', $identity->id);
         })
         ->latest()
         ->take(5)
@@ -56,7 +56,7 @@ class MobileBoardService
         // ✅ Liste des recentes évaluations
         $groupLabels = QuestionGroup::pluck('label', 'key');
 
-        $sessions = $account->evaluationSessions()
+        $sessions = $identity->evaluationSessions()
             ->withCount('answers')
             ->with('report')
             ->latest()

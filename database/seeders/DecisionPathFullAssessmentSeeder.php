@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Decisions\DecisionNode;
-use App\Models\Decisions\DecisionPath;
-use App\Models\Evaluation\DynamicQuestionTemplate;
+use App\Domains\Decision\Models\DecisionNode;
+use App\Domains\Decision\Models\DecisionPath;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 
 class DecisionPathFullAssessmentSeeder extends Seeder
 {

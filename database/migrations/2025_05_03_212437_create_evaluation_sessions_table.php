@@ -6,48 +6,38 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('evaluation_sessions', function (Blueprint $table) {
             $table->id();
 
-            // Liens et statut
-            $table->foreignId('account_id')->constrained()->cascadeOnDelete();
+            $table->uuid('identity_id');
             $table->foreignId('current_question_id')
                   ->nullable()
                   ->constrained('dynamic_question_templates')
                   ->nullOnDelete();
             $table->enum('status', ['in_progress', 'completed', 'cancelled'])->default('in_progress');
 
-            // Données de suivi
             $table->string('type')->default('complete');
-            $table->string('context')->nullable();        // Ex: "col_de_l_uterus", "sein"
-            $table->string('risk_level')->nullable();     // Risque global (léger/modéré/élevé)
-            $table->unsignedInteger('score')->default(0); // Score total
+            $table->string('context')->nullable();
+            $table->string('risk_level')->nullable();
+            $table->unsignedInteger('score')->default(0);
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->boolean('is_completed')->default(false);
 
-            // Gestion des blocs dynamiques
-            $table->string('current_bloc')->nullable();     // Bloc en cours
-            $table->json('target_blocs')->nullable();       // Liste des blocs visés (null = tous)
-            $table->json('visited_blocs')->nullable();      // Historique des blocs parcourus
+            $table->string('current_bloc')->nullable();
+            $table->json('target_blocs')->nullable();
+            $table->json('visited_blocs')->nullable();
 
-            // Timestamps et index
             $table->timestamps();
-            $table->index('account_id');
+            $table->index('identity_id');
             $table->index('status');
             $table->index('current_question_id');
             $table->unsignedBigInteger('decision_path_id')->nullable(false);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('evaluation_sessions');

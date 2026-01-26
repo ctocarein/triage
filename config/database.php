@@ -143,7 +143,16 @@ return [
 
     'redis' => [
 
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+        'client' => (static function () {
+            $default = extension_loaded('redis') ? 'phpredis' : 'predis';
+            $client = env('REDIS_CLIENT', $default);
+
+            if ($client === 'phpredis' && ! extension_loaded('redis')) {
+                return 'predis';
+            }
+
+            return $client;
+        })(),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),

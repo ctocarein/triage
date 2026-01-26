@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Capsule\Capsule;
+use App\Domains\Recommendation\Models\Capsule;
 use Illuminate\Database\Seeder;
-use App\Models\Capsule\CapsuleItem;
+use App\Domains\Recommendation\Models\CapsuleItem;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class CapsuleSeeder extends Seeder

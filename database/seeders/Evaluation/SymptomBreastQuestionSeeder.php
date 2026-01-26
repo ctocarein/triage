@@ -3,8 +3,8 @@
 namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
-use App\Models\Evaluation\DynamicQuestionTemplate;
-use App\Models\Evaluation\QuestionGroup;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Models\QuestionGroup;
 
 class SymptomBreastQuestionSeeder extends Seeder
 {

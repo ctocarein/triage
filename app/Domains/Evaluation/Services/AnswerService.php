@@ -1,0 +1,80 @@
+<?php
+
+namespace App\Domains\Evaluation\Services;
+
+use App\Domains\Evaluation\Models\EvaluationAnswer;
+use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Services\RiskModelService;
+
+class AnswerService
+{
+    /**
+     * Enregistre ou met a jour une reponse a une question.
+     *
+     * @param array $data Donnees validees (incluant session, question, reponse...).
+     * @return EvaluationAnswer La reponse enregistree.
+     * @throws \Exception Si la session est fermee ou invalide.
+     */
+    public function saveAnswer(array $data): EvaluationAnswer
+    {
+        $session = EvaluationSession::findOrFail($data['evaluation_session_id']);
+        $questionId = $data['question_id'] ?? $data['dynamic_question_template_id'] ?? null;
+
+        if (! $questionId) {
+            throw new \Exception('Question id manquant.');
+        }
+
+        $question = DynamicQuestionTemplate::findOrFail($questionId);
+
+        if (! $session->isInProgress()) {
+            throw new \Exception("La session est terminee, impossible d'enregistrer une reponse.");
+        }
+
+        $existing = EvaluationAnswer::where([
+            'evaluation_session_id' => $session->id,
+            'question_id' => $question->id,
+        ])->first();
+
+        $payload = [
+            'value' => $data['value'] ?? null,
+            'file_ids' => $data['file_ids'] ?? null,
+            'is_skipped' => $data['is_skipped'] ?? false,
+        ];
+
+        // Mise a jour de reponse existante
+        if ($existing) {
+            $existing->update($payload);
+            if (! $existing->dynamic_question_template_id) {
+                $existing->forceFill(['dynamic_question_template_id' => $question->id])->save();
+            }
+            $this->syncSessionScore($session);
+
+            return $existing;
+        }
+
+        // Nouvelle reponse
+        $answer = EvaluationAnswer::create([
+            'evaluation_session_id' => $session->id,
+            'question_id' => $question->id,
+            'dynamic_question_template_id' => $question->id,
+            'value' => $payload['value'],
+            'file_ids' => $payload['file_ids'],
+            'is_skipped' => $payload['is_skipped'],
+        ]);
+
+        $this->syncSessionScore($session);
+
+        return $answer;
+    }
+
+    protected function syncSessionScore(EvaluationSession $session): void
+    {
+        $risk = app(RiskModelService::class)->evaluate($session);
+
+        $session->forceFill([
+            'score' => (int) round($risk['score_total']),
+            'risk_level' => $risk['risk_level'],
+        ])->save();
+    }
+}

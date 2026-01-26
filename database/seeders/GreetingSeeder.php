@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Evaluation\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class GreetingSeeder extends Seeder

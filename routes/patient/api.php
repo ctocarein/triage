@@ -1,89 +1,33 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\MobileBoardController;
-use App\Http\Controllers\Account\LogoutController;
-use App\Http\Controllers\Capsule\CapsuleController;
-use App\Http\Controllers\Evaluation\ReportController;
-use App\Http\Controllers\Account\SetPinCodeController;
-use App\Http\Controllers\Account\AnonymousAuthController;
-use App\Http\Controllers\Account\MedicalProfileController;
-use App\Http\Controllers\Account\PersonalProfileController;
-use App\Http\Controllers\Account\RegisterOrLoginController;
-use App\Http\Controllers\Evaluation\DecisionPathController;
-use App\Http\Controllers\Evaluation\ThematicBlocController;
-use App\Http\Controllers\Evaluation\QuestionFlowsController;
-use App\Http\Controllers\Evaluation\EvaluationAnswerController;
-use App\Http\Controllers\Evaluation\EvaluationSessionController;
+use App\Domains\Evaluation\Controllers\Patient\MobileBoardController;
+use App\Domains\Recommendation\Controllers\Patient\CapsuleController;
+use App\Domains\Report\Controllers\Patient\ReportController;
+use App\Domains\Decision\Controllers\Patient\DecisionPathController;
+use App\Domains\Evaluation\Controllers\Patient\ThematicBlocController;
+use App\Domains\Notification\Controllers\Patient\ReminderController;
 
+require base_path('app/Domains/Identity/Presentation/Http/Routes/identity.routes.php');
+require base_path('app/Domains/Profile/Routes/patient.php');
+require base_path('app/Domains/Evaluation/Routes/patient.php');
 
-
-Route::group(['prefix' => 'account'], function () {
-    Route::post('/',RegisterOrLoginController::class);
-    Route::post('/anonymous', AnonymousAuthController::class);
-    Route::post('/pincode', SetPinCodeController::class);
-    Route::post('/verify_pin', [SetPinCodeController::class, 'verifyPin']);
-    Route::post('/request-reset', [SetPinCodeController::class, 'requestReset']);
-    Route::post('/confirm-reset', [SetPinCodeController::class, 'confirmReset']);
-
-});
-
-// This route is for logging out the user. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
-// The LogoutController handles the logout process, which typically involves invalidating the user's token.
-Route::group(['prefix' => 'account','middleware'=>'auth:sanctum'], function () {
-    // Logout route
-    Route::get('/logout',LogoutController::class);
-    // Medical and Personal Profile routes
-    // These routes are protected by the 'sanctum' middleware, ensuring that only authenticated users can access them.
-    Route::get('/medical-profile', [MedicalProfileController::class, 'index']);
-    Route::post('/medical-profile', [MedicalProfileController::class, 'store']);
-    Route::put('/medical-profile', [MedicalProfileController::class, 'update']);
-    Route::get('/personal-profile', [PersonalProfileController::class, 'index']);
-    Route::post('/personal-profile', [PersonalProfileController::class, 'store']);
-    Route::put('/personal-profile', [PersonalProfileController::class, 'update']);
-});
-
-Route::group(['prefix' => 'mobile-board','middleware'=>'auth:sanctum'], function () {
+Route::group(['prefix' => 'mobile-board', 'middleware' => 'auth:sanctum'], function () {
     Route::get('/', MobileBoardController::class);
 });
 
-// This route is for flow. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
-Route::middleware(['auth:sanctum'])->prefix('flow')->group(function () {
-    Route::get('/entry-points', [QuestionFlowsController::class, 'entryPoints']);
-    Route::post('/questions', [QuestionFlowsController::class, 'flow']);
-    Route::post('/next-group', [QuestionFlowsController::class, 'nextGroup']);
-});
-
-// This route is for the evaluation session. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
-Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
-     Route::get('/', [EvaluationSessionController::class, 'index']);
-    Route::post('/start', [EvaluationSessionController::class, 'start']);
-    Route::post('/{session}/next', [EvaluationSessionController::class, 'next']);
-    Route::post('/{session}/complete', [EvaluationSessionController::class, 'complete']);
-    Route::get('/{session}', [EvaluationSessionController::class, 'show']);
-});
 
 //this route is Thematic bloc route. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
 Route::middleware(['auth:sanctum'])->prefix('thematic-blocs')->group(function () {
-  Route::get('/', [ThematicBlocController::class, 'index']);
- Route::get('/{keyOrId}', [ThematicBlocController::class, 'show']);
+    Route::get('/', [ThematicBlocController::class, 'index']);
+    Route::get('/{keyOrId}', [ThematicBlocController::class, 'show']);
 });
 
-// This route is for submitting answers to the evaluation. It uses the 'sanctum' middleware to ensure that only authenticated users can access it.
-
-Route::prefix('answers')
-    ->middleware(['auth:sanctum', 'has.active.session']) // Middleware optionnel
-    ->group(function () {
-        Route::get('/{sessionId}', [EvaluationAnswerController::class, 'index']);
-        Route::post('/', [EvaluationAnswerController::class, 'store']);
-        Route::delete('/{id}', [EvaluationAnswerController::class, 'destroy']);
-    });
-
-    //Reminders routes
-    Route::middleware('auth:sanctum')->prefix('reminders')->group(function() {
-        Route::get('/', [ReminderController::class, 'index']);
-        Route::post('/validate', [ReminderController::class, 'validateReminder']);
-    });
+//Reminders routes
+Route::middleware('auth:sanctum')->prefix('reminders')->group(function () {
+    Route::get('/', [ReminderController::class, 'index']);
+    Route::post('/validate', [ReminderController::class, 'validateReminder']);
+});
 
 // Report routes & Decision Path routes
 
@@ -104,5 +48,3 @@ Route::middleware('auth:sanctum')->prefix('decision-paths')->group(function () {
 Route::middleware(['auth:sanctum'])->prefix('capsules')->group(function () {
     Route::get('/{id}', [CapsuleController::class, 'show']);
 });
-
-

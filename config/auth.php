@@ -14,8 +14,8 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+        'guard' => env('AUTH_GUARD', 'api'),
+        'passwords' => env('AUTH_PASSWORD_BROKER', 'identities'),
     ],
 
     /*
@@ -36,18 +36,9 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
         'api' => [
             'driver' => 'sanctum',
-            'provider' => 'users',
-        ],
-    
-        'account' => [
-            'driver' => 'sanctum',
-            'provider' => 'main_admins',
+            'provider' => 'identities',
         ],
     ],
 
@@ -69,19 +60,10 @@ return [
     */
 
     'providers' => [
-        'users' => [
+        'identities' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Domains\Identity\Infrastructure\Persistence\Models\Identity::class,
         ],
-        'account' => [
-            'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\Account::class),
-        ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*
@@ -104,8 +86,8 @@ return [
     */
 
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
+        'identities' => [
+            'provider' => 'identities',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

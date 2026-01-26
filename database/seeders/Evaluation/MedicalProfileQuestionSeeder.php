@@ -3,7 +3,7 @@
 namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
-use App\Models\Evaluation\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 
 class MedicalProfileQuestionSeeder extends Seeder
 {
