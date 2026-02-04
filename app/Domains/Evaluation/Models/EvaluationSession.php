@@ -10,19 +10,24 @@ use Illuminate\Database\Eloquent\Model;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Domains\Engagement\Models\ScanEvent;
+use App\Domains\Engagement\Infrastructure\Persistence\Models\ScanEvent;
+use Illuminate\Support\Str;
+use App\Domains\ExternalApi\Evaluation\Domain\Events\EvaluationCompleted;
 
 class EvaluationSession extends Model
 {
     use HasFactory;
     protected $fillable = [
         'identity_id',
+        'public_id',
         'status',
         'context',
         'score',
         'risk_level',
         'started_at',
         'completed_at',
+        'expires_at',
+        'referral_id',
         'current_question_id',
         'current_node_key',
         'is_completed',
@@ -40,6 +45,7 @@ class EvaluationSession extends Model
         'context' => 'array',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'expires_at' => 'datetime',
         'score' => 'integer',
         'target_blocs' => 'array',
         'visited_blocs' => 'array',
@@ -47,10 +53,31 @@ class EvaluationSession extends Model
         'risk_model_version' => 'integer',
     ];
 
+
+    protected $hidden = [
+        'id',
+        'identity_id',
+    ];
+
+    protected static function booted()
+    {
+        static::creating(function (self $session): void {
+            if (empty($session->public_id)) {
+                $session->public_id = (string) Str::uuid();
+            }
+        });
+    }
+
+
     // Relations
     public function identity()
     {
         return $this->belongsTo(Identity::class, 'identity_id');
+    }
+
+    public function referral()
+    {
+        return $this->belongsTo(\App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral::class, 'referral_id');
     }
     public function answers()
     {
@@ -84,9 +111,28 @@ class EvaluationSession extends Model
     {
         return $query->where('status', 'in_progress');
     }
+
+    public function scopeNotExpired($query)
+    {
+        return $query->where(function ($query) {
+            $query->whereNull('expires_at')
+                ->orWhere('expires_at', '>', now());
+        });
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->inProgress()->notExpired();
+    }
     public function isInProgress(): bool
     {
         return $this->status === 'in_progress';
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->status === 'expired'
+            || ($this->expires_at !== null && $this->expires_at->isPast());
     }
     // Scopes
     public function scopeCompleted($query)
@@ -163,10 +209,20 @@ class EvaluationSession extends Model
 
     public function markCompleted(): void
     {
+        if ($this->status === 'completed' && $this->is_completed) {
+            return;
+        }
+
         $this->update([
             'is_completed' => true,
             'status' => 'completed',
             'completed_at' => now(),
+            'current_question_id' => null,
+            'current_node_key' => null,
         ]);
+
+        event(new EvaluationCompleted($this));
     }
 }
+
+

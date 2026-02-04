@@ -42,7 +42,7 @@ return new class extends Migration {
         // Cible de la réponse (profil, suivi, etc.)
         $table->enum('answer_target', [
             'personal_profile', 'medical_profile',
-            'evaluation', 'followup', 'tracking', 'survey','greeting', 'custom'
+            'evaluation', 'followup', 'tracking', 'survey', 'greeting', 'custom', 'consent'
         ])->nullable();
 
         // Groupe de questions

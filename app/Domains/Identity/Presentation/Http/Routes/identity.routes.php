@@ -11,6 +11,10 @@ Route::prefix('identity')->group(function () {
 });
 
 Route::prefix('identity')->middleware('auth:sanctum')->group(function () {
+    Route::patch('/secret', [IdentityAuthController::class, 'setSecret']);
+    Route::post('/unlock', [IdentityAuthController::class, 'unlock']);
+    Route::post('/panic-lock', [IdentityAuthController::class, 'panicLock']);
+    Route::get('/security/status', [IdentityAuthController::class, 'securityStatus']);
     Route::post('/logout', [IdentityAuthController::class, 'logout']);
     Route::get('/me', [IdentityController::class, 'me']);
     Route::get('/', [IdentityController::class, 'index'])->middleware('role:PlatformAdmin,OrgManager');

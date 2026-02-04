@@ -27,6 +27,36 @@ API Laravel pour la plateforme TRIAGE.
 
 Executer la suite : `php artisan test`
 
+## Decision thresholds
+
+Les seuils utilises par `DecisionInsightService` sont centralises dans `config/decision-thresholds.php`.
+
+Format attendu (extrait) :
+
+```php
+return [
+    'confidence' => [
+        'min' => 0.7,          // Confiance minimale pour eviter une revue humaine
+        'high_bonus' => 0.05,  // Bonus si niveau de risque = high
+        'min_margin' => 0.05,  // Marge minimale pour l'intervalle de confiance
+        'margin_factor' => 0.2 // Facteur applique a (1 - confidence)
+    ],
+    'quality' => [
+        'min' => 0.6,
+        'critical_missing_requires_review' => true
+    ],
+    'review' => [
+        'high_risk_requires_review' => true
+    ],
+    'suggested_action' => [
+        'high' => 'refer_to_specialist',
+        'moderate' => 'medical_check',
+        'low' => 'self_care',
+        'default' => 'self_care'
+    ]
+];
+```
+
 ## Licence
 
 Le projet est distribue sous licence [MIT](https://opensource.org/licenses/MIT).

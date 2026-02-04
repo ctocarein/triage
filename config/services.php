@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'psm' => [
+        'enabled' => env('PSM_ENABLED', false),
+        'base_url' => env('PSM_BASE_URL'),
+        'token' => env('PSM_TOKEN'),
+        'header_type' => env('PSM_HEADER_TYPE'),
+        'header_value' => env('PSM_HEADER_VALUE'),
+        'timeout' => env('PSM_TIMEOUT', 10),
+    ],
+
 ];

@@ -3,8 +3,8 @@
 namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Profile\Models\PersonalProfile;
-use App\Domains\Profile\Models\MedicalProfile;
+use App\Domains\Profile\Infrastructure\Persistence\Models\PersonalProfile;
+use App\Domains\Profile\Infrastructure\Persistence\Models\MedicalProfile;
 
 class ProfileUpdaterService
 {

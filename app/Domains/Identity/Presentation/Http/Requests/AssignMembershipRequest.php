@@ -21,6 +21,7 @@ class AssignMembershipRequest extends FormRequest
             'role' => ['required', Rule::in([
                 'Beneficiary',
                 'FieldAgent',
+                'Ambassador',
                 'Practitioner',
                 'OrgManager',
                 'PlatformAdmin',
@@ -36,6 +37,6 @@ class AssignMembershipRequest extends FormRequest
 
     private function organizationRequired(?string $role): bool
     {
-        return in_array($role, ['FieldAgent', 'Practitioner', 'OrgManager'], true);
+        return in_array($role, ['FieldAgent', 'Ambassador', 'Practitioner', 'OrgManager'], true);
     }
 }

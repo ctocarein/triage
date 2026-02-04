@@ -21,6 +21,7 @@ class IdentityIndexRequest extends FormRequest
             'role' => ['sometimes', Rule::in([
                 'Beneficiary',
                 'FieldAgent',
+                'Ambassador',
                 'Practitioner',
                 'OrgManager',
                 'PlatformAdmin',

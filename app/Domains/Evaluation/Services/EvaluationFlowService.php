@@ -12,14 +12,18 @@ use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
 use App\Domains\Report\Models\Report;
 use App\Domains\Report\Services\ReportGenerationService;
+use App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral;
+use App\Domains\Ambassador\Domain\Events\ReferralUsed;
 use App\Services\Decisions\DecisionPathEngine;
+use App\Domains\Evaluation\Services\ProfileUpdaterService;
 
 class EvaluationFlowService
 {
     public function __construct(
         protected AnswerService $answerService,
         protected DecisionInsightService $insightService,
-        protected ReportGenerationService $reportService
+        protected ReportGenerationService $reportService,
+        protected ProfileUpdaterService $profileUpdater
     ) {
     }
 
@@ -31,7 +35,119 @@ class EvaluationFlowService
     {
         $type = $validated['type'];
         $blocKeys = $validated['bloc_keys'] ?? [];
+        $referralCode = $validated['referral_code'] ?? null;
+        $clientIp = $validated['client_ip'] ?? null;
+        $referral = null;
         $decisionPath = null;
+
+        if ($referralCode !== null) {
+            $referral = Referral::query()->where('code', $referralCode)->first();
+            if (! $referral || $referral->revoked_at !== null || ($referral->expires_at !== null && $referral->expires_at->isPast())) {
+                return [
+                    'status' => 410,
+                    'payload' => [
+                        'message' => 'Lien de parrainage invalide ou expire.',
+                        'error_code' => 'REFERRAL_EXPIRED',
+                        'redirect_url' => config('ambassador.referrals.expired_url'),
+                    ],
+                ];
+            }
+            if ($referral->ambassador?->user_id === $identity->id) {
+                return [
+                    'status' => 403,
+                    'payload' => [
+                        'message' => "Vous ne pouvez pas utiliser votre propre lien de parrainage.",
+                        'error_code' => 'REFERRAL_SELF',
+                    ],
+                ];
+            }
+        }
+
+        $existingInProgress = $identity->evaluationSessions()
+            ->active()
+            ->latest('started_at')
+            ->first();
+
+        if ($existingInProgress && $this->sessionTokenMismatch($identity, $existingInProgress)) {
+            $this->expireSession($existingInProgress);
+            $existingInProgress = null;
+        }
+
+        if ($existingInProgress) {
+            return [
+                'status' => 403,
+                'payload' => [
+                    'message' => 'Vous avez une evaluation en cours. Veuillez la terminer.',
+                    'error_code' => 'SESSION_IN_PROGRESS',
+                    'session_id' => $existingInProgress->public_id,
+                ],
+            ];
+        }
+
+        $completedSession = $identity->evaluationSessions()
+            ->completed()
+            ->latest('completed_at')
+            ->first();
+
+        if ($completedSession) {
+            return [
+                'status' => 403,
+                'payload' => [
+                    'message' => 'Vous avez deja complete une evaluation.',
+                    'error_code' => 'ALREADY_COMPLETED',
+                    'redirect_url' => config('ambassador.referrals.used_url'),
+                    'session_id' => $completedSession->public_id,
+                ],
+            ];
+        }
+
+        if ($referral && $clientIp) {
+            $otherIpSession = EvaluationSession::query()
+                ->where('referral_id', $referral->id)
+                ->where('identity_id', '!=', $identity->id)
+                ->where('context->client_ip', $clientIp)
+                ->first();
+
+            if ($otherIpSession) {
+                return [
+                    'status' => 403,
+                    'payload' => [
+                        'message' => 'Ce lien a deja ete utilise sur cet appareil.',
+                        'error_code' => 'REFERRAL_DEVICE_USED',
+                        'redirect_url' => config('ambassador.referrals.used_url'),
+                    ],
+                ];
+            }
+        }
+
+        if ($referral) {
+            $existingReferralSession = $identity->evaluationSessions()
+                ->where('referral_id', $referral->id)
+                ->latest('started_at')
+                ->first();
+
+            if ($existingReferralSession && $existingReferralSession->isInProgress()) {
+                return [
+                    'status' => 403,
+                    'payload' => [
+                        'message' => 'Cette session est deja en cours. Veuillez la terminer.',
+                        'error_code' => 'SESSION_IN_PROGRESS',
+                        'session_id' => $existingReferralSession->public_id,
+                    ],
+                ];
+            }
+
+            if ($existingReferralSession && $existingReferralSession->status === 'completed') {
+                return [
+                    'status' => 403,
+                    'payload' => [
+                        'message' => 'Vous avez deja termine une evaluation avec ce lien.',
+                        'error_code' => 'REFERRAL_USED',
+                        'redirect_url' => config('ambassador.referrals.used_url'),
+                    ],
+                ];
+            }
+        }
 
         if ($type !== 'complete' && ! IdentityEvaluationPolicy::hasCompletedFullEvaluation($identity)) {
             return [
@@ -42,32 +158,38 @@ class EvaluationFlowService
             ];
         }
 
-        $inProgressFull = IdentityEvaluationPolicy::getInProgressFullEvaluation($identity);
-        if ($inProgressFull && $type !== 'complete') {
-            return [
-                'status' => 403,
-                'payload' => [
-                    'message' => 'Vous avez une evaluation complete en cours. Veuillez la terminer avant de continuer.',
-                    'session_id' => $inProgressFull->id,
-                ],
-            ];
-        }
+        if ($type === 'thematic') {
+            $normalized = $this->normalizeBlocKeys($blocKeys);
+            $existing = $identity->evaluationSessions()
+                ->active()
+                ->where('type', 'thematic')
+                ->latest('started_at')
+                ->get()
+                ->first(function (EvaluationSession $session) use ($normalized, $identity): bool {
+                    if ($this->sessionTokenMismatch($identity, $session)) {
+                        $this->expireSession($session);
+                        return false;
+                    }
 
-        if ($type === 'complete' && $inProgressFull) {
-            $questionPayload = $this->resolveCurrentQuestionPayload($inProgressFull);
-            $report = $inProgressFull->report;
-            $insight = $this->insightService->generate($inProgressFull, $report);
+                    return $this->normalizeBlocKeys($session->target_blocs ?? []) === $normalized;
+                });
 
-            return [
-                'status' => 200,
-                'payload' => $this->buildPayload(
-                    $inProgressFull,
-                    $insight,
-                    $questionPayload,
-                    $report,
-                    'Session deja en cours.'
-                ),
-            ];
+            if ($existing) {
+                $questionPayload = $this->resolveCurrentQuestionPayload($existing);
+                $report = $existing->report;
+                $insight = $this->insightService->generate($existing, $report);
+
+                return [
+                    'status' => 200,
+                    'payload' => $this->buildPayload(
+                        $existing,
+                        $insight,
+                        $questionPayload,
+                        $report,
+                        'Session deja en cours.'
+                    ),
+                ];
+            }
         }
 
         if ($type === 'complete') {
@@ -128,11 +250,15 @@ class EvaluationFlowService
             'type' => $type,
             'status' => 'in_progress',
             'started_at' => now(),
+            'expires_at' => $this->resolveSessionExpiry(),
             'target_blocs' => $blocKeys ?: null,
             'visited_blocs' => [],
             'context' => [
                 'bloc_keys' => $blocKeys,
+                'token_id' => $identity->currentAccessToken()?->id,
+                'client_ip' => $clientIp,
             ],
+            'referral_id' => $referral?->id,
         ]);
 
         $engine = new DecisionPathEngine($decisionPath);
@@ -143,7 +269,7 @@ class EvaluationFlowService
                 'status' => 500,
                 'payload' => [
                     'message' => "Le parcours d'evaluation n'a pas de premiere etape definie.",
-                    'session_id' => $session->id,
+                    'session_id' => $session->public_id,
                     'decision_path_id' => $decisionPath->id,
                     'question' => null,
                 ],
@@ -206,6 +332,13 @@ class EvaluationFlowService
 
         $answerData['evaluation_session_id'] = $session->id;
         $answer = $this->answerService->saveAnswer($answerData);
+        $answer->loadMissing('question');
+        if (
+            $answer->question &&
+            in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'], true)
+        ) {
+            $this->profileUpdater->syncFromAnswers($session);
+        }
 
         $session->update([
             'current_question_id' => $answer->question_id,
@@ -361,13 +494,15 @@ class EvaluationFlowService
     protected function mapSession(EvaluationSession $session): array
     {
         return [
-            'id' => $session->id,
+            'id' => $session->public_id,
+            'public_id' => $session->public_id,
             'status' => $session->status,
             'type' => $session->type,
             'score' => $session->score,
             'risk_level' => $session->risk_level,
             'started_at' => $session->started_at,
             'completed_at' => $session->completed_at,
+            'expires_at' => $session->expires_at,
             'decision_path_id' => $session->decision_path_id,
             'decision_path_key' => $session->decision_path_key,
             'decision_path_version' => $session->decision_path_version,
@@ -442,13 +577,59 @@ class EvaluationFlowService
         return $version?->id;
     }
 
+    protected function resolveSessionExpiry(): ?\Illuminate\Support\Carbon
+    {
+        $hours = (int) config('evaluation.session_ttl_hours', 24);
+        if ($hours <= 0) {
+            return null;
+        }
+
+        return now()->addHours($hours);
+    }
+
+    /**
+     * @param array<int, string> $blocKeys
+     */
+    protected function normalizeBlocKeys(array $blocKeys): array
+    {
+        $normalized = array_values(array_filter($blocKeys, fn($value) => (string) $value !== ''));
+        sort($normalized);
+
+        return $normalized;
+    }
+
+    protected function sessionTokenMismatch(Identity $identity, EvaluationSession $session): bool
+    {
+        $tokenId = $identity->currentAccessToken()?->id;
+        $context = $session->context ?? [];
+        $sessionTokenId = is_array($context) ? ($context['token_id'] ?? null) : null;
+
+        return $tokenId !== null
+            && $sessionTokenId !== null
+            && (int) $tokenId !== (int) $sessionTokenId;
+    }
+
+    protected function expireSession(EvaluationSession $session): void
+    {
+        if ($session->status !== 'expired') {
+            $updates = ['status' => 'expired'];
+            if ($session->expires_at === null) {
+                $updates['expires_at'] = now();
+            }
+            $session->update($updates);
+        }
+    }
+
     protected function markCompleted(EvaluationSession $session): void
     {
-        $session->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'current_question_id' => null,
-            'current_node_key' => null,
-        ]);
+        $session->markCompleted();
+
+        if ($session->referral_id !== null) {
+            Referral::query()
+                ->where('id', $session->referral_id)
+                ->update(['last_used_at' => now()]);
+
+            event(new ReferralUsed($session->referral_id, 'completed'));
+        }
     }
 }

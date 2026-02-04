@@ -12,6 +12,603 @@
         }
     ],
     "paths": {
+        "/ambassador/badges": {
+            "get": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "List ambassador badges",
+                "operationId": "ambassadorBadgesIndex",
+                "responses": {
+                    "200": {
+                        "description": "Badge list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorBadgeCollection"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/profile": {
+            "get": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Get ambassador profile",
+                "operationId": "ambassadorProfile",
+                "responses": {
+                    "200": {
+                        "description": "Ambassador profile",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/activate": {
+            "post": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Activate ambassador profile",
+                "description": "PlatformAdmin only. Activates a beneficiary as ambassador. Defaults organization_id to the PlatformAdmin organization when omitted.",
+                "operationId": "ambassadorActivate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActivateAmbassadorRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ambassador activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorResponseWithMessage"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/deactivate": {
+            "post": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Deactivate ambassador profile",
+                "operationId": "ambassadorDeactivate",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeactivateAmbassadorRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ambassador deactivated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorResponseWithMessage"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/metrics": {
+            "get": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Get ambassador metrics",
+                "operationId": "ambassadorMetrics",
+                "responses": {
+                    "200": {
+                        "description": "Ambassador metrics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorMetricsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/dashboard": {
+            "get": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Get ambassador dashboard",
+                "operationId": "ambassadorDashboard",
+                "responses": {
+                    "200": {
+                        "description": "Ambassador dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorDashboardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/badges/recompute": {
+            "post": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Recompute ambassador badges",
+                "operationId": "ambassadorRecomputeBadges",
+                "responses": {
+                    "200": {
+                        "description": "Badges recomputed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorRecomputeBadgesResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/level/recompute": {
+            "post": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Recompute ambassador level",
+                "operationId": "ambassadorRecomputeLevel",
+                "responses": {
+                    "200": {
+                        "description": "Level recomputed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorRecomputeLevelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/referrals": {
+            "get": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "List ambassador referrals",
+                "operationId": "ambassadorReferralsIndex",
+                "responses": {
+                    "200": {
+                        "description": "Referral list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorReferralCollection"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Generate or reuse a referral link",
+                "description": "A 'started' usage event is recorded automatically when the link is opened.",
+                "operationId": "ambassadorReferralsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateReferralLinkRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Referral link generated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorReferralLinkResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ambassador/referrals/{referral}/revoke": {
+            "post": {
+                "tags": [
+                    "Ambassador"
+                ],
+                "summary": "Revoke a referral",
+                "operationId": "ambassadorReferralsRevoke",
+                "parameters": [
+                    {
+                        "name": "referral",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Referral revoked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AmbassadorReferralResponseWithMessage"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/campaigns": {
             "get": {
                 "tags": [
@@ -1098,6 +1695,181 @@
                 ]
             }
         },
+        "/answers/session/{session}": {
+            "get": {
+                "tags": [
+                    "Answers"
+                ],
+                "summary": "Lister toutes les reponses d'une session.",
+                "operationId": "getAnswersBySession",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des reponses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "session_id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "answers": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/EvaluationAnswer"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/answers": {
+            "post": {
+                "tags": [
+                    "Answers"
+                ],
+                "summary": "Enregistrer une reponse a une question.",
+                "operationId": "storeAnswer",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EvaluationAnswerStoreRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Reponse enregistree",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Reponse enregistree avec succes."
+                                        },
+                                        "answer": {
+                                            "$ref": "#/components/schemas/EvaluationAnswer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur de validation ou session non trouvee"
+                    },
+                    "401": {
+                        "description": "Non authentifie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/answers/{id}": {
+            "delete": {
+                "tags": [
+                    "Answers"
+                ],
+                "summary": "Supprimer une reponse (optionnel).",
+                "operationId": "deleteAnswer",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reponse supprimee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Reponse supprimee."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Reponse non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/evaluations/start": {
             "post": {
                 "tags": [
@@ -1207,7 +1979,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     },
                     {
@@ -1292,7 +2065,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     },
                     {
@@ -1348,7 +2122,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     },
                     {
@@ -1410,6 +2185,35 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/evaluations/current": {
+            "get": {
+                "tags": [
+                    "Evaluations"
+                ],
+                "summary": "Get the current in-progress evaluation session",
+                "operationId": "evaluationsCurrent",
+                "responses": {
+                    "200": {
+                        "description": "Current session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EvaluationFlowResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No active session"
                     }
                 },
                 "security": [
@@ -1540,6 +2344,48 @@
                         "description": "Validation error"
                     }
                 }
+            }
+        },
+        "/identity/secret": {
+            "patch": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Set a phone credential secret",
+                "operationId": "identitySetSecret",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IdentitySetSecretRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Secret set",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IdentitySetSecretResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/identity/logout": {
@@ -2131,6 +2977,37 @@
                 ]
             }
         },
+        "/organizations/default": {
+            "get": {
+                "tags": [
+                    "Organizations"
+                ],
+                "summary": "Get the default organization (PlatformAdmin-owned)",
+                "operationId": "organizationsDefault",
+                "responses": {
+                    "200": {
+                        "description": "Default organization",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrganizationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/organizations/{organization}": {
             "get": {
                 "tags": [
@@ -2246,6 +3123,528 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/OrganizationResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/identity/profile/medical": {
+            "get": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Get medical profile",
+                "operationId": "identityMedicalProfileIndex",
+                "responses": {
+                    "200": {
+                        "description": "Profile data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MedicalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Update medical profile",
+                "operationId": "identityMedicalProfileUpdate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MedicalProfileUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MedicalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Create medical profile",
+                "operationId": "identityMedicalProfileStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MedicalProfileCreateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Profile created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MedicalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/identity/profile/personal": {
+            "get": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Get personal profile",
+                "operationId": "identityPersonalProfileIndex",
+                "responses": {
+                    "200": {
+                        "description": "Profile data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Update personal profile",
+                "operationId": "identityPersonalProfileUpdate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonalProfileUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Create personal profile",
+                "operationId": "identityPersonalProfileStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonalProfileCreateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Profile created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/identity/profile/pro": {
+            "get": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Get professional profile",
+                "operationId": "identityProfessionalProfileIndex",
+                "responses": {
+                    "200": {
+                        "description": "Profile data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProfessionalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Update professional profile",
+                "operationId": "identityProfessionalProfileUpdate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfessionalProfileUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProfessionalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Create professional profile",
+                "operationId": "identityProfessionalProfileStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfessionalProfileCreateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Profile created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProfessionalProfileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
                                 }
                             }
                         }
@@ -2556,7 +3955,16 @@
                         "nullable": true
                     },
                     "role": {
-                        "type": "string"
+                        "type": "string",
+                        "enum": [
+                            "Beneficiary",
+                            "FieldAgent",
+                            "Ambassador",
+                            "Practitioner",
+                            "OrgManager",
+                            "PlatformAdmin",
+                            "System"
+                        ]
                     },
                     "status": {
                         "type": "string"
@@ -2863,6 +4271,9 @@
                         "items": {
                             "type": "string"
                         }
+                    },
+                    "referral_code": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -2916,6 +4327,53 @@
                 },
                 "type": "object"
             },
+            "EvaluationAnswer": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "evaluation_session_id": {
+                        "type": "integer"
+                    },
+                    "dynamic_question_template_id": {
+                        "type": "integer"
+                    },
+                    "value": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "is_skipped": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "EvaluationAnswerStoreRequest": {
+                "required": [
+                    "dynamic_question_template_id"
+                ],
+                "properties": {
+                    "dynamic_question_template_id": {
+                        "type": "integer"
+                    },
+                    "value": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "is_skipped": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
             "PaginationMeta": {
                 "properties": {
                     "current_page": {
@@ -2936,8 +4394,7 @@
             "IdentityRegisterRequest": {
                 "required": [
                     "credential_type",
-                    "identifier",
-                    "secret"
+                    "identifier"
                 ],
                 "properties": {
                     "kind": {
@@ -2953,11 +4410,21 @@
                         "example": "+243000000000"
                     },
                     "secret": {
+                        "description": "Optional for phone credentials.",
                         "type": "string",
                         "example": "1234"
                     },
                     "role": {
                         "type": "string",
+                        "enum": [
+                            "Beneficiary",
+                            "FieldAgent",
+                            "Ambassador",
+                            "Practitioner",
+                            "OrgManager",
+                            "PlatformAdmin",
+                            "System"
+                        ],
                         "example": "Beneficiary"
                     },
                     "organization_id": {
@@ -2987,8 +4454,7 @@
             "IdentityLoginRequest": {
                 "required": [
                     "credential_type",
-                    "identifier",
-                    "secret"
+                    "identifier"
                 ],
                 "properties": {
                     "credential_type": {
@@ -3000,6 +4466,7 @@
                         "example": "user@example.com"
                     },
                     "secret": {
+                        "description": "Optional for phone credentials.",
                         "type": "string",
                         "example": "secret123"
                     }
@@ -3013,6 +4480,26 @@
                     },
                     "identity": {
                         "$ref": "#/components/schemas/Identity"
+                    }
+                },
+                "type": "object"
+            },
+            "IdentitySetSecretRequest": {
+                "required": [
+                    "secret"
+                ],
+                "properties": {
+                    "secret": {
+                        "type": "string",
+                        "example": "1234"
+                    }
+                },
+                "type": "object"
+            },
+            "IdentitySetSecretResponse": {
+                "properties": {
+                    "credential": {
+                        "$ref": "#/components/schemas/Credential"
                     }
                 },
                 "type": "object"
@@ -3061,7 +4548,16 @@
                         "format": "uuid"
                     },
                     "role": {
-                        "type": "string"
+                        "type": "string",
+                        "enum": [
+                            "Beneficiary",
+                            "FieldAgent",
+                            "Ambassador",
+                            "Practitioner",
+                            "OrgManager",
+                            "PlatformAdmin",
+                            "System"
+                        ]
                     },
                     "organization_id": {
                         "type": "string",
@@ -3099,6 +4595,524 @@
                     },
                     "meta": {
                         "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                },
+                "type": "object"
+            },
+            "ProfessionalProfile": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "identity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "job_title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ProfessionalProfileCreateRequest": {
+                "required": [
+                    "full_name"
+                ],
+                "properties": {
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "job_title": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "type": "string"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "type": "object"
+            },
+            "ProfessionalProfileUpdateRequest": {
+                "properties": {
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "job_title": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "type": "string"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "type": "object"
+            },
+            "ProfessionalProfileResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/ProfessionalProfile"
+                    }
+                },
+                "type": "object"
+            },
+            "PersonalProfile": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "identity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "birth_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "education_level": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "primary",
+                            "secondary",
+                            "university"
+                        ],
+                        "nullable": true
+                    },
+                    "gender": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "commune": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cmu": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "height": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "occupation": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PersonalProfileCreateRequest": {
+                "properties": {
+                    "first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "birth_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "education_level": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "primary",
+                            "secondary",
+                            "university"
+                        ],
+                        "nullable": true
+                    },
+                    "commune": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PersonalProfileUpdateRequest": {
+                "properties": {
+                    "first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "birth_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "education_level": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "primary",
+                            "secondary",
+                            "university"
+                        ],
+                        "nullable": true
+                    },
+                    "commune": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PersonalProfileResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/PersonalProfile"
+                    }
+                },
+                "type": "object"
+            },
+            "MedicalProfile": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "identity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "cmu_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "has_breast_cancer": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "has_ovarian_cancer": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "has_cervical_cancer": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "has_other_cancer": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "weight": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "blood_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "allergies": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_pregnant": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "breastfeeding": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "menopause_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "family_cancer_history": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "last_screening_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "screening_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "first_sexual_intercourse_age": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_partners": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_pregnancies": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_abortions": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_children": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "exposed_to_smoke": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "exposure_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "MedicalProfileCreateRequest": {
+                "properties": {
+                    "cmu_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "weight": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "blood_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "allergies": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_pregnant": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "breastfeeding": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "menopause_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "family_cancer_history": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "last_screening_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "screening_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "first_sexual_intercourse_age": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_partners": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_pregnancies": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_abortions": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_children": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "exposed_to_smoke": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "exposure_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "MedicalProfileUpdateRequest": {
+                "properties": {
+                    "cmu_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "weight": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "blood_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "allergies": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_pregnant": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "breastfeeding": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "menopause_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "family_cancer_history": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "last_screening_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "screening_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "first_sexual_intercourse_age": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_partners": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_pregnancies": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_abortions": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number_of_children": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "exposed_to_smoke": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "exposure_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "MedicalProfileResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/MedicalProfile"
                     }
                 },
                 "type": "object"
@@ -3156,6 +5170,432 @@
                     }
                 },
                 "type": "object"
+            },
+            "Ambassador": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "paused",
+                            "exited"
+                        ]
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deactivated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/Ambassador"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorResponseWithMessage": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Ambassador"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorMetrics": {
+                "properties": {
+                    "total_referrals": {
+                        "type": "integer"
+                    },
+                    "active_referrals": {
+                        "type": "integer"
+                    },
+                    "expired_referrals": {
+                        "type": "integer"
+                    },
+                    "revoked_referrals": {
+                        "type": "integer"
+                    },
+                    "started_usages": {
+                        "type": "integer"
+                    },
+                    "completed_usages": {
+                        "type": "integer"
+                    },
+                    "last_used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "badges_earned": {
+                        "type": "integer"
+                    },
+                    "level_code": {
+                        "type": "string",
+                        "enum": [
+                            "starter",
+                            "active",
+                            "leader",
+                            "champion"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorMetricsResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/AmbassadorMetrics"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorLevel": {
+                "properties": {
+                    "ambassador_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "level_code": {
+                        "type": "string",
+                        "enum": [
+                            "starter",
+                            "active",
+                            "leader",
+                            "champion"
+                        ]
+                    },
+                    "computed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorReferral": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "ambassador_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "channel": {
+                        "type": "string",
+                        "enum": [
+                            "whatsapp",
+                            "sms",
+                            "qr",
+                            "other"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revoked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorReferralCollection": {
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AmbassadorReferral"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorReferralResponseWithMessage": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AmbassadorReferral"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorReferralLinkResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "reused": {
+                        "type": "boolean"
+                    },
+                    "remaining_weekly": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AmbassadorReferral"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorReferralUsage": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "referral_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "event_type": {
+                        "type": "string",
+                        "enum": [
+                            "started",
+                            "completed"
+                        ]
+                    },
+                    "source": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "occurred_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorReferralUsageResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "usage": {
+                        "$ref": "#/components/schemas/AmbassadorReferralUsage"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorBadge": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "ambassador_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "badge_code": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "earned",
+                            "revoked"
+                        ]
+                    },
+                    "earned_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revoked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "evidence": {
+                        "type": "object"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorBadgeCollection": {
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AmbassadorBadge"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorDashboardResponse": {
+                "properties": {
+                    "ambassador": {
+                        "$ref": "#/components/schemas/Ambassador"
+                    },
+                    "metrics": {
+                        "$ref": "#/components/schemas/AmbassadorMetrics"
+                    },
+                    "badges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AmbassadorBadge"
+                        }
+                    },
+                    "level": {
+                        "$ref": "#/components/schemas/AmbassadorLevel"
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorRecomputeBadgesResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "badges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AmbassadorBadge"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "AmbassadorRecomputeLevelResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "level": {
+                        "$ref": "#/components/schemas/AmbassadorLevel"
+                    }
+                },
+                "type": "object"
+            },
+            "ActivateAmbassadorRequest": {
+                "required": [
+                    "identity_id"
+                ],
+                "properties": {
+                    "identity_id": {
+                        "description": "Identity to activate as ambassador",
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "11111111-1111-1111-1111-111111111111"
+                    }
+                },
+                "type": "object"
+            },
+            "DeactivateAmbassadorRequest": {
+                "properties": {
+                    "reason": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "paused",
+                            "exited"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "GenerateReferralRequest": {
+                "required": [
+                    "channel"
+                ],
+                "properties": {
+                    "channel": {
+                        "type": "string",
+                        "enum": [
+                            "whatsapp",
+                            "sms",
+                            "qr",
+                            "other"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "GenerateReferralLinkRequest": {
+                "required": [
+                    "channel"
+                ],
+                "properties": {
+                    "channel": {
+                        "type": "string",
+                        "enum": [
+                            "whatsapp",
+                            "sms",
+                            "qr",
+                            "other"
+                        ]
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -3168,12 +5608,20 @@
     },
     "tags": [
         {
+            "name": "Ambassador",
+            "description": "Ambassador"
+        },
+        {
             "name": "Campaigns",
             "description": "Campaigns"
         },
         {
             "name": "QR Codes",
             "description": "QR Codes"
+        },
+        {
+            "name": "Answers",
+            "description": "Answers"
         },
         {
             "name": "Evaluations",

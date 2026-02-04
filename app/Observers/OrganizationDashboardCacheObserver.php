@@ -2,11 +2,11 @@
 
 namespace App\Observers;
 
-use App\Domains\Engagement\Models\Campaign;
+use App\Domains\Engagement\Infrastructure\Persistence\Models\Campaign;
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Engagement\Models\QrCode;
+use App\Domains\Engagement\Infrastructure\Persistence\Models\QrCode;
 use App\Domains\Report\Models\Report;
-use App\Domains\Engagement\Models\ScanEvent;
+use App\Domains\Engagement\Infrastructure\Persistence\Models\ScanEvent;
 use App\Support\OrganizationDashboardCache;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;

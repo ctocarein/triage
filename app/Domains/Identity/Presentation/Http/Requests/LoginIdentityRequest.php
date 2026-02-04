@@ -26,12 +26,13 @@ class LoginIdentityRequest extends FormRequest
                 $type === 'phone' ? 'max:20' : null,
             ]),
             'secret' => array_filter([
-                'required',
+                $type === 'phone' ? 'nullable' : 'required',
                 'string',
                 $type === 'phone' ? 'min:4' : null,
                 $type === 'phone' ? 'max:6' : null,
                 $type === 'email' ? 'min:6' : null,
             ]),
+            'device_fingerprint' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

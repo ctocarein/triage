@@ -19,7 +19,7 @@ class IdentityEvaluationPolicy
     {
         return $identity->evaluationSessions()
             ->where('type', 'complete')
-            ->where('status', 'in_progress')
+            ->active()
             ->latest()
             ->first();
     }

@@ -7,6 +7,7 @@ use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Decision\Services\DecisionInsightService;
 use App\Domains\Evaluation\Services\EvaluationFlowService;
 use App\Http\Controllers\Controller;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -52,10 +53,42 @@ class DecisionsController extends Controller
 
     private function ensureSessionAccess(Request $request, EvaluationSession $session): void
     {
-        $identityId = $request->user()?->id;
+        try {
+            $this->authorize('view', $session);
+        } catch (AuthorizationException $exception) {
+            abort(404, 'Session introuvable.');
+        }
 
-        if ($session->identity_id !== $identityId) {
-            abort(403, 'Acces interdit a cette session.');
+        if ($this->tokenInvalidatesSession($request, $session)) {
+            $this->expireSession($session);
+            abort(410, 'Session invalidee.');
+        }
+
+        if ($session->isExpired()) {
+            $this->expireSession($session);
+            abort(410, 'Session expiree.');
+        }
+    }
+
+    private function tokenInvalidatesSession(Request $request, EvaluationSession $session): bool
+    {
+        $tokenId = $request->user()?->currentAccessToken()?->id;
+        $context = $session->context ?? [];
+        $sessionTokenId = is_array($context) ? ($context['token_id'] ?? null) : null;
+
+        return $tokenId !== null
+            && $sessionTokenId !== null
+            && (int) $tokenId !== (int) $sessionTokenId;
+    }
+
+    private function expireSession(EvaluationSession $session): void
+    {
+        if ($session->status !== 'expired') {
+            $updates = ['status' => 'expired'];
+            if ($session->expires_at === null) {
+                $updates['expires_at'] = now();
+            }
+            $session->update($updates);
         }
     }
 }

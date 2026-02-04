@@ -42,10 +42,11 @@ class OrganizationController extends Controller
         }
 
         if (! empty($filters['name'])) {
-            $query->where('name', 'like', '%'.$filters['name'].'%');
+            $query->where('name', 'like', '%' . $filters['name'] . '%');
         }
 
-        if ($actor && method_exists($actor, 'hasMembershipRole')
+        if (
+            $actor && method_exists($actor, 'hasMembershipRole')
             && ! $actor->hasMembershipRole('PlatformAdmin')
             && $actor->hasMembershipRole('OrgManager')
         ) {
@@ -61,6 +62,32 @@ class OrganizationController extends Controller
         $perPage = $filters['per_page'] ?? 15;
 
         return response()->json($query->paginate($perPage));
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/organizations/default",
+     *     operationId="organizationsDefault",
+     *     summary="Get the default organization (PlatformAdmin-owned)",
+     *     tags={"Organizations"},
+     *     @OA\Response(response=200, description="Default organization", @OA\JsonContent(ref="#/components/schemas/OrganizationResponse")),
+     *     @OA\Response(response=404, description="Not found", @OA\JsonContent(ref="#/components/schemas/ApiMessage"))
+     * )
+     */
+    public function default(Request $request): JsonResponse
+    {
+        $organization = Organization::query()
+            ->whereHas('memberships', function ($query) {
+                $query->where('role', 'PlatformAdmin')
+                    ->where('status', 'active');
+            })
+            ->first();
+
+        if (! $organization) {
+            abort(404, 'Default organization not found.');
+        }
+
+        return response()->json(['organization' => $organization]);
     }
 
     /**

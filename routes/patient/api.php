@@ -9,8 +9,8 @@ use App\Domains\Evaluation\Controllers\Patient\ThematicBlocController;
 use App\Domains\Notification\Controllers\Patient\ReminderController;
 
 require base_path('app/Domains/Identity/Presentation/Http/Routes/identity.routes.php');
-require base_path('app/Domains/Profile/Routes/patient.php');
-require base_path('app/Domains/Evaluation/Routes/patient.php');
+require base_path('app/Domains/Profile/Presentation/Http/Routes/profile.routes.php');
+require base_path('app/Domains/Evaluation/Presentation/Http/Routes/evaluation.routes.php');
 
 Route::group(['prefix' => 'mobile-board', 'middleware' => 'auth:sanctum'], function () {
     Route::get('/', MobileBoardController::class);

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
             'can' => \Illuminate\Auth\Middleware\Authorize::class,
             'role' => \App\Http\Middleware\EnsureIdentityRole::class,
+            'security.gate' => \App\Http\Middleware\SecurityGateMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

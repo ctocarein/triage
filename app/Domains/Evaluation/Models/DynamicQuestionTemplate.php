@@ -33,13 +33,16 @@ class DynamicQuestionTemplate extends Model
         'max',              // <-- ajouté
         'meta', // <-- ajouté
         'label',           // <-- ajouté
-        'placeholder',     // <-- ajouté    
+        'placeholder',
+        'routing_rules',
+        'single_choice'     // <-- ajouté    
     ];
 
     protected $casts = [
         'visible_if' => 'array',
         'options' => 'array',
         'meta' => 'array',
+        'routing_rules' => 'array',
         'is_required' => 'boolean',
         'is_entry_point' => 'boolean',
     ];

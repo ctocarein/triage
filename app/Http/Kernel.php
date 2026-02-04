@@ -38,6 +38,7 @@ class Kernel extends HttpKernel
 
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
+        'security.gate' => \App\Http\Middleware\SecurityGateMiddleware::class,
 
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
 

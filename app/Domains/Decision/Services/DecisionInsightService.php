@@ -135,9 +135,13 @@ class DecisionInsightService
 
     protected function computeConfidence(array $risk, array $quality): float
     {
+        $thresholds = config('decision-thresholds.confidence', []);
+        $min = (float) ($thresholds['min'] ?? 0.7);
+        $highBonus = (float) ($thresholds['high_bonus'] ?? 0.05);
+
         $base = $quality['data_quality_score'] ?? 1.0;
         if ($risk['risk_level'] === 'high') {
-            $base = min(1.0, $base + 0.05);
+            $base = min(1.0, $base + $highBonus);
         }
 
         return round(max(0.0, min(1.0, $base)), 4);
@@ -145,7 +149,10 @@ class DecisionInsightService
 
     protected function computeConfidenceInterval(float $riskScore, float $confidence): array
     {
-        $margin = max(0.05, 0.2 * (1 - $confidence));
+        $thresholds = config('decision-thresholds.confidence', []);
+        $minMargin = (float) ($thresholds['min_margin'] ?? 0.05);
+        $marginFactor = (float) ($thresholds['margin_factor'] ?? 0.2);
+        $margin = max($minMargin, $marginFactor * (1 - $confidence));
         $low = max(0.0, $riskScore - $margin);
         $high = min(1.0, $riskScore + $margin);
 
@@ -154,32 +161,47 @@ class DecisionInsightService
 
     protected function requiresHumanValidation(string $riskLevel, float $confidence, array $quality): bool
     {
-        if (($quality['critical_missing'] ?? false) === true) {
+        $qualityThresholds = config('decision-thresholds.quality', []);
+        $reviewThresholds = config('decision-thresholds.review', []);
+        $confidenceThresholds = config('decision-thresholds.confidence', []);
+
+        $criticalMissingRequiresReview = (bool) ($qualityThresholds['critical_missing_requires_review'] ?? true);
+        if ($criticalMissingRequiresReview && ($quality['critical_missing'] ?? false) === true) {
             return true;
         }
 
-        if ($confidence < 0.7) {
+        $minConfidence = (float) ($confidenceThresholds['min'] ?? 0.7);
+        if ($confidence < $minConfidence) {
             return true;
         }
 
-        return $riskLevel === 'high';
+        $highRiskRequiresReview = (bool) ($reviewThresholds['high_risk_requires_review'] ?? true);
+        return $highRiskRequiresReview && $riskLevel === 'high';
     }
 
     protected function resolveHumanValidationReason(string $riskLevel, float $confidence, array $quality): ?string
     {
-        if (($quality['critical_missing'] ?? false) === true) {
+        $qualityThresholds = config('decision-thresholds.quality', []);
+        $reviewThresholds = config('decision-thresholds.review', []);
+        $confidenceThresholds = config('decision-thresholds.confidence', []);
+
+        $criticalMissingRequiresReview = (bool) ($qualityThresholds['critical_missing_requires_review'] ?? true);
+        if ($criticalMissingRequiresReview && ($quality['critical_missing'] ?? false) === true) {
             return 'missing_critical_answers';
         }
 
-        if (($quality['data_quality_score'] ?? 1.0) < 0.6) {
+        $minQuality = (float) ($qualityThresholds['min'] ?? 0.6);
+        if (($quality['data_quality_score'] ?? 1.0) < $minQuality) {
             return 'data_quality_low';
         }
 
-        if ($confidence < 0.7) {
+        $minConfidence = (float) ($confidenceThresholds['min'] ?? 0.7);
+        if ($confidence < $minConfidence) {
             return 'confidence_below_threshold';
         }
 
-        if ($riskLevel === 'high') {
+        $highRiskRequiresReview = (bool) ($reviewThresholds['high_risk_requires_review'] ?? true);
+        if ($highRiskRequiresReview && $riskLevel === 'high') {
             return 'high_risk_requires_review';
         }
 
@@ -188,10 +210,7 @@ class DecisionInsightService
 
     protected function suggestedAction(string $riskLevel): string
     {
-        return match ($riskLevel) {
-            'high' => 'refer_to_specialist',
-            'moderate' => 'medical_check',
-            default => 'self_care',
-        };
+        $actions = config('decision-thresholds.suggested_action', []);
+        return $actions[$riskLevel] ?? ($actions['default'] ?? 'self_care');
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Domains\Identity\Presentation\Http\Controllers;
 
 use App\Domains\Identity\Application\Services\IdentityAuthService;
+use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Identity\Presentation\Http\Requests\LoginIdentityRequest;
 use App\Domains\Identity\Presentation\Http\Requests\RegisterIdentityRequest;
+use App\Domains\Identity\Presentation\Http\Requests\SetCredentialSecretRequest;
+use App\Domains\Identity\Presentation\Http\Requests\UnlockSecurityGateRequest;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +58,34 @@ class IdentityAuthController extends Controller
     }
 
     /**
+     * @OA\Patch(
+     *     path="/identity/secret",
+     *     operationId="identitySetSecret",
+     *     summary="Set a phone credential secret",
+     *     tags={"Identity"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/IdentitySetSecretRequest")
+     *     ),
+     *     @OA\Response(response=200, description="Secret set", @OA\JsonContent(ref="#/components/schemas/IdentitySetSecretResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function setSecret(SetCredentialSecretRequest $request, IdentityAuthService $service): JsonResponse
+    {
+        $identity = $request->user();
+        if (! $identity instanceof Identity) {
+            abort(403, 'Forbidden.');
+        }
+
+        $credential = $service->setPhoneSecret($identity, (string) $request->validated()['secret']);
+
+        return response()->json(['credential' => $credential]);
+    }
+
+    /**
      * @OA\Post(
      *     path="/identity/logout",
      *     operationId="identityLogout",
@@ -70,5 +101,86 @@ class IdentityAuthController extends Controller
         $request->user()?->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logged out successfully.']);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/identity/unlock",
+     *     operationId="identityUnlock",
+     *     summary="Unlock the security gate using pin/agent/biometric",
+     *     tags={"Identity"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/IdentityUnlockRequest")
+     *     ),
+     *     @OA\Response(response=200, description="Gate unlocked", @OA\JsonContent(ref="#/components/schemas/IdentityUnlockResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function unlock(UnlockSecurityGateRequest $request, IdentityAuthService $service): JsonResponse
+    {
+        $identity = $request->user();
+        if (! $identity instanceof Identity) {
+            abort(403, 'Forbidden.');
+        }
+
+        $payload = $service->unlockSecurityGate($identity, $request->validated());
+
+        return response()->json($payload);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/identity/panic-lock",
+     *     operationId="identityPanicLock",
+     *     summary="Panic lock the security gate and revoke devices",
+     *     tags={"Identity"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Gate locked", @OA\JsonContent(ref="#/components/schemas/IdentityPanicLockResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
+    public function panicLock(Request $request, IdentityAuthService $service): JsonResponse
+    {
+        $identity = $request->user();
+        if (! $identity instanceof Identity) {
+            abort(403, 'Forbidden.');
+        }
+
+        $payload = $service->panicLock($identity);
+
+        return response()->json($payload);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/identity/security/status",
+     *     operationId="identitySecurityStatus",
+     *     summary="Get the current security gate status",
+     *     tags={"Identity"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="device_fingerprint",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(response=200, description="Security status", @OA\JsonContent(ref="#/components/schemas/IdentitySecurityStatusResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
+    public function securityStatus(Request $request, IdentityAuthService $service): JsonResponse
+    {
+        $identity = $request->user();
+        if (! $identity instanceof Identity) {
+            abort(403, 'Forbidden.');
+        }
+
+        $fingerprint = $request->query('device_fingerprint');
+        $payload = $service->getSecurityStatus($identity, is_string($fingerprint) ? $fingerprint : null);
+
+        return response()->json($payload);
     }
 }

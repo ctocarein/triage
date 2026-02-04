@@ -5,8 +5,9 @@ namespace App\Domains\Identity\Infrastructure\Persistence\Models;
 use App\Domains\Access\Models\Membership;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Notification\Models\UserReminder;
-use App\Domains\Profile\Models\MedicalProfile;
-use App\Domains\Profile\Models\PersonalProfile;
+use App\Domains\Profile\Infrastructure\Persistence\Models\MedicalProfile;
+use App\Domains\Profile\Infrastructure\Persistence\Models\PersonalProfile;
+use App\Domains\Profile\Infrastructure\Persistence\Models\ProfessionalProfile;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -45,6 +46,26 @@ class Identity extends Authenticatable
         return $this->hasMany(Credential::class);
     }
 
+    public function securityGate(): HasOne
+    {
+        return $this->hasOne(IdentitySecurityGate::class);
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(IdentityDevice::class);
+    }
+
+    public function pinAttempts(): HasMany
+    {
+        return $this->hasMany(IdentityPinAttempt::class);
+    }
+
+    public function securityEvents(): HasMany
+    {
+        return $this->hasMany(IdentitySecurityEvent::class);
+    }
+
     public function memberships(): HasMany
     {
         return $this->hasMany(Membership::class, 'identity_id');
@@ -63,6 +84,11 @@ class Identity extends Authenticatable
     public function medicalProfile(): HasOne
     {
         return $this->hasOne(MedicalProfile::class, 'identity_id');
+    }
+
+    public function professionalProfile(): HasOne
+    {
+        return $this->hasOne(ProfessionalProfile::class, 'identity_id');
     }
 
     public function reminders(): HasMany

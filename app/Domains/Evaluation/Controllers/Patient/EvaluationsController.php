@@ -8,6 +8,7 @@ use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Services\EvaluationFlowService;
 use App\Domains\Evaluation\Services\IdempotencyService;
 use App\Http\Controllers\Controller;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -75,7 +76,7 @@ class EvaluationsController extends Controller
      *     summary="Advance an evaluation session",
      *     tags={"Evaluations"},
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(name="session", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="session", in="path", required=true, @OA\Schema(type="string", format="uuid")),
      *     @OA\Parameter(
      *         name="Idempotency-Key",
      *         in="header",
@@ -100,7 +101,25 @@ class EvaluationsController extends Controller
         EvaluationFlowService $flow,
         IdempotencyService $idempotency
     ): JsonResponse {
-        $this->ensureSessionAccess($request, $session);
+        try {
+            $this->authorize('view', $session);
+        } catch (AuthorizationException $exception) {
+            logger()->warning('Evaluation session access denied.', [
+                'session_id' => $session->id,
+                'identity_id' => $request->user()?->id,
+            ]);
+            abort(403, 'You are not allowed to access this session.');
+        }
+
+        if ($this->tokenInvalidatesSession($request, $session)) {
+            $this->expireSession($session);
+            abort(410, 'Session invalidee.');
+        }
+
+        if ($session->isExpired()) {
+            $this->expireSession($session);
+            abort(410, 'Session expiree.');
+        }
 
         $key = $idempotency->requireKey($request);
         $hash = $idempotency->hashRequest($request);
@@ -128,7 +147,7 @@ class EvaluationsController extends Controller
      *     summary="Get evaluation session state",
      *     tags={"Evaluations"},
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(name="session", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="session", in="path", required=true, @OA\Schema(type="string", format="uuid")),
      *     @OA\Parameter(
      *         name="Idempotency-Key",
      *         in="header",
@@ -145,7 +164,25 @@ class EvaluationsController extends Controller
         EvaluationSession $session,
         EvaluationFlowService $flow
     ): JsonResponse {
-        $this->ensureSessionAccess($request, $session);
+        try {
+            $this->authorize('view', $session);
+        } catch (AuthorizationException $exception) {
+            logger()->warning('Evaluation session access denied.', [
+                'session_id' => $session->id,
+                'identity_id' => $request->user()?->id,
+            ]);
+            abort(403, 'You are not allowed to access this session.');
+        }
+
+        if ($this->tokenInvalidatesSession($request, $session)) {
+            $this->expireSession($session);
+            abort(410, 'Session invalidee.');
+        }
+
+        if ($session->isExpired()) {
+            $this->expireSession($session);
+            abort(410, 'Session expiree.');
+        }
 
         $result = $flow->state($session);
 
@@ -159,7 +196,7 @@ class EvaluationsController extends Controller
      *     summary="Complete an evaluation session",
      *     tags={"Evaluations"},
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(name="session", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="session", in="path", required=true, @OA\Schema(type="string", format="uuid")),
      *     @OA\Parameter(
      *         name="Idempotency-Key",
      *         in="header",
@@ -188,7 +225,25 @@ class EvaluationsController extends Controller
         EvaluationFlowService $flow,
         IdempotencyService $idempotency
     ): JsonResponse {
-        $this->ensureSessionAccess($request, $session);
+        try {
+            $this->authorize('view', $session);
+        } catch (AuthorizationException $exception) {
+            logger()->warning('Evaluation session access denied.', [
+                'session_id' => $session->id,
+                'identity_id' => $request->user()?->id,
+            ]);
+            abort(403, 'You are not allowed to access this session.');
+        }
+
+        if ($this->tokenInvalidatesSession($request, $session)) {
+            $this->expireSession($session);
+            abort(410, 'Session invalidee.');
+        }
+
+        if ($session->isExpired()) {
+            $this->expireSession($session);
+            abort(410, 'Session expiree.');
+        }
 
         $key = $idempotency->requireKey($request);
         $hash = $idempotency->hashRequest($request);
@@ -209,12 +264,76 @@ class EvaluationsController extends Controller
             ->header('Idempotency-Key', $key);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/evaluations/current",
+     *     operationId="evaluationsCurrent",
+     *     summary="Get the current in-progress evaluation session",
+     *     tags={"Evaluations"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Current session", @OA\JsonContent(ref="#/components/schemas/EvaluationFlowResponse")),
+     *     @OA\Response(response=404, description="No active session")
+     * )
+     */
+    public function current(
+        Request $request,
+        EvaluationFlowService $flow
+    ): JsonResponse {
+        $session = $request->user()
+            ?->evaluationSessions()
+            ->active()
+            ->latest('started_at')
+            ->first();
+
+        if (! $session) {
+            return response()->json(['message' => 'Aucune session active.'], 404);
+        }
+
+        $this->ensureSessionAccess($request, $session);
+
+        $result = $flow->state($session);
+
+        return response()->json($result['payload'], $result['status']);
+    }
+
     private function ensureSessionAccess(Request $request, EvaluationSession $session): void
     {
-        $identityId = $request->user()?->id;
+        try {
+            $this->authorize('view', $session);
+        } catch (AuthorizationException $exception) {
+            abort(404, 'Session introuvable.');
+        }
 
-        if ($session->identity_id !== $identityId) {
-            abort(403, 'Acces interdit a cette session.');
+        if ($this->tokenInvalidatesSession($request, $session)) {
+            $this->expireSession($session);
+            abort(410, 'Session invalidee.');
+        }
+
+        if ($session->isExpired()) {
+            $this->expireSession($session);
+            abort(410, 'Session expiree.');
+        }
+    }
+
+    private function tokenInvalidatesSession(Request $request, EvaluationSession $session): bool
+    {
+        $tokenId = $request->user()?->currentAccessToken()?->id;
+        $context = $session->context ?? [];
+        $sessionTokenId = is_array($context) ? ($context['token_id'] ?? null) : null;
+
+        return $tokenId !== null
+            && $sessionTokenId !== null
+            && (int) $tokenId !== (int) $sessionTokenId;
+    }
+
+    private function expireSession(EvaluationSession $session): void
+    {
+        if ($session->status !== 'expired') {
+            $updates = ['status' => 'expired'];
+            if ($session->expires_at === null) {
+                $updates['expires_at'] = now();
+            }
+            $session->update($updates);
         }
     }
 }
