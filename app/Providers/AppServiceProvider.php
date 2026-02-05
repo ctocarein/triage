@@ -83,6 +83,10 @@ class AppServiceProvider extends ServiceProvider
 
     private function bootRoutingRulesValidation(): void
     {
+        if (app()->runningInConsole()) {
+            return;
+        }
+
         if (!Schema::hasTable('dynamic_question_templates')) {
             return;
         }
