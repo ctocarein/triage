@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Domains\Ambassador\Infrastructure\Jobs;
 
 use App\Domains\Ambassador\Application\Services\AmbassadorBadgeService;
 use App\Domains\Ambassador\Application\Services\AmbassadorLevelService;

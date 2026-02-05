@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Observers;
+namespace App\Domains\Organization\Infrastructure\Observers;
 
 use App\Domains\Engagement\Infrastructure\Persistence\Models\Campaign;
 use App\Domains\Evaluation\Models\EvaluationSession;
@@ -82,4 +82,3 @@ class OrganizationDashboardCacheObserver
         return null;
     }
 }
-
