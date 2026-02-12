@@ -1,0 +1,20 @@
+{
+  "name": "greeting-consent-yes",
+  "type": "complete",
+  "steps": [
+    {
+      "question_key": "explicit_consent",
+      "value": {
+        "value": "yes",
+        "label": "Oui"
+      },
+      "expect": {
+        "routing": {
+          "action": "jump_bloc",
+          "bloc_key": "symptom_breast"
+        },
+        "next_question_key": "breast_pain"
+      }
+    }
+  ]
+}

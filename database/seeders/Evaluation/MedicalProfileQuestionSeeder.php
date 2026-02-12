@@ -4,11 +4,14 @@ namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
 
 class MedicalProfileQuestionSeeder extends Seeder
 {
     public function run()
     {
+        $validator = new QuestionTemplateContractValidator();
+
         $bloc = 'medical_profile';
 
         $questions = [
@@ -153,7 +156,7 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'order' => 15,
             ],
 
-            // 📏 Données biométriques
+            //📏 Données biométriques
             [
                 'key' => 'cmu_number',
                 'text' => '💳 Numéro de CMU (si applicable)',
@@ -197,6 +200,7 @@ class MedicalProfileQuestionSeeder extends Seeder
                     ['value' => 'AB-', 'label' => 'AB-'],
                     ['value' => 'O+', 'label' => 'O+'],
                     ['value' => 'O-', 'label' => 'O-'],
+                    ['value' => 'Null', 'label' => 'Je ne sais pas'],
                 ]),
                 'order' => 19,
             ],
@@ -208,7 +212,7 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'answer_target' => 'medical_profile',
                 'order' => 20,
             ],
-
+            
             // 🌫️ Exposition environnementale
             [
                 'key' => 'exposed_to_smoke',
@@ -231,7 +235,11 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
         ];
 
+        $validator->assertUniqueOrderPerBloc($questions, static::class);
+
         foreach ($questions as $q) {
+            $q = $validator->normalize($q);
+            $validator->assertValid($q);
             DynamicQuestionTemplate::updateOrCreate(
                 ['key' => $q['key']],
                 $q

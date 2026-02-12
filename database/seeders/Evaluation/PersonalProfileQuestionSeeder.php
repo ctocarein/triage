@@ -5,11 +5,14 @@ namespace Database\Seeders\Evaluation;
 use Illuminate\Database\Seeder;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\QuestionGroup;
+use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
 
 class PersonalProfileQuestionSeeder extends Seeder
 {
     public function run(): void
     {
+        $validator = new QuestionTemplateContractValidator();
+
         // Récupère tous les groupes nécessaires en une seule fois
         $groups = QuestionGroup::whereIn('key', [
             'profile_personal', 'profil_identite', 'profil_socio', 'profil_sante'
@@ -64,9 +67,10 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'key' => 'height',
                     'text' => '📏 Quelle est votre taille (en cm) ?',
                     'type' => 'number',
-                    'bloc_key' => 'medical_profile',
+                    'bloc_key' => 'profil_sante',
                     'answer_target' => 'personal_profile',
                     'order' => 6,
+                    
                 ],
                 [
                     'key' => 'education_level',
@@ -87,15 +91,18 @@ class PersonalProfileQuestionSeeder extends Seeder
                 ]
             ];
 
+        $validator->assertUniqueOrderPerBloc($questions, static::class);
+
 
         foreach ($questions as $q) {
             // Trouve le sous-groupe, sinon fallback sur le groupe principal
             $questionGroup = $groups[$q['bloc_key']] ?? $groups['profile_personal'];
+            $q = $validator->normalize($q);
+            $validator->assertValid($q);
 
             DynamicQuestionTemplate::updateOrCreate(
                 [
                     'key' => $q['key'],
-                    'answer_target' => $q['answer_target'],
                 ],
                 [
                     'text' => $q['text'],

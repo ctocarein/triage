@@ -5,11 +5,13 @@ namespace Database\Seeders\Evaluation;
 use Illuminate\Database\Seeder;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\QuestionGroup;
+use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
 
 class SymptomCervicalQuestionSeeder extends Seeder
 {
-public function run()
+    public function run()
     {
+        $validator = new QuestionTemplateContractValidator();
         $questions = [
 
             // 1️⃣ Saignement vaginal anormal
@@ -256,7 +258,11 @@ public function run()
             ],
         ];
 
+        $validator->assertUniqueOrderPerBloc($questions, static::class);
+
         foreach ($questions as $q) {
+            $q = $validator->normalize($q);
+            $validator->assertValid($q);
             DynamicQuestionTemplate::updateOrCreate(
                 ['key' => $q['key']],
                 $q

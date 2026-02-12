@@ -5,11 +5,13 @@ namespace Database\Seeders\Evaluation;
 use Illuminate\Database\Seeder;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\QuestionGroup;
+use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
 
 class SymptomBreastQuestionSeeder extends Seeder
 {
     public function run(): void
     {
+        $validator = new QuestionTemplateContractValidator();
         // On récupère le SOUS-groupe douleur_sein pour lier les questions
         $subGroup = QuestionGroup::where('key', 'douleur_sein')->first();
         // Fallback sur le groupe principal si besoin
@@ -274,7 +276,11 @@ class SymptomBreastQuestionSeeder extends Seeder
 
         ];
 
+        $validator->assertUniqueOrderPerBloc($questions, static::class);
+
        foreach ($questions as $q) {
+            $q = $validator->normalize($q);
+            $validator->assertValid($q);
             DynamicQuestionTemplate::updateOrCreate(
                 ['key' => $q['key']],
                 $q

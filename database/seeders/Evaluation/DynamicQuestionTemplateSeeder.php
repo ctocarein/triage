@@ -4,6 +4,7 @@ namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
 use Database\Seeders\GreetingSeeder;
+use Database\Seeders\Evaluation\ConsentDeclinedQuestionSeeder;
 use Database\Seeders\Evaluation\PersonalProfileQuestionSeeder;
 use Database\Seeders\Evaluation\MedicalProfileQuestionSeeder;
 use Database\Seeders\Evaluation\SymptomBreastQuestionSeeder;
@@ -15,6 +16,7 @@ class DynamicQuestionTemplateSeeder extends Seeder
     {
         $this->call([
             GreetingSeeder::class,
+            ConsentDeclinedQuestionSeeder::class,
             PersonalProfileQuestionSeeder::class,
             MedicalProfileQuestionSeeder::class,
             SymptomBreastQuestionSeeder::class,

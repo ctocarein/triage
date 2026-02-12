@@ -1,0 +1,60 @@
+{
+  "name": "greeting-consent-no",
+  "type": "complete",
+  "steps": [
+    {
+      "question_key": "explicit_consent",
+      "value": {
+        "value": "no",
+        "label": "Non"
+      },
+      "expect": {
+        "routing": {
+          "action": "jump_bloc",
+          "bloc_key": "consent_declined"
+        },
+        "next_question_key": "consent_declined_thank_you"
+      }
+    },
+    {
+      "question_key": "consent_declined_thank_you",
+      "value": {
+        "value": "continue",
+        "label": "Continuer"
+      },
+      "expect": {
+        "routing": {
+          "action": "jump_question",
+          "question_key": "consent_declined_whatsapp"
+        },
+        "next_question_key": "consent_declined_whatsapp"
+      }
+    },
+    {
+      "question_key": "consent_declined_whatsapp",
+      "value": "0700000000",
+      "expect": {
+        "routing": {
+          "action": "jump_question",
+          "question_key": "consent_declined_end"
+        },
+        "next_question_key": "consent_declined_end"
+      }
+    },
+    {
+      "question_key": "consent_declined_end",
+      "value": {
+        "value": "done",
+        "label": "Terminer"
+      },
+      "expect": {
+        "routing": {
+          "action": "end_session",
+          "status": "cancelled",
+          "reason": "consent_declined"
+        },
+        "next_question_key": null
+      }
+    }
+  ]
+}

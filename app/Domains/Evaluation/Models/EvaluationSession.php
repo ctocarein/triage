@@ -223,6 +223,32 @@ class EvaluationSession extends Model
 
         event(new EvaluationCompleted($this));
     }
+
+    public function markCancelled(?string $reason = null): void
+    {
+        if ($this->status === 'cancelled' && $this->is_completed) {
+            return;
+        }
+
+        $context = is_array($this->context) ? $this->context : [];
+        $context['termination_type'] = 'abandon';
+        if ($reason !== null && $reason !== '') {
+            $context['termination_reason'] = $reason;
+        }
+
+        $this->update([
+            'is_completed' => true,
+            'status' => 'cancelled',
+            'completed_at' => now(),
+            'current_question_id' => null,
+            'current_node_key' => null,
+            'context' => $context,
+        ]);
+    
+}
+
+
+
 }
 
 

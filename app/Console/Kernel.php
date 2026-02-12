@@ -3,6 +3,8 @@
 namespace App\Console;
 
 use App\Console\Commands\ImportQuestionnaire;
+use App\Console\Commands\CheckEvaluationCatalog;
+use App\Console\Commands\ReplayGoldenPaths;
 use App\Console\Commands\RecomputeAmbassadorStats;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -10,7 +12,9 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     protected $commands = [
+        CheckEvaluationCatalog::class,
         ImportQuestionnaire::class,
+        ReplayGoldenPaths::class,
         RecomputeAmbassadorStats::class,
     ];
 

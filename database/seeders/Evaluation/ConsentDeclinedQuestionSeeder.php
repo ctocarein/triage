@@ -1,0 +1,74 @@
+<?php
+
+namespace Database\Seeders\Evaluation;
+
+use Illuminate\Database\Seeder;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
+
+class ConsentDeclinedQuestionSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $validator = new QuestionTemplateContractValidator();
+
+        $questions = [
+            [
+                'key' => 'consent_declined_thank_you',
+                'text' => 'Merci pour votre retour.',
+                'type' => 'select_one',
+                'bloc_key' => 'consent_declined',
+                'answer_target' => 'custom',
+                'options' => json_encode([
+                    ['value' => 'continue', 'label' => 'Continuer'],
+                ]),
+                'routing_rules' => [
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'continue'], 'next' => 'question:consent_declined_whatsapp'],
+                ],
+                'is_required' => true,
+                'is_entry_point' => false,
+                'order' => 1,
+            ],
+            [
+                'key' => 'consent_declined_whatsapp',
+                'text' => 'Si vous le souhaitez, laissez votre numero WhatsApp pour recevoir nos notifications.',
+                'type' => 'text',
+                'bloc_key' => 'consent_declined',
+                'answer_target' => 'custom',
+                'is_required' => false,
+                'placeholder' => 'Ex: 0700000000',
+                'routing_rules' => [
+                    ['if' => true, 'next' => 'question:consent_declined_end'],
+                ],
+                'order' => 2,
+            ],
+            [
+                'key' => 'consent_declined_end',
+                'text' => 'Aucune recommandation ne sera chargee pour ce parcours. Appuyez sur Terminer pour quitter.',
+                'type' => 'select_one',
+                'bloc_key' => 'consent_declined',
+                'answer_target' => 'custom',
+                'options' => json_encode([
+                    ['value' => 'done', 'label' => 'Terminer'],
+                ]),
+                'routing_rules' => [
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'done'], 'next' => 'end_session:consent_declined'],
+                ],
+                'is_required' => true,
+                'order' => 3,
+            ],
+        ];
+
+        $validator->assertUniqueOrderPerBloc($questions, static::class);
+
+        foreach ($questions as $q) {
+            $q = $validator->normalize($q);
+            $validator->assertValid($q);
+
+            DynamicQuestionTemplate::updateOrCreate(
+                ['key' => $q['key']],
+                $q
+            );
+        }
+    }
+}

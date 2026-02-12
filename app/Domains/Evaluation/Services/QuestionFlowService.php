@@ -34,19 +34,36 @@ class QuestionFlowService
 
     public function getSessionContext(EvaluationSession $session): array
     {
-        $answers = $session->answers->keyBy('question_id')->map->value->toArray();
+        $answersById = [];
+        $answersByKey = [];
+
+        foreach ($session->answers()->with('question:id,key')->get() as $answer) {
+            $normalized = $this->normalizeAnswerValue($answer->value);
+            $answersById[$answer->question_id] = $normalized;
+
+            $questionKey = $answer->question?->key;
+            if ($questionKey) {
+                $answersByKey[$questionKey] = $normalized;
+            }
+        }
+
         return [
-            'answers' => $answers,
+            'answers' => $answersByKey,
+            'answers_by_id' => $answersById,
             'profile' => [
                 'medical' => optional($session->identity->medicalProfile)->toArray() ?? [],
                 'personal' => optional($session->identity->personalProfile)->toArray() ?? [],
             ],
-            'answeredIds' => array_keys($answers),
+            'answeredIds' => array_keys($answersById),
         ];
     }
 
     public function goToNextQuestion(EvaluationSession $session, $groupIds = []): ?DynamicQuestionTemplate
     {
+        if (!$session->isInProgress()) {
+            return null;
+        }
+
         $context = $this->getSessionContext($session);
         $forcedQuestion = $this->consumeForcedQuestion($session, $context['answers'], $context['profile']);
         if ($forcedQuestion) {
@@ -105,6 +122,10 @@ class QuestionFlowService
 
     public function getNextQuestions(EvaluationSession $session): array
     {
+        if (!$session->isInProgress()) {
+            return [];
+        }
+
         $context = $this->getSessionContext($session);
         $forcedQuestion = $this->consumeForcedQuestion($session, $context['answers'], $context['profile']);
         if ($forcedQuestion) {
@@ -175,27 +196,31 @@ class QuestionFlowService
 
     private function isVisible(array $visibleIf, array $answers, array $profile): bool
     {
-        foreach ($visibleIf as $condition) {
-            $source = $condition['source'] ?? 'question';
-            $key = $condition['key'] ?? $condition['question'] ?? null;
-            $value = $condition['value'] ?? null;
-            $op = $condition['operator'] ?? '=';
-
-            $actual = match ($source) {
-                'question' => $answers[$key] ?? null,
-                'profile.medical' => $profile['medical'][$key] ?? null,
-                'profile.personal' => $profile['personal'][$key] ?? null,
-                default => null,
-            };
-
-            if (!$this->compare($actual, $value, $op)) return false;
+        if ($visibleIf === []) {
+            return true;
         }
 
-        return true;
+        $scope = $this->buildRuleScope($answers, $profile, null, null, null);
+
+        if ($this->isList($visibleIf)) {
+            foreach ($visibleIf as $condition) {
+                if (!$this->evaluateCondition($condition, $scope)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return $this->evaluateCondition($visibleIf, $scope);
     }
 
     public function applyRoutingRules(EvaluationSession $session, DynamicQuestionTemplate $question, mixed $answerValue): ?array
     {
+        if (!$session->isInProgress()) {
+            return null;
+        }
+
         $rules = $question->routing_rules;
         if (is_string($rules)) {
             $rules = json_decode($rules, true);
@@ -205,7 +230,14 @@ class QuestionFlowService
             return null;
         }
 
-        $normalizedAnswer = $this->normalizeAnswerValue($answerValue);
+        $context = $this->getSessionContext($session);
+        $scope = $this->buildRuleScope(
+            $context['answers'] ?? [],
+            $context['profile'] ?? [],
+            $answerValue,
+            $session,
+            $question
+        );
 
         foreach ($rules as $rule) {
             if (!is_array($rule) || !array_key_exists('next', $rule)) {
@@ -213,7 +245,7 @@ class QuestionFlowService
             }
 
             $condition = $rule['if'] ?? null;
-            if (!$this->evaluateRoutingCondition($condition, $normalizedAnswer)) {
+            if (!$this->evaluateCondition($condition, $scope)) {
                 continue;
             }
 
@@ -223,16 +255,24 @@ class QuestionFlowService
         return null;
     }
 
-    protected function evaluateRoutingCondition(mixed $condition, mixed $answerValue): bool
+    protected function evaluateCondition(mixed $condition, array $scope): bool
     {
         if ($condition === null) {
             return false;
         }
 
+        if (is_bool($condition)) {
+            return $condition;
+        }
+
         if (is_array($condition)) {
+            if (isset($condition['not'])) {
+                return !$this->evaluateCondition($condition['not'], $scope);
+            }
+
             if (isset($condition['all']) && is_array($condition['all'])) {
                 foreach ($condition['all'] as $item) {
-                    if (!$this->evaluateRoutingCondition($item, $answerValue)) {
+                    if (!$this->evaluateCondition($item, $scope)) {
                         return false;
                     }
                 }
@@ -241,26 +281,140 @@ class QuestionFlowService
 
             if (isset($condition['any']) && is_array($condition['any'])) {
                 foreach ($condition['any'] as $item) {
-                    if ($this->evaluateRoutingCondition($item, $answerValue)) {
+                    if ($this->evaluateCondition($item, $scope)) {
                         return true;
                     }
                 }
                 return false;
             }
 
+            if (array_key_exists('source', $condition) || array_key_exists('key', $condition) || array_key_exists('question', $condition)) {
+                $actual = $this->resolveConditionActual($condition, $scope);
+                $expected = $condition['value'] ?? null;
+                $operator = $condition['operator'] ?? '=';
+                return $this->compare($actual, $expected, $operator);
+            }
+
             if (array_key_exists('value', $condition) || array_key_exists('operator', $condition)) {
                 $expected = $condition['value'] ?? null;
                 $operator = $condition['operator'] ?? '=';
-                return $this->compare($answerValue, $expected, $operator);
+                return $this->compare($scope['answer']['value'] ?? null, $expected, $operator);
             }
 
-            $keys = array_keys($condition);
-            if ($keys === range(0, count($keys) - 1)) {
-                return $this->compare($answerValue, $condition, 'in');
+            if ($this->isList($condition)) {
+                return $this->compare($scope['answer']['value'] ?? null, $condition, 'in');
             }
         }
 
-        return $this->compare($answerValue, $condition, '=');
+        return $this->compare($scope['answer']['value'] ?? null, $condition, '=');
+    }
+
+    protected function buildRuleScope(
+        array $answers,
+        array $profile,
+        mixed $answerValue,
+        ?EvaluationSession $session,
+        ?DynamicQuestionTemplate $question
+    ): array
+    {
+        $normalizedAnswer = $this->normalizeAnswerValue($answerValue);
+        $comparableAnswer = $this->extractComparableAnswerValue($normalizedAnswer);
+        $sessionContext = $session ? $this->normalizeSessionContext($session) : [];
+
+        return [
+            'answer' => [
+                'raw' => $normalizedAnswer,
+                'value' => $comparableAnswer,
+            ],
+            'answers' => $answers,
+            'profile' => [
+                'medical' => $profile['medical'] ?? [],
+                'personal' => $profile['personal'] ?? [],
+            ],
+            'session' => [
+                'id' => $session?->id,
+                'public_id' => $session?->public_id,
+                'status' => $session?->status,
+                'type' => $session?->type,
+                'risk_level' => $session?->risk_level,
+                'score' => $session?->score,
+                'current_bloc' => $session?->current_bloc,
+                'context' => $sessionContext,
+            ],
+            'question' => [
+                'id' => $question?->id,
+                'key' => $question?->key,
+                'bloc_key' => $question?->bloc_key,
+                'type' => $question?->type,
+                'answer_target' => $question?->answer_target,
+            ],
+        ];
+    }
+
+    protected function resolveConditionActual(array $condition, array $scope): mixed
+    {
+        $source = $condition['source'] ?? 'question';
+        $key = $condition['key'] ?? $condition['question'] ?? null;
+
+        if ($source === 'answer') {
+            if ($key === null || $key === '' || $key === 'value') {
+                return $scope['answer']['value'] ?? null;
+            }
+
+            if ($key === 'raw') {
+                return $scope['answer']['raw'] ?? null;
+            }
+
+            return data_get($scope['answer'], $key);
+        }
+
+        if ($source === 'question') {
+            if ($key === null || $key === '') {
+                return null;
+            }
+
+            return $scope['answers'][$key] ?? null;
+        }
+
+        if ($source === 'profile.medical') {
+            return $key ? data_get($scope['profile']['medical'] ?? [], $key) : null;
+        }
+
+        if ($source === 'profile.personal') {
+            return $key ? data_get($scope['profile']['personal'] ?? [], $key) : null;
+        }
+
+        if ($source === 'session') {
+            return $key ? data_get($scope['session'] ?? [], $key) : null;
+        }
+
+        if ($source === 'context') {
+            return $key ? data_get($scope['session']['context'] ?? [], $key) : null;
+        }
+
+        if ($source === 'current_question') {
+            return $key ? data_get($scope['question'] ?? [], $key) : null;
+        }
+
+        return null;
+    }
+
+    protected function isList(array $array): bool
+    {
+        return array_keys($array) === range(0, count($array) - 1);
+    }
+
+    protected function extractComparableAnswerValue(mixed $answerValue): mixed
+    {
+        if (!is_array($answerValue)) {
+            return $answerValue;
+        }
+
+        if (array_key_exists('value', $answerValue) && !is_array($answerValue['value'])) {
+            return $answerValue['value'];
+        }
+
+        return $answerValue;
     }
 
     protected function applyRoutingNext(EvaluationSession $session, string $next, DynamicQuestionTemplate $question): array
@@ -268,10 +422,16 @@ class QuestionFlowService
         $context = $this->normalizeSessionContext($session);
         $context = $this->clearForcedRouting($context);
 
-        if ($next === 'end_session') {
-            $session->markCompleted();
+        if ($next === 'end_session' || str_starts_with($next, 'end_session:')) {
+            $reason = null;
+            if (str_contains($next, ':')) {
+                $reason = substr($next, strlen('end_session:'));
+                $reason = $reason === '' ? null : $reason;
+            }
+
+            $session->markCancelled($reason ?? 'routing_end');
             $this->updateSessionContext($session, $context);
-            return ['action' => 'end_session'];
+            return ['action' => 'end_session', 'status' => 'cancelled', 'reason' => $reason];
         }
 
         if (str_starts_with($next, 'level:')) {
