@@ -12,6 +12,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
     public function run()
     {
         $validator = new QuestionTemplateContractValidator();
+        $group = QuestionGroup::where('key', 'symptom_cervix')->firstOrFail();
         $questions = [
 
             // 1️⃣ Saignement vaginal anormal
@@ -19,7 +20,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'vaginal_bleeding_abnormal',
                 'text' => '🩸 Avez-vous eu des saignements vaginaux anormaux (en dehors des règles, après rapport ou après la ménopause) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'is_entry_point' => true,
                 'order' => 1,
@@ -39,7 +40,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => 'after_menopause',   'label' => 'Après la ménopause'],
                     ['value' => 'unknown',           'label' => 'Je ne sais pas'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 2,
                 'risk_weight' => 4,
@@ -51,7 +52,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'bleeding_amount',
                 'text' => 'Le saignement était-il abondant (nécessité de changer de protection plus souvent, caillots, anémie ressentie) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 3,
                 'risk_weight' => 3,
@@ -69,7 +70,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => '1_3m',    'label' => '1-3 mois'],
                     ['value' => 'more_3m', 'label' => 'Plus de 3 mois'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 4,
                 'risk_weight' => 2,
@@ -81,7 +82,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'bleeding_pain',
                 'text' => 'Avez-vous des douleurs pelviennes associées à ces saignements ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 5,
                 'risk_weight' => 3,
@@ -95,7 +96,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'pelvic_pain',
                 'text' => '🤕 Ressentez-vous des douleurs pelviennes (bas-ventre) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 6,
                 'risk_weight' => 4,
@@ -112,7 +113,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => '1_3m',    'label' => '1-3 mois'],
                     ['value' => 'more_3m', 'label' => 'Plus de 3 mois'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 7,
                 'risk_weight' => 1,
@@ -130,7 +131,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => 'sudden',      'label' => 'Brutale'],
                     ['value' => 'other',       'label' => 'Autre'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 8,
                 'risk_weight' => 1,
@@ -144,7 +145,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'vaginal_discharge',
                 'text' => '🦠 Avez-vous des pertes vaginales inhabituelles (couleur/odeur anormales, abondantes…) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 9,
                 'risk_weight' => 3,
@@ -161,7 +162,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => 'malodorous',  'label' => 'Nauséabondes'],
                     ['value' => 'other',       'label' => 'Autre'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 10,
                 'risk_weight' => 2,
@@ -175,10 +176,16 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'pelvic_mass',
                 'text' => '🎈 Avez-vous une sensation de boule ou de gonflement dans le bas-ventre (masse pelvienne) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 11,
                 'risk_weight' => 4,
+                'routing_rules' => [
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
+                        'next' => 'end_session:urgent_pelvic_mass',
+                    ],
+                ],
                 'media_type' => 'image',
                 'media_url' => asset('images/symptoms/gyneco_mass.jpg'),
             ],
@@ -192,7 +199,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => '1_3m',    'label' => '1-3 mois'],
                     ['value' => 'more_3m', 'label' => 'Plus de 3 mois'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 12,
                 'risk_weight' => 2,
@@ -206,7 +213,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'associated_troubles',
                 'text' => '🚾 Avez-vous des troubles urinaires ou digestifs associés (difficulté à uriner, constipation, etc.) ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 13,
                 'risk_weight' => 2,
@@ -224,7 +231,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                     ['value' => 'tenesme',     'label' => 'Ténesme rectal'],
                     ['value' => 'other',       'label' => 'Autre'],
                 ]),
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 14,
                 'risk_weight' => 1,
@@ -238,7 +245,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'general_fatigue',
                 'text' => '🥱 Ressentez-vous une fatigue importante ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 15,
                 'risk_weight' => 1,
@@ -249,7 +256,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'key' => 'general_weightloss',
                 'text' => '⚖️ Avez-vous perdu du poids de façon inexpliquée ces derniers mois ?',
                 'type' => 'boolean',
-                'bloc_key' => 'symptom_gyneco',
+                'bloc_key' => 'symptom_cervix',
                 'answer_target' => 'evaluation',
                 'order' => 16,
                 'risk_weight' => 2,
@@ -262,6 +269,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
 
         foreach ($questions as $q) {
             $q = $validator->normalize($q);
+            $q['question_group_id'] = $group->id;
             $validator->assertValid($q);
             DynamicQuestionTemplate::updateOrCreate(
                 ['key' => $q['key']],

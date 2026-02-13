@@ -40,13 +40,22 @@ class ThematicBlocSeeder extends Seeder
                 'question_group_key' => 'symptom_cervix',
             ],
             [
+                'key' => 'medical_profile',
+                'label' => 'Profil mÃ©dical',
+                'color' => '#4DB6AC',
+                'icon'  => 'clipboard',
+                'description' => 'Facteurs de risque mÃ©dicaux et antÃ©cÃ©dents.',
+                'order' => 4,
+                'question_group_key' => 'medical_profile',
+            ],
+            [
                 'key' => 'lifestyle',
                 'label' => 'Mode de vie',
                 'color' => '#4CAF50',
                 'icon'  => 'activity',
                 'description' => 'Questions sur le mode de vie.',
-                'order' => 4,
-                'question_group_key' => 'lifestyle',
+                'order' => 5,
+                'question_group_key' => 'profil_socio',
             ],
             [
                 'key' => 'family_history',
@@ -54,8 +63,8 @@ class ThematicBlocSeeder extends Seeder
                 'color' => '#90CAF9',
                 'icon'  => 'users',
                 'description' => 'Questions sur les antécédents familiaux.',
-                'order' => 5,
-                'question_group_key' => 'profile_personal',
+                'order' => 6,
+                'question_group_key' => 'profil_familial',
             ],
             // ... Ajoute d’autres blocs selon besoins ...
         ];

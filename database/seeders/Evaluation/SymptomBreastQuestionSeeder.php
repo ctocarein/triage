@@ -13,7 +13,7 @@ class SymptomBreastQuestionSeeder extends Seeder
     {
         $validator = new QuestionTemplateContractValidator();
         // On récupère le SOUS-groupe douleur_sein pour lier les questions
-        $subGroup = QuestionGroup::where('key', 'douleur_sein')->first();
+        $subGroup = QuestionGroup::where('key', 'symptom_breast_pain')->first();
         // Fallback sur le groupe principal si besoin
         $group = $subGroup ?? QuestionGroup::where('key', 'symptom_breast')->firstOrFail();
 
@@ -120,6 +120,12 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'answer_target' => 'evaluation',
                 'order' => 6,
                 'risk_weight' => 5,
+                'routing_rules' => [
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
+                        'next' => 'bloc:medical_profile',
+                    ],
+                ],
                 'media_type' => 'image',
                 'media_url' => asset('images/symptoms/breast_mass.jpg'),
             ],
@@ -184,6 +190,12 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'answer_target' => 'evaluation',
                 'order' => 10,
                 'risk_weight' => 5,
+                'routing_rules' => [
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
+                        'next' => 'end_session:urgent_breast_nipple_bleeding',
+                    ],
+                ],
                 'media_type' => 'image',
                 'media_url' => asset('images/symptoms/breast_nipple_bleeding.jpg'),
                 'visible_if' => json_encode([
@@ -224,6 +236,12 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'answer_target' => 'evaluation',
                 'order' => 13,
                 'risk_weight' => 5,
+                'routing_rules' => [
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
+                        'next' => 'end_session:urgent_breast_skin_orange',
+                    ],
+                ],
                 'media_type' => 'image',
                 'media_url' => asset('images/symptoms/breast_skin_orange.jpg'),
             ],
@@ -280,6 +298,7 @@ class SymptomBreastQuestionSeeder extends Seeder
 
        foreach ($questions as $q) {
             $q = $validator->normalize($q);
+            $q['question_group_id'] = $group->id;
             $validator->assertValid($q);
             DynamicQuestionTemplate::updateOrCreate(
                 ['key' => $q['key']],
