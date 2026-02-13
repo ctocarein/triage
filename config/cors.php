@@ -11,6 +11,8 @@ return [
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => [
+        'https://triage.carein.cloud',
+        'https://on.chereh.com',
         'https://on.dev.chereh.com',
         'http://localhost:3000',
     ],
