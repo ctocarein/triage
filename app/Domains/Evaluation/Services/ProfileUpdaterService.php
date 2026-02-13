@@ -5,6 +5,7 @@ namespace App\Domains\Evaluation\Services;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Profile\Infrastructure\Persistence\Models\PersonalProfile;
 use App\Domains\Profile\Infrastructure\Persistence\Models\MedicalProfile;
+use Carbon\Carbon;
 
 class ProfileUpdaterService
 {
@@ -44,6 +45,10 @@ class ProfileUpdaterService
 
     private function castValue(string $key, string $type, $value)
     {
+        if ($key === 'birth_date') {
+            return $this->normalizeBirthDate($value);
+        }
+
         if ($key === 'education_level') {
             $map = [
                 'aucun' => 'none',
@@ -77,6 +82,27 @@ class ProfileUpdaterService
         }
 
         return $value;
+    }
+
+    private function normalizeBirthDate($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || (is_string($value) && preg_match('/^\d{4}$/', trim($value)))) {
+            return sprintf('%04d-01-01', (int) $value);
+        }
+
+        if (is_string($value)) {
+            try {
+                return Carbon::parse($value)->toDateString();
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
 }

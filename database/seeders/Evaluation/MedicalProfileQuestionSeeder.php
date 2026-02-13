@@ -31,6 +31,9 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'order' => 2,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'is_pregnant', 'value' => false, 'operator' => '=']
+                ]),
             ],
             [
                 'key' => 'menopause_status',
@@ -40,10 +43,14 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'answer_target' => 'medical_profile',
                 'options' => json_encode([
                     ['value' => 'unknown', 'label' => 'Je ne sais pas'],
-                    ['value' => 'pre',    'label' => 'Non, avant la ménopause'],
-                    ['value' => 'post',   'label' => 'Oui, après la ménopause'],
+                    ['value' => 'pre',    'label' => 'Non'],
+                    ['value' => 'post-',   'label' => 'Oui, depuis moins de 5 ans'],
+                    ['value' => 'post+',   'label' => 'Oui, depuis plus de 5 ans'],
                 ]),
                 'order' => 3,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'is_pregnant', 'value' => false, 'operator' => '=']
+                ]),
             ],
 
             // 🧬 Historique médical
@@ -58,51 +65,71 @@ class MedicalProfileQuestionSeeder extends Seeder
             [
                 'key' => 'last_screening_date',
                 'text' => '📅 Quelle est la date de votre dernier dépistage (frottis, mammographie…) ?',
-                'type' => 'date',
+                'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
+                'options' => json_encode([
+                    ['value' => 'never', 'label' => 'Je n’ai jamais fait de dépistage'],
+                    ['value' => 'over_3_years', 'label' => 'Il y a plus de 3 ans'],
+                    ['value' => 'over_5_year', 'label' => 'Oui, mais je ne me souviens plus de la date exacte'],
+                    ['value' => 'less_than_1_year', 'label' => 'Il y a moins d’un an'],
+                ]),
                 'order' => 5,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'menopause_status', 'value' => 'pre', 'operator' => '=']
+                ]),
             ],
             [
                 'key' => 'screening_type',
                 'text' => '🧪 Quel type de dépistage avez-vous effectué en dernier ?',
-                'type' => 'text',
+                'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
+                'options' => json_encode([
+                    ['value' => 'frottis', 'label' => 'Cancer de col de l’utérus (frottis)'],
+                    ['value' => 'mammographie', 'label' => 'Mammographie'],
+                    ['value' => 'autre', 'label' => 'Autre'],
+                ]),
                 'order' => 6,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'last_screening_date', 'value' =>'never', 'operator' => '!=']
+                ]),
             ],
             [
-                'key' => 'has_breast_cancer',
-                'text' => '🎗️ Avez-vous eu un cancer du sein ?',
+                'key' => 'has_cancer',
+                'text' => '🎗️ Avez-vous déjà eu un cancer ?',
                 'type' => 'boolean',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'order' => 7,
             ],
             [
-                'key' => 'has_ovarian_cancer',
-                'text' => '🎗️ Avez-vous eu un cancer des ovaires ?',
-                'type' => 'boolean',
+                'key' => 'cancer_details',
+                'text' => '🎗️ Quel type de cancer avez-vous eu ?',
+                'type' => 'text',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'order' => 8,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'has_cancer', 'value' => true, 'operator' => '=']
+                ]),
             ],
-            [
-                'key' => 'has_cervical_cancer',
-                'text' => '🎗️ Avez-vous eu un cancer du col de l’utérus ?',
-                'type' => 'boolean',
-                'bloc_key' => $bloc,
-                'answer_target' => 'medical_profile',
-                'order' => 9,
-            ],
-            [
-                'key' => 'has_other_cancer',
-                'text' => '🎗️ Avez-vous eu un autre cancer ?',
-                'type' => 'boolean',
-                'bloc_key' => $bloc,
-                'answer_target' => 'medical_profile',
-                'order' => 10,
-            ],
+                [
+                    'key' => 'other_diseases',
+                    'text' => '🩺 Avez-vous d’autres maladies chroniques ou conditions médicales importantes ? (diabète, hypertension, etc.)',
+                    'type' => 'text',
+                    'bloc_key' => $bloc,
+                    'answer_target' => 'medical_profile',
+                    'order' => 9,
+                ],
+                [
+                    'key' => 'current_medications',
+                    'text' => '💊 Prenez-vous actuellement des médicaments sur ordonnance ? Si oui, lesquels ?',
+                    'type' => 'text',
+                    'bloc_key' => $bloc,
+                    'answer_target' => 'medical_profile',
+                    'order' => 10,
+                ],
 
             // 🩺 Vie sexuelle & gynécologique
             [
@@ -124,6 +151,9 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'min' => 0,
                 'max' => 100,
                 'order' => 12,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'first_sexual_intercourse_age', 'value' => 16, 'operator' => '<']
+                ]),
             ],
             [
                 'key' => 'number_of_pregnancies',
@@ -134,6 +164,9 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'min' => 0,
                 'max' => 20,
                 'order' => 13,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'is_pregnant', 'value' => false, 'operator' => '=']
+                ]),
             ],
             [
                 'key' => 'number_of_abortions',
@@ -144,6 +177,9 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'min' => 0,
                 'max' => 10,
                 'order' => 14,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'number_of_pregnancies', 'value' => 0, 'operator' => '>']
+                ]),
             ],
             [
                 'key' => 'number_of_children',
@@ -154,6 +190,9 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'min' => 0,
                 'max' => 15,
                 'order' => 15,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'number_of_pregnancies', 'value' => 0, 'operator' => '>']
+                ]),
             ],
 
             //📏 Données biométriques
@@ -164,6 +203,9 @@ class MedicalProfileQuestionSeeder extends Seeder
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'order' => 16,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'cmu', 'value' => true, 'operator' => '=']
+                ]),
             ],
             [
                 'key' => 'height',
