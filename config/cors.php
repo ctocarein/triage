@@ -10,7 +10,10 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['https://on.dev.chereh.com'],
+    'allowed_origins' => [
+        'https://on.dev.chereh.com',
+        'http://localhost:3000',
+    ],
 
     'allowed_origins_patterns' => [],
 
