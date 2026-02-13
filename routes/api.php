@@ -20,6 +20,10 @@ Route::get('/referrals/used', function () {
     return response()->file(public_path('referrals/used.html'), ['Content-Type' => 'text/html']);
 });
 
+Route::options('/{any}', function () {
+    return response()->noContent();
+})->where('any', '.*');
+
 Route::middleware('auth:sanctum')->group(function () {
     require base_path('app/Domains/Ambassador/Presentation/Http/Routes/ambassador.php');
     require base_path('app/Domains/Engagement/Presentation/Http/Routes/engagement.routes.php');
