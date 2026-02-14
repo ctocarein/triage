@@ -26,22 +26,13 @@ class GreetingSeeder extends Seeder
                 'order' => 1,
             ],
             [
-                'key' => 'greeting_intro',
-                'text' => "Information importante\n\nCHEREH ne pose pas de diagnostic medical et ne remplace pas un professionnel de sante.\n\nLes resultats fournis servent uniquement a vous orienter.",
+                'key' => 'greeting_confidential',
+                'text' => "Information importante.\n\nCHEREH ne pose pas de diagnostic medical et ne remplace pas un professionnel de sante.\n\nLes resultats fournis servent uniquement a vous orienter.\n\nVos reponses resteront strictement confidentielles et securisees.",
                 'bloc_key' => 'greeting',
                 'is_entry_point' => false,
                 'type' => 'custom',
                 'answer_target' => null,
                 'order' => 2,
-            ],
-            [
-                'key' => 'greeting_confidential',
-                'text' => 'Vos reponses resteront strictement confidentielles et securisees.',
-                'type' => 'custom',
-                'bloc_key' => 'greeting',
-                'answer_target' => null,
-                'is_entry_point' => false,
-                'order' => 3,
             ],
             [
                 'key' => 'explicit_consent',
@@ -63,7 +54,7 @@ class GreetingSeeder extends Seeder
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'yes'], 'next' => 'bloc:symptom_breast'],
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 'next' => 'bloc:consent_declined'],
                 ],
-                'order' => 4,
+                'order' => 3,
                 'is_required' => true,
             ],
 

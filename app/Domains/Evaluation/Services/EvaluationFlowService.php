@@ -16,6 +16,7 @@ use App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral;
 use App\Domains\Ambassador\Domain\Events\ReferralUsed;
 use App\Services\Decisions\DecisionPathEngine;
 use App\Domains\Evaluation\Services\ProfileUpdaterService;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 
 class EvaluationFlowService
 {
@@ -23,7 +24,8 @@ class EvaluationFlowService
         protected AnswerService $answerService,
         protected DecisionInsightService $insightService,
         protected ReportGenerationService $reportService,
-        protected ProfileUpdaterService $profileUpdater
+        protected ProfileUpdaterService $profileUpdater,
+        protected QuestionFlowService $questionFlow
     ) {
     }
 
@@ -344,8 +346,31 @@ class EvaluationFlowService
             'current_question_id' => $answer->question_id,
         ]);
 
-        $engine = new DecisionPathEngine($session->decisionPath);
-        $nextNode = $engine->getNextNode($session);
+        $routing = null;
+        if ($answer->question) {
+            $routing = $this->questionFlow->applyRoutingRules($session, $answer->question, $answer->value);
+        }
+
+        if (! $session->isInProgress()) {
+            $insight = $this->insightService->generate($session);
+
+            return [
+                'status' => 200,
+                'payload' => $this->buildPayload(
+                    $session,
+                    $insight,
+                    null,
+                    null,
+                    'Evaluation terminee.'
+                ),
+            ];
+        }
+
+        $nextNode = $this->resolveNextNodeFromRouting($session, $routing);
+        if (! $nextNode) {
+            $engine = new DecisionPathEngine($session->decisionPath);
+            $nextNode = $engine->getNextNode($session);
+        }
 
         if (! $nextNode) {
             $this->markCompleted($session);
@@ -564,6 +589,69 @@ class EvaluationFlowService
         return isset($node->dynamic_question_template_id)
             ? (int) $node->dynamic_question_template_id
             : null;
+    }
+
+    /**
+     * @param array<string, mixed>|null $routing
+     */
+    protected function resolveNextNodeFromRouting(EvaluationSession $session, ?array $routing): ?DecisionNode
+    {
+        if (! $routing || ! $session->decisionPath) {
+            return null;
+        }
+
+        $action = $routing['action'] ?? null;
+        if ($action === 'jump_question') {
+            $questionKey = $routing['question_key'] ?? null;
+            if (is_string($questionKey) && $questionKey !== '') {
+                return $this->resolveNodeForQuestionKey($session->decisionPath, $questionKey);
+            }
+        }
+
+        if ($action === 'jump_bloc') {
+            $blocKey = $routing['bloc_key'] ?? null;
+            if (is_string($blocKey) && $blocKey !== '') {
+                return $this->resolveNodeForBlocKey($session, $blocKey);
+            }
+        }
+
+        return null;
+    }
+
+    protected function resolveNodeForBlocKey(EvaluationSession $session, string $blocKey): ?DecisionNode
+    {
+        $answeredIds = $session->answers()->pluck('question_id')->all();
+        $question = DynamicQuestionTemplate::query()
+            ->where('bloc_key', $blocKey)
+            ->whereNotIn('id', $answeredIds)
+            ->orderBy('order')
+            ->first();
+
+        if (! $question) {
+            return null;
+        }
+
+        return $this->resolveNodeForQuestionId($session->decisionPath, $question->id);
+    }
+
+    protected function resolveNodeForQuestionKey(DecisionPath $path, string $questionKey): ?DecisionNode
+    {
+        $question = DynamicQuestionTemplate::query()->where('key', $questionKey)->first();
+        if (! $question) {
+            return null;
+        }
+
+        return $this->resolveNodeForQuestionId($path, $question->id);
+    }
+
+    protected function resolveNodeForQuestionId(DecisionPath $path, int $questionId): ?DecisionNode
+    {
+        return $path->nodes()
+            ->where(function ($query) use ($questionId) {
+                $query->where('question_id', $questionId)
+                    ->orWhere('dynamic_question_template_id', $questionId);
+            })
+            ->first();
     }
 
     protected function resolveActiveVersionId(string $name): ?int

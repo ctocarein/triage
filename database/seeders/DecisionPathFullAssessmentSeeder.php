@@ -29,7 +29,7 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             'profile_personal',
             'profil_identite',          // Bloc accueil (optionnel)
             'profil_socio',            // Bloc socio-économique
-            'consent',            // Bloc socio-économique
+            'consent_declined',        // Parcours de refus de consentement
             'medical_profile',    // Antécédents
             'symptom_breast',     // Symptômes mammaires
             'symptom_cervical',   // Symptômes gynécologiques
