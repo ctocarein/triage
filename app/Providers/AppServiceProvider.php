@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\RoutingRulesValidator;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -105,24 +106,30 @@ class AppServiceProvider extends ServiceProvider
         $validator = app(RoutingRulesValidator::class);
         $errors = [];
 
-        foreach ($questions as $question) {
-            if ($question->routing_rules === null) {
-                continue;
+        try {
+            foreach ($questions as $question) {
+                if ($question->routing_rules === null) {
+                    continue;
+                }
+
+                $errors = array_merge(
+                    $errors,
+                    $validator->validateRoutingRules(
+                        $question->routing_rules,
+                        $knownQuestionKeys,
+                        $knownBlocKeys,
+                        (string) $question->key
+                    )
+                );
             }
 
-            $errors = array_merge(
-                $errors,
-                $validator->validateRoutingRules(
-                    $question->routing_rules,
-                    $knownQuestionKeys,
-                    $knownBlocKeys,
-                    (string) $question->key
-                )
-            );
-        }
-
-        if (!empty($errors)) {
-            throw new \RuntimeException("routing_rules invalides:\n- " . implode("\n- ", $errors));
+            if (!empty($errors)) {
+                Log::error("routing_rules invalides:\n- " . implode("\n- ", $errors));
+            }
+        } catch (\Throwable $e) {
+            Log::error("Erreur lors de la validation des routing_rules: " . $e->getMessage(), [
+                'exception' => $e
+            ]);
         }
     }
 }
