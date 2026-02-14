@@ -18,7 +18,7 @@ class GreetingSeeder extends Seeder
         $greetingInfos = [
             [
                 'key' => 'greeting_welcome',
-                'text' => 'Bienvenue sur CHEREH\n\nCHEREH est un outil de sante numerique concu pour aider a reperer plus tot certains signes de risque lies aux cancers feminins.',
+                'text' => 'Soyez la bienvenue sur CHEREH, votre outil de sante numerique concu pour aider a reperer plus tot certains signes de risque lies aux cancers feminins.',
                 'type' => 'custom',
                 'bloc_key' => 'greeting',
                 'answer_target' => null,
