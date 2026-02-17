@@ -51,7 +51,7 @@ class GreetingSeeder extends Seeder
                     ],
                 ]),
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'yes'], 'next' => 'bloc:symptom_breast'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'yes'], 'next' => 'bloc:profile_personal'],
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 'next' => 'bloc:consent_declined'],
                 ],
                 'order' => 3,

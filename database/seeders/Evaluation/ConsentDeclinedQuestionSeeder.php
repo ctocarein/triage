@@ -11,6 +11,12 @@ class ConsentDeclinedQuestionSeeder extends Seeder
     public function run(): void
     {
         $validator = new QuestionTemplateContractValidator();
+        
+        $communeOptions = DB::table('communes')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($row) => ['value' => $row->name, 'label' => $row->name])
+            ->toArray();
 
         $questions = [
             [
@@ -37,6 +43,33 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'answer_target' => 'custom',
                 'is_required' => false,
                 'placeholder' => 'Ex: 0700000000',
+                'routing_rules' => [
+                    ['if' => true, 'next' => 'question:consent_declined_end'],
+                ],
+                'order' => 2,
+            ],
+            [
+                $startYear= date('Y') - 90,
+                $endYear = date('Y') - 18,
+                'key' => 'consent_declined_year',
+                'text' => 'Puis-je avoir votre année de naissance ?',
+                'type' => 'select_one',
+                'options' => array_map(fn($y) => ['value' => (string)$y, 'label' => (string)$y], range($endYear, $startYear)),
+                'bloc_key' => 'consent_declined',
+                'answer_target' => 'custom',
+                'is_required' => false,
+                'routing_rules' => [
+                    ['if' => true, 'next' => 'question:consent_declined_end'],
+                ],
+                'order' => 3,
+            ],
+            [
+                'text' => 'Votre commune de residence ?',
+                'type' => 'select_one',
+                'bloc_key' => 'consent_declined',
+                'answer_target' => 'custom',
+                'options' => $communeOptions,
+                'is_required' => false,
                 'routing_rules' => [
                     ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],

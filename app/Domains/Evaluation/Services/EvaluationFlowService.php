@@ -368,6 +368,27 @@ class EvaluationFlowService
 
         $nextNode = $this->resolveNextNodeFromRouting($session, $routing);
         if (! $nextNode) {
+            $routedPayload = $this->resolveQuestionPayloadFromRouting($session, $routing);
+            if ($routedPayload) {
+                $session->update([
+                    'current_question_id' => $routedPayload['id'],
+                    'current_node_key' => null,
+                ]);
+
+                $insight = $this->insightService->generate($session);
+
+                return [
+                    'status' => 200,
+                    'payload' => $this->buildPayload(
+                        $session,
+                        $insight,
+                        $routedPayload,
+                        null,
+                        null
+                    ),
+                ];
+            }
+
             $engine = new DecisionPathEngine($session->decisionPath);
             $nextNode = $engine->getNextNode($session);
         }
@@ -652,6 +673,82 @@ class EvaluationFlowService
                     ->orWhere('dynamic_question_template_id', $questionId);
             })
             ->first();
+    }
+
+    /**
+     * @param array<string, mixed>|null $routing
+     * @return array<string, mixed>|null
+     */
+    protected function resolveQuestionPayloadFromRouting(EvaluationSession $session, ?array $routing): ?array
+    {
+        if (! $routing) {
+            return null;
+        }
+
+        $action = $routing['action'] ?? null;
+        if ($action === 'jump_question') {
+            $questionKey = $routing['question_key'] ?? null;
+            if (! is_string($questionKey) || $questionKey === '') {
+                return null;
+            }
+
+            $question = DynamicQuestionTemplate::query()->where('key', $questionKey)->first();
+            return $question ? $this->buildQuestionPayloadFromTemplate($question) : null;
+        }
+
+        if ($action === 'jump_bloc') {
+            $blocKey = $routing['bloc_key'] ?? null;
+            if (! is_string($blocKey) || $blocKey === '') {
+                return null;
+            }
+
+            $question = $this->resolveFirstVisibleQuestionInBloc($session, $blocKey);
+            return $question ? $this->buildQuestionPayloadFromTemplate($question) : null;
+        }
+
+        return null;
+    }
+
+    protected function resolveFirstVisibleQuestionInBloc(EvaluationSession $session, string $blocKey): ?DynamicQuestionTemplate
+    {
+        $answeredIds = $session->answers()->pluck('question_id')->all();
+        $context = $this->questionFlow->getSessionContext($session);
+
+        return DynamicQuestionTemplate::query()
+            ->where('bloc_key', $blocKey)
+            ->whereNotIn('id', $answeredIds)
+            ->orderBy('order')
+            ->get()
+            ->first(fn (DynamicQuestionTemplate $question) => $this->questionFlow->shouldBeVisible(
+                $question,
+                $context['answers'],
+                $context['profile']
+            ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildQuestionPayloadFromTemplate(DynamicQuestionTemplate $question): array
+    {
+        return [
+            'id' => $question->id,
+            'key' => $question->key,
+            'text' => $question->text,
+            'type' => $question->type,
+            'bloc_key' => $question->bloc_key,
+            'answer_target' => $question->answer_target,
+            'order' => $question->order,
+            'risk_weight' => $question->risk_weight,
+            'min' => $question->min,
+            'max' => $question->max,
+            'media_type' => $question->media_type,
+            'media_url' => $question->media_url,
+            'options' => $question->options,
+            'visible_if' => $question->visible_if,
+            'question_id' => $question->id,
+            'node_id' => null,
+        ];
     }
 
     protected function resolveActiveVersionId(string $name): ?int

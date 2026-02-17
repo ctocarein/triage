@@ -98,6 +98,52 @@ class MedicalProfileQuestionSeeder extends Seeder
                 ]),
             ],
             [
+              'key' => 'last_screening_result',
+                'text' => '✅ Quel était le résultat de votre dernier dépistage ?',
+                'type' => 'select_one',
+                'bloc_key' => $bloc,
+                'answer_target' => 'medical_profile',
+                'options' => json_encode([
+                    ['value' => 'normal', 'label' => 'Normal'],
+                    ['value' => 'abnormal', 'label' => 'Anormal, avec suivi médical'],
+                    ['value' => 'abnormal_no_followup', 'label' => 'Anormal, sans suivi médical'],
+                    ['value' => 'dont_know', 'label' => 'Je ne sais pas'],
+                ]),
+                'order' => 7,
+                'visible_if' => json_encode([
+                    ['source' => 'question', 'key' => 'last_screening_date', 'value' =>'never', 'operator' => '!='],
+
+                ]),
+            ],
+
+            // 🚨 Question de Triage Principal (La Bascule)
+            [
+                'key' => 'primary_symptom_type',
+                'text' => '🚩 Ressentez-vous actuellement l’un de ces signes ou une gêne particulière ?',
+                'type' => 'select_one',
+                'bloc_key' => $bloc,
+                'answer_target' => 'medical_profile',
+                'options' => json_encode([
+                    ['value' => 'none', 'label' => 'Non, je souhaite faire une évaluation de routine'],
+                    ['value' => 'pain_pelvis', 'label' => 'Oui, des douleurs pelviennes'],
+                    ['value' => 'pain_mammaries', 'label' => 'Oui, des douleurs mammaires'],
+                    ['value' => 'bleeding', 'label' => 'Oui, des saignements inhabituels'],
+                    ['value' => 'both', 'label' => 'Oui, les deux (douleurs et saignements)'],
+                    ['value' => 'lump', 'label' => 'Oui, j’ai senti une grosseur ou une masse'],
+                ]),
+                'order' => 8,
+
+                'routing_rules' => [
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'none'], 'next' => 'bloc:lifestyle'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'pain_pelvis'], 'next' => 'bloc:symptom_cervix'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'pain_mammaries'], 'next' => 'bloc:symptom_breast'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'bleeding'], 'next' => 'bloc:symptom_triage'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'both'], 'next' => 'bloc:symptom_triage'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'lump'], 'next' => 'bloc:symptom_triage'],
+                ],
+            ],
+        
+            [
                 'key' => 'has_cancer',
                 'text' => '🎗️ Avez-vous déjà eu un cancer ?',
                 'type' => 'boolean',

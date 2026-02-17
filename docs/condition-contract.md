@@ -102,8 +102,8 @@ During seeding, legacy list conditions are normalized automatically to:
     { "source": "question", "key": "breast_pain", "operator": "=", "value": true }
   ]
 }
-```
 
+```
 ## 5. `routing_rules` format
 
 ```json

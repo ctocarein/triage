@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class CommuneSeeder extends Seeder
 {
@@ -151,7 +150,7 @@ class CommuneSeeder extends Seeder
     ['name' => 'Toumodi'],
     ['name' => 'Transua'],
     ['name' => 'Vavoua'],
-     ['name' => 'Yakassé-Attobrou'],
+    ['name' => 'Yakassé-Attobrou'],
     ['name' => 'Yakassé-Féyassé'],
     ['name' => 'Yakro'],
     ['name' => 'Yamoussoukro'],

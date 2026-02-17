@@ -3,6 +3,7 @@
 namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\QuestionGroup;
 use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
@@ -18,6 +19,12 @@ class PersonalProfileQuestionSeeder extends Seeder
             'profile_personal', 'profil_identite', 'profil_socio', 'profil_sante'
         ])->get()->keyBy('key');
 
+        $communeOptions = DB::table('communes')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($row) => ['value' => $row->name, 'label' => $row->name])
+            ->toArray();
+
          $questions = [
                 [
                     'key' => 'first_name',
@@ -29,15 +36,14 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'is_entry_point' => true,
                 ],
                 [
+                    $startYear= date('Y') - 90,
+                    $endYear = date('Y') - 18,
                     'key' => 'birth_date',
                     'text' => '🎂 Quelle est votre année de naissance ?',
-                    'type' => 'date',
+                    'type' => 'select_one',
                     'bloc_key' => 'profil_identite',
                     'answer_target' => 'personal_profile',
-                    'options' => json_encode([
-                        'format' => 'YYYY',
-                        'placeholder' => 'AAAA',
-                    ]),
+                    'options' => array_map(fn($y) => ['value' => (string)$y, 'label' => (string)$y], range($endYear, $startYear)),
                     'order' => 2,
                     'is_entry_point' => true,
                 ],
@@ -54,18 +60,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'text' => '🏠 Dans quelle commune habitez-vous ?',
                     'type' => 'select_one',
                     'bloc_key' => 'profil_socio',
-                    'options' => json_encode([
-                        ['value' => 'yopougon', 'label' => 'Yopougon'],
-                        ['value' => 'cocody', 'label' => 'Cocody'],
-                        ['value' => 'abobo', 'label' => 'Abobo'],
-                        ['value' => 'adjame', 'label' => 'Adjamé'],
-                        ['value' => 'plateau', 'label' => 'Plateau'],
-                        ['value' => 'koumassi', 'label' => 'Koumassi'],
-                        ['value' => 'marcory', 'label' => 'Marcory'],
-                        ['value' => 'bingerville', 'label' => 'Bingerville'],
-                        ['value' => 'anyama', 'label' => 'Anyama'],
-                        ['value' => 'autre',   'label' => 	'Au-delà de la Côte d’Ivoire (Autre)'],
-                    ]),
+                    'options' => $communeOptions,
                     'answer_target' => 'personal_profile',
                     'order' => 4,
                 ],
@@ -76,6 +71,10 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'bloc_key' => 'profil_socio',
                     'answer_target' => 'personal_profile',
                     'order' => 5,
+                    'routing_rules' => [
+                        ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'question:cmu_number'],
+                        ['if' => ['source' => 'answer', 'operator' => '=', 'value' => false], 'next' => 'question:last_screening_date'],
+                    ],
                 ],
                 [
                     'key' => 'marital_status',
@@ -102,7 +101,10 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'bloc_key' => 'profil_socio',
                     'answer_target' => 'personal_profile',
                     'order' => 8,
-                ]
+                ],
+
+
+                
             ];
 
         $validator->assertUniqueOrderPerBloc($questions, static::class);
@@ -137,3 +139,4 @@ class PersonalProfileQuestionSeeder extends Seeder
         }
     }
 }
+
