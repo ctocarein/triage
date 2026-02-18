@@ -7,6 +7,10 @@ use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Services\DataQualityService;
 use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\FactsEngine;
+use App\Domains\Evaluation\Services\RiskEngine;
+use App\Domains\Evaluation\Services\FlagEngine;
+use App\Domains\Evaluation\Services\DataQualityEngine;
 use App\Domains\Report\Models\Report;
 
 class DecisionInsightService
@@ -47,6 +51,7 @@ class DecisionInsightService
             'requires_human_validation' => $requiresHuman,
             'human_validation_reason' => $humanReason,
             'final_decision' => null,
+            'vnext_shadow' => $this->buildVnextShadow($session),
         ];
 
         return DecisionInsight::updateOrCreate(
@@ -145,6 +150,37 @@ class DecisionInsightService
         }
 
         return round(max(0.0, min(1.0, $base)), 4);
+    }
+
+    protected function buildVnextShadow(EvaluationSession $session): ?array
+    {
+        if (! $this->isVnextShadowMode()) {
+            return null;
+        }
+
+        $facts = app(FactsEngine::class)->evaluate($session);
+        $risk = app(RiskEngine::class)->evaluate($session, $facts);
+        $flags = app(FlagEngine::class)->evaluate($session, $facts);
+        $quality = app(DataQualityEngine::class)->assess($session);
+
+        return [
+            'facts' => $facts,
+            'risk' => $risk,
+            'flags' => $flags,
+            'confidence_score' => $quality['data_quality_score'] ?? null,
+            'versions' => [
+                'protocol' => $session->decision_path_key && $session->decision_path_version
+                    ? $session->decision_path_key . '@' . $session->decision_path_version
+                    : $session->decision_path_key,
+                'risk_model_version_id' => $session->risk_model_version,
+                'engine' => 'vnext_shadow',
+            ],
+        ];
+    }
+
+    protected function isVnextShadowMode(): bool
+    {
+        return (bool) config('vnext.shadow_mode', false);
     }
 
     protected function computeConfidenceInterval(float $riskScore, float $confidence): array

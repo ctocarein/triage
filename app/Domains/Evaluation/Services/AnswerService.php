@@ -40,13 +40,21 @@ class AnswerService
             'value' => $data['value'] ?? null,
             'file_ids' => $data['file_ids'] ?? null,
             'is_skipped' => $data['is_skipped'] ?? false,
+            'status' => $this->resolveStatus($data),
         ];
 
         // Mise a jour de reponse existante
         if ($existing) {
+            $valueChanged = $this->hasMeaningfulChange($existing, $payload);
             $existing->update($payload);
+            if (! $existing->order) {
+                $existing->forceFill(['order' => $this->resolveNextOrder($session)])->save();
+            }
             if (! $existing->dynamic_question_template_id) {
                 $existing->forceFill(['dynamic_question_template_id' => $question->id])->save();
+            }
+            if ($valueChanged) {
+                $this->invalidateDownstreamAnswers($session, (int) ($existing->order ?? 0));
             }
             $this->syncSessionScore($session);
 
@@ -61,6 +69,8 @@ class AnswerService
             'value' => $payload['value'],
             'file_ids' => $payload['file_ids'],
             'is_skipped' => $payload['is_skipped'],
+            'status' => $payload['status'],
+            'order' => $this->resolveNextOrder($session),
         ]);
 
         $this->syncSessionScore($session);
@@ -76,5 +86,51 @@ class AnswerService
             'score' => (int) round($risk['score_total']),
             'risk_level' => $risk['risk_level'],
         ])->save();
+    }
+
+    protected function resolveStatus(array $data): string
+    {
+        if (!empty($data['status'])) {
+            return (string) $data['status'];
+        }
+
+        return !empty($data['is_skipped']) ? 'skipped' : 'answered';
+    }
+
+    protected function resolveNextOrder(EvaluationSession $session): int
+    {
+        $max = (int) ($session->answers()->max('order') ?? 0);
+        return $max + 1;
+    }
+
+    protected function hasMeaningfulChange(EvaluationAnswer $existing, array $payload): bool
+    {
+        if ((bool) $existing->is_skipped !== (bool) $payload['is_skipped']) {
+            return true;
+        }
+
+        $current = json_encode($existing->value);
+        $next = json_encode($payload['value'] ?? null);
+
+        return $current !== $next;
+    }
+
+    protected function invalidateDownstreamAnswers(EvaluationSession $session, int $order): void
+    {
+        if ($order <= 0) {
+            return;
+        }
+
+        $update = ['status' => 'invalidated'];
+        if ((bool) config('vnext.purge_invalidated', false)) {
+            $update['value'] = null;
+            $update['file_ids'] = null;
+            $update['is_skipped'] = true;
+        }
+
+        $session->answers()
+            ->where('order', '>', $order)
+            ->whereNotIn('status', ['invalidated'])
+            ->update($update);
     }
 }

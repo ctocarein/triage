@@ -18,6 +18,7 @@ class EvaluationAnswer extends Model
         'value',
         'file_ids',
         'is_skipped',
+        'status',
         'order',
     ];
 

@@ -7,7 +7,9 @@ use App\Domains\Decision\Models\DecisionNode;
 use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Decision\Services\DecisionInsightService;
+use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Evaluation\Models\EvaluationSnapshot;
 use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
 use App\Domains\Report\Models\Report;
@@ -17,6 +19,10 @@ use App\Domains\Ambassador\Domain\Events\ReferralUsed;
 use App\Services\Decisions\DecisionPathEngine;
 use App\Domains\Evaluation\Services\ProfileUpdaterService;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Services\FactsEngine;
+use App\Domains\Evaluation\Services\RiskEngine;
+use App\Domains\Evaluation\Services\DataQualityEngine;
+use App\Domains\Evaluation\Services\FlagEngine;
 
 class EvaluationFlowService
 {
@@ -255,6 +261,7 @@ class EvaluationFlowService
             'expires_at' => $this->resolveSessionExpiry(),
             'target_blocs' => $blocKeys ?: null,
             'visited_blocs' => [],
+            'path_trace' => [],
             'context' => [
                 'bloc_keys' => $blocKeys,
                 'token_id' => $identity->currentAccessToken()?->id,
@@ -350,6 +357,10 @@ class EvaluationFlowService
         if ($answer->question) {
             $routing = $this->questionFlow->applyRoutingRules($session, $answer->question, $answer->value);
         }
+
+        $this->recordPathTrace($session, $answer, $routing);
+        $this->markNonApplicableAfterRouting($session, $answer, $routing);
+        $this->reactivateBlocAfterRouting($session, $routing);
 
         if (! $session->isInProgress()) {
             $insight = $this->insightService->generate($session);
@@ -523,6 +534,8 @@ class EvaluationFlowService
         ?Report $report,
         ?string $message
     ): array {
+        $this->maybeRecordVnextSnapshot($session);
+
         $payload = [
             'session' => $this->mapSession($session),
             'insight' => $insight ? $this->mapInsight($insight) : null,
@@ -535,6 +548,147 @@ class EvaluationFlowService
         }
 
         return $payload;
+    }
+
+    protected function maybeRecordVnextSnapshot(EvaluationSession $session): void
+    {
+        if (! $this->isVnextShadowMode()) {
+            return;
+        }
+
+        $facts = app(FactsEngine::class)->evaluate($session);
+        $risk = app(RiskEngine::class)->evaluate($session, $facts);
+        $flags = app(FlagEngine::class)->evaluate($session, $facts);
+        $quality = app(DataQualityEngine::class)->assess($session);
+
+        $snapshot = [
+            'facts' => $facts,
+            'risk' => $risk,
+            'flags' => $flags,
+            'versions' => [
+                'protocol' => $this->resolveProtocolVersion($session),
+                'risk_model_version_id' => $session->risk_model_version ?? $this->resolveActiveVersionId('risk_model'),
+                'engine' => 'vnext_shadow',
+            ],
+            'confidence_score' => $quality['data_quality_score'] ?? null,
+        ];
+
+        $hash = hash('sha256', json_encode($snapshot));
+
+        EvaluationSnapshot::create([
+            'evaluation_session_id' => $session->id,
+            'facts' => $facts,
+            'risk' => $risk,
+            'flags' => $flags,
+            'versions' => $snapshot['versions'],
+            'confidence_score' => $snapshot['confidence_score'],
+            'snapshot_hash' => $hash,
+        ]);
+    }
+
+    protected function isVnextShadowMode(): bool
+    {
+        return (bool) config('vnext.shadow_mode', false);
+    }
+
+    protected function resolveProtocolVersion(EvaluationSession $session): ?string
+    {
+        if ($session->decision_path_key && $session->decision_path_version) {
+            return $session->decision_path_key . '@' . $session->decision_path_version;
+        }
+
+        return $session->decision_path_key ?: null;
+    }
+
+    protected function recordPathTrace(EvaluationSession $session, EvaluationAnswer $answer, ?array $routing): void
+    {
+        $trace = $session->path_trace ?? [];
+        $trace[] = [
+            'question_id' => $answer->question_id,
+            'question_key' => $answer->question?->key,
+            'node_key' => $session->current_node_key,
+            'status' => $answer->status,
+            'order' => $answer->order,
+            'routing' => $routing,
+            'at' => now()->toISOString(),
+        ];
+
+        $session->path_trace = $trace;
+        $session->save();
+    }
+
+    protected function markNonApplicableAfterRouting(
+        EvaluationSession $session,
+        EvaluationAnswer $answer,
+        ?array $routing
+    ): void {
+        if (! $routing || ! isset($routing['action'])) {
+            return;
+        }
+
+        if (! in_array($routing['action'], ['jump_bloc', 'end_session'], true)) {
+            return;
+        }
+
+        $currentBloc = $answer->question?->bloc_key;
+        if (! $currentBloc) {
+            return;
+        }
+
+        $questions = DynamicQuestionTemplate::query()
+            ->where('bloc_key', $currentBloc)
+            ->get(['id', 'key']);
+
+        foreach ($questions as $question) {
+            $existing = EvaluationAnswer::query()->where([
+                'evaluation_session_id' => $session->id,
+                'question_id' => $question->id,
+            ])->first();
+
+            if ($existing) {
+                continue;
+            }
+
+            EvaluationAnswer::create([
+                'evaluation_session_id' => $session->id,
+                'question_id' => $question->id,
+                'dynamic_question_template_id' => $question->id,
+                'value' => null,
+                'file_ids' => null,
+                'is_skipped' => true,
+                'status' => 'non_applicable',
+                'order' => null,
+            ]);
+        }
+    }
+
+    protected function reactivateBlocAfterRouting(EvaluationSession $session, ?array $routing): void
+    {
+        if (! $routing || ($routing['action'] ?? null) !== 'jump_bloc') {
+            return;
+        }
+
+        $targetBloc = $routing['bloc_key'] ?? null;
+        if (! $targetBloc) {
+            return;
+        }
+
+        $questions = DynamicQuestionTemplate::query()
+            ->where('bloc_key', $targetBloc)
+            ->get(['id']);
+
+        foreach ($questions as $question) {
+            EvaluationAnswer::query()
+                ->where('evaluation_session_id', $session->id)
+                ->where('question_id', $question->id)
+                ->where('status', 'non_applicable')
+                ->update([
+                    'status' => 'invalidated',
+                    'value' => null,
+                    'file_ids' => null,
+                    'is_skipped' => false,
+                ]);
+        }
     }
 
     protected function mapSession(EvaluationSession $session): array
@@ -554,6 +708,11 @@ class EvaluationFlowService
             'decision_path_version' => $session->decision_path_version,
             'catalog_version' => $session->catalog_version,
             'risk_model_version' => $session->risk_model_version,
+            'versions' => [
+                'protocol' => $this->resolveProtocolVersion($session),
+                'catalog_version_id' => $session->catalog_version,
+                'risk_model_version_id' => $session->risk_model_version,
+            ],
             'current_question_id' => $session->current_question_id,
             'current_node_key' => $session->current_node_key,
             'target_blocs' => $session->target_blocs,
@@ -579,6 +738,7 @@ class EvaluationFlowService
             'requires_human_validation' => $insight->requires_human_validation,
             'human_validation_reason' => $insight->human_validation_reason,
             'final_decision' => $insight->final_decision,
+            'vnext_shadow' => $insight->vnext_shadow,
         ];
     }
 

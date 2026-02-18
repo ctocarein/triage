@@ -69,6 +69,10 @@ class RiskModelService
 
     public function shouldCountAnswer(EvaluationAnswer $answer): bool
     {
+        if (in_array($answer->status, ['invalidated', 'non_applicable'], true)) {
+            return false;
+        }
+
         if ($answer->is_skipped || $answer->value === null) {
             return false;
         }

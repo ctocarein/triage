@@ -3,6 +3,7 @@
 namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
 
@@ -11,12 +12,15 @@ class ConsentDeclinedQuestionSeeder extends Seeder
     public function run(): void
     {
         $validator = new QuestionTemplateContractValidator();
-        
+
         $communeOptions = DB::table('communes')
             ->orderBy('name')
             ->get()
             ->map(fn ($row) => ['value' => $row->name, 'label' => $row->name])
             ->toArray();
+
+        $startYear = (int) date('Y') - 90;
+        $endYear = (int) date('Y') - 18;
 
         $questions = [
             [
@@ -25,14 +29,14 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'type' => 'select_one',
                 'bloc_key' => 'consent_declined',
                 'answer_target' => 'custom',
-                'options' => json_encode([
+                'options' => [
                     ['value' => 'continue', 'label' => 'Continuer'],
-                ]),
+                ],
                 'routing_rules' => [
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'continue'], 'next' => 'question:consent_declined_whatsapp'],
                 ],
                 'is_required' => true,
-                'is_entry_point' => false,
+                'is_entry_point' => true,
                 'order' => 1,
             ],
             [
@@ -49,12 +53,10 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'order' => 2,
             ],
             [
-                $startYear= date('Y') - 90,
-                $endYear = date('Y') - 18,
                 'key' => 'consent_declined_year',
-                'text' => 'Puis-je avoir votre année de naissance ?',
+                'text' => 'Puis-je avoir votre annee de naissance ?',
                 'type' => 'select_one',
-                'options' => array_map(fn($y) => ['value' => (string)$y, 'label' => (string)$y], range($endYear, $startYear)),
+                'options' => array_map(fn($y) => ['value' => (string) $y, 'label' => (string) $y], range($endYear, $startYear)),
                 'bloc_key' => 'consent_declined',
                 'answer_target' => 'custom',
                 'is_required' => false,
@@ -64,6 +66,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'order' => 3,
             ],
             [
+                'key' => 'consent_declined_commune',
                 'text' => 'Votre commune de residence ?',
                 'type' => 'select_one',
                 'bloc_key' => 'consent_declined',
@@ -73,7 +76,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'routing_rules' => [
                     ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],
-                'order' => 2,
+                'order' => 4,
             ],
             [
                 'key' => 'consent_declined_end',
@@ -81,14 +84,14 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'type' => 'select_one',
                 'bloc_key' => 'consent_declined',
                 'answer_target' => 'custom',
-                'options' => json_encode([
+                'options' => [
                     ['value' => 'done', 'label' => 'Terminer'],
-                ]),
+                ],
                 'routing_rules' => [
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'done'], 'next' => 'end_session:consent_declined'],
                 ],
                 'is_required' => true,
-                'order' => 3,
+                'order' => 5,
             ],
         ];
 

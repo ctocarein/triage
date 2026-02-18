@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders\Evaluation;
 
 use Illuminate\Database\Seeder;
@@ -17,10 +16,10 @@ class MedicalProfileQuestionSeeder extends Seeder
         $bloc = 'medical_profile';
 
         $questions = [
-            // 👩‍⚕️ Vie reproductive & hormonale
+            // ðŸ‘©â€âš•ï¸ Vie reproductive & hormonale
             [
                 'key' => 'is_pregnant',
-                'text' => '🤰 Êtes-vous actuellement enceinte ?',
+                'text' => 'ðŸ¤° ÃŠtes-vous actuellement enceinteâ€¯?',
                 'type' => 'boolean',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -28,7 +27,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'breastfeeding',
-                'text' => '🍼 Allaitez-vous en ce moment ?',
+                'text' => 'ðŸ¼ Allaitez-vous en ce momentâ€¯?',
                 'type' => 'boolean',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -39,7 +38,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'menopause_status',
-                'text' => '⚖️ Êtes-vous ménopausée ?',
+                'text' => 'âš–ï¸ ÃŠtes-vous mÃ©nopausÃ©eâ€¯?',
                 'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -55,10 +54,10 @@ class MedicalProfileQuestionSeeder extends Seeder
                 ]),
             ],
 
-            // 🧬 Historique médical
+            // ðŸ§¬ Historique mÃ©dical
             [
                 'key' => 'family_cancer_history',
-                'text' => '👪 Avez-vous des antécédents familiaux de cancer (mère, sœur, tante…) ?',
+                'text' => 'ðŸ‘ª Avez-vous des antÃ©cÃ©dents familiaux de cancer (mÃ¨re, sÅ“ur, tanteâ€¦)â€¯?',
                 'type' => 'boolean',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -66,15 +65,15 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'last_screening_date',
-                'text' => '📅 Quelle est la date de votre dernier dépistage (frottis, mammographie…) ?',
+                'text' => 'ðŸ“… Quelle est la date de votre dernier dÃ©pistage (frottis, mammographieâ€¦)â€¯?',
                 'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'options' => json_encode([
-                    ['value' => 'never', 'label' => 'Je n’ai jamais fait de dépistage'],
+                    ['value' => 'never', 'label' => 'Je nâ€™ai jamais fait de dÃ©pistage'],
                     ['value' => 'over_3_years', 'label' => 'Il y a plus de 3 ans'],
                     ['value' => 'over_5_year', 'label' => 'Oui, mais je ne me souviens plus de la date exacte'],
-                    ['value' => 'less_than_1_year', 'label' => 'Il y a moins d’un an'],
+                    ['value' => 'less_than_1_year', 'label' => 'Il y a moins dâ€™un an'],
                 ]),
                 'order' => 5,
                 'visible_if' => json_encode([
@@ -83,12 +82,12 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'screening_type',
-                'text' => '🧪 Quel type de dépistage avez-vous effectué en dernier ?',
+                'text' => 'ðŸ§ª Quel type de dÃ©pistage avez-vous effectuÃ© en dernierâ€¯?',
                 'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'options' => json_encode([
-                    ['value' => 'frottis', 'label' => 'Cancer de col de l’utérus (frottis)'],
+                    ['value' => 'frottis', 'label' => 'Cancer de col de lâ€™utÃ©rus (frottis)'],
                     ['value' => 'mammographie', 'label' => 'Mammographie'],
                     ['value' => 'autre', 'label' => 'Autre'],
                 ]),
@@ -99,14 +98,14 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
               'key' => 'last_screening_result',
-                'text' => '✅ Quel était le résultat de votre dernier dépistage ?',
+                'text' => 'âœ… Quel Ã©tait le rÃ©sultat de votre dernier dÃ©pistageâ€¯?',
                 'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'options' => json_encode([
                     ['value' => 'normal', 'label' => 'Normal'],
-                    ['value' => 'abnormal', 'label' => 'Anormal, avec suivi médical'],
-                    ['value' => 'abnormal_no_followup', 'label' => 'Anormal, sans suivi médical'],
+                    ['value' => 'abnormal', 'label' => 'Anormal, avec suivi mÃ©dical'],
+                    ['value' => 'abnormal_no_followup', 'label' => 'Anormal, sans suivi mÃ©dical'],
                     ['value' => 'dont_know', 'label' => 'Je ne sais pas'],
                 ]),
                 'order' => 7,
@@ -116,20 +115,20 @@ class MedicalProfileQuestionSeeder extends Seeder
                 ]),
             ],
 
-            // 🚨 Question de Triage Principal (La Bascule)
+            // ðŸš¨ Question de Triage Principal (La Bascule)
             [
                 'key' => 'primary_symptom_type',
-                'text' => '🚩 Ressentez-vous actuellement l’un de ces signes ou une gêne particulière ?',
+                'text' => 'ðŸš© Ressentez-vous actuellement lâ€™un de ces signes ou une gÃªne particuliÃ¨re ?',
                 'type' => 'select_one',
                 'bloc_key' => $bloc,
-                'answer_target' => 'medical_profile',
+                'answer_target' => 'evaluation',
                 'options' => json_encode([
-                    ['value' => 'none', 'label' => 'Non, je souhaite faire une évaluation de routine'],
+                    ['value' => 'none', 'label' => 'Non, je souhaite faire une Ã©valuation de routine'],
                     ['value' => 'pain_pelvis', 'label' => 'Oui, des douleurs pelviennes'],
                     ['value' => 'pain_mammaries', 'label' => 'Oui, des douleurs mammaires'],
                     ['value' => 'bleeding', 'label' => 'Oui, des saignements inhabituels'],
                     ['value' => 'both', 'label' => 'Oui, les deux (douleurs et saignements)'],
-                    ['value' => 'lump', 'label' => 'Oui, j’ai senti une grosseur ou une masse'],
+                    ['value' => 'lump', 'label' => 'Oui, jâ€™ai senti une grosseur ou une masse'],
                 ]),
                 'order' => 8,
 
@@ -145,44 +144,44 @@ class MedicalProfileQuestionSeeder extends Seeder
         
             [
                 'key' => 'has_cancer',
-                'text' => '🎗️ Avez-vous déjà eu un cancer ?',
+                'text' => '🎗️ Avez-vous deja eu un cancer?',
                 'type' => 'boolean',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
-                'order' => 7,
+                'order' => 23,
             ],
             [
                 'key' => 'cancer_details',
-                'text' => '🎗️ Quel type de cancer avez-vous eu ?',
+                'text' => '🎗️ Quel type de cancer avez-vous eu?',
                 'type' => 'text',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
-                'order' => 8,
+                'order' => 24,
                 'visible_if' => json_encode([
                     ['source' => 'question', 'key' => 'has_cancer', 'value' => true, 'operator' => '=']
                 ]),
             ],
-                [
-                    'key' => 'other_diseases',
-                    'text' => '🩺 Avez-vous d’autres maladies chroniques ou conditions médicales importantes ? (diabète, hypertension, etc.)',
-                    'type' => 'text',
-                    'bloc_key' => $bloc,
-                    'answer_target' => 'medical_profile',
-                    'order' => 9,
-                ],
-                [
-                    'key' => 'current_medications',
-                    'text' => '💊 Prenez-vous actuellement des médicaments sur ordonnance ? Si oui, lesquels ?',
+            [
+                'key' => 'other_diseases',
+                'text' => 'ðŸ©º Avez-vous dâ€™autres maladies chroniques ou conditions mÃ©dicales importantesâ€¯? (diabÃ¨te, hypertension, etc.)',
+                'type' => 'text',
+                'bloc_key' => $bloc,
+                'answer_target' => 'medical_profile',
+                'order' => 9,
+            ],
+            [
+                'key' => 'current_medications',
+                    'text' => 'ðŸ’Š Prenez-vous actuellement des mÃ©dicaments sur ordonnanceâ€¯? Si oui, lesquelsâ€¯?',
                     'type' => 'text',
                     'bloc_key' => $bloc,
                     'answer_target' => 'medical_profile',
                     'order' => 10,
                 ],
 
-            // 🩺 Vie sexuelle & gynécologique
+            // ðŸ©º Vie sexuelle & gynÃ©cologique
             [
                 'key' => 'first_sexual_intercourse_age',
-                'text' => '🔞 Quel âge aviez-vous lors de votre premier rapport sexuel ?',
+                'text' => 'ðŸ”ž Quel Ã¢ge aviez-vous lors de votre premier rapport sexuelâ€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -192,7 +191,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'number_of_partners',
-                'text' => '👫 Combien de partenaires sexuels avez-vous eu dans votre vie ?',
+                'text' => 'ðŸ‘« Combien de partenaires sexuels avez-vous eu dans votre vieâ€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -205,7 +204,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'number_of_pregnancies',
-                'text' => '🤰 Combien de grossesses avez-vous eues (y compris fausses couches/IVG) ?',
+                'text' => 'ðŸ¤° Combien de grossesses avez-vous eues (y compris fausses couches/IVG)â€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -218,7 +217,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'number_of_abortions',
-                'text' => '🚨 Combien d’avortements/fausses couches avez-vous eues ?',
+                'text' => 'ðŸš¨ Combien dâ€™avortements/fausses couches avez-vous euesâ€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -231,7 +230,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'number_of_children',
-                'text' => '👶 Combien d’enfants avez-vous eu ?',
+                'text' => 'ðŸ‘¶ Combien dâ€™enfants avez-vous euâ€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -243,10 +242,10 @@ class MedicalProfileQuestionSeeder extends Seeder
                 ]),
             ],
 
-            //📏 Données biométriques
+            //ðŸ“ DonnÃ©es biomÃ©triques
             [
                 'key' => 'cmu_number',
-                'text' => '💳 Numéro de CMU (si applicable)',
+                'text' => 'ðŸ’³ NumÃ©ro de CMU (si applicable)',
                 'type' => 'text',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -257,7 +256,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'height',
-                'text' => '📏 Quelle est votre taille (en cm) ?',
+                'text' => 'ðŸ“ Quelle est votre taille (en cm)â€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -267,7 +266,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'weight',
-                'text' => '⚖️ Quel est votre poids (en kg) ?',
+                'text' => 'âš–ï¸ Quel est votre poids (en kg)â€¯?',
                 'type' => 'number',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -277,7 +276,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'blood_type',
-                'text' => '🩸 Quel est votre groupe sanguin ?',
+                'text' => 'ðŸ©¸ Quel est votre groupe sanguinâ€¯?',
                 'type' => 'select_one',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -296,17 +295,17 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'allergies',
-                'text' => '🌱 Avez-vous des allergies connues ? (précisez si oui)',
+                'text' => 'ðŸŒ± Avez-vous des allergies connuesâ€¯? (prÃ©cisez si oui)',
                 'type' => 'text',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
                 'order' => 20,
             ],
             
-            // 🌫️ Exposition environnementale
+            // ðŸŒ«ï¸ Exposition environnementale
             [
                 'key' => 'exposed_to_smoke',
-                'text' => '🌫️ Êtes-vous exposée à la fumée (tabac, feu, etc.) ?',
+                'text' => 'ðŸŒ«ï¸ ÃŠtes-vous exposÃ©e Ã  la fumÃ©e (tabac, feu, etc.)â€¯?',
                 'type' => 'boolean',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',
@@ -314,7 +313,7 @@ class MedicalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'exposure_type',
-                'text' => '🌫️ Type d’exposition (tabac, feu, pollution, autre…)',
+                'text' => 'ðŸŒ«ï¸ Type dâ€™exposition (tabac, feu, pollution, autreâ€¦)',
                 'type' => 'text',
                 'bloc_key' => $bloc,
                 'answer_target' => 'medical_profile',

@@ -9,19 +9,28 @@ class DataQualityService
     public function assess(EvaluationSession $session): array
     {
         $totalQuestions = $this->resolveTotalQuestions($session);
-        $answeredCount = $session->answers()->count();
+        $answeredCount = $session->answers()
+            ->whereIn('status', ['answered', 'skipped'])
+            ->count();
 
-        $missing = max(0, $totalQuestions - $answeredCount);
-        $dataQualityScore = $totalQuestions > 0
-            ? round($answeredCount / $totalQuestions, 4)
+        $nonApplicable = $session->answers()
+            ->where('status', 'non_applicable')
+            ->count();
+
+        $expectedTotal = max(0, $totalQuestions - $nonApplicable);
+
+        $missing = max(0, $expectedTotal - $answeredCount);
+        $dataQualityScore = $expectedTotal > 0
+            ? round($answeredCount / $expectedTotal, 4)
             : 1.0;
 
-        $criticalMissing = $totalQuestions > 0
-            ? ($missing / $totalQuestions) >= 0.3
+        $criticalMissing = $expectedTotal > 0
+            ? ($missing / $expectedTotal) >= 0.3
             : false;
 
         return [
             'missing_answers' => $missing,
+            'non_applicable' => $nonApplicable,
             'critical_missing' => $criticalMissing,
             'inconsistent' => false,
             'data_quality_score' => $dataQualityScore,

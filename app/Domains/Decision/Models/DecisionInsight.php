@@ -30,6 +30,7 @@ class DecisionInsight extends Model
         'requires_human_validation',
         'human_validation_reason',
         'final_decision',
+        'vnext_shadow',
     ];
 
     protected $casts = [
@@ -41,6 +42,7 @@ class DecisionInsight extends Model
         'data_quality' => 'array',
         'explanations' => 'array',
         'final_decision' => 'array',
+        'vnext_shadow' => 'array',
         'requires_human_validation' => 'boolean',
     ];
 

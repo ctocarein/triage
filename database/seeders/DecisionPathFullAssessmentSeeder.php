@@ -33,7 +33,7 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             'medical_profile',    // Antécédents
             'symptom_breast',     // Symptômes mammaires
             'symptom_cervical',   // Symptômes gynécologiques
-            // 'lifestyle',        // Ajoute ici d’autres blocs si besoin
+            'lifestyle',        // Ajoute ici d’autres blocs si besoin
         ];
 
         $order = 1;

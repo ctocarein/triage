@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Domains\Evaluation\Models;
 
 use App\Domains\Report\Models\Report;
@@ -39,6 +38,7 @@ class EvaluationSession extends Model
         'decision_path_version',
         'catalog_version',
         'risk_model_version',
+        'path_trace',
     ];
 
     protected $casts = [
@@ -49,6 +49,7 @@ class EvaluationSession extends Model
         'score' => 'integer',
         'target_blocs' => 'array',
         'visited_blocs' => 'array',
+        'path_trace' => 'array',
         'catalog_version' => 'integer',
         'risk_model_version' => 'integer',
     ];
@@ -168,7 +169,7 @@ class EvaluationSession extends Model
     }
 
     /**
-     * VAcrifie si un bloc a dAcjAÿ ActAc visitAc.
+     * VAcrifie si un bloc a dAcjAÃ¿ ActAc visitAc.
      */
     public function hasVisitedBloc(string $blocKey): bool
     {
@@ -176,7 +177,7 @@ class EvaluationSession extends Model
     }
 
     /**
-     * Ajoute un bloc Aÿ la liste des blocs visitAcs.
+     * Ajoute un bloc AÃ¿ la liste des blocs visitAcs.
      */
     public function addVisitedBloc(string $blocKey): void
     {

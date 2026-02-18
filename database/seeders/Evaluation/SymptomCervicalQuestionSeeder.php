@@ -14,6 +14,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
         $validator = new QuestionTemplateContractValidator();
         $group = QuestionGroup::where('key', 'symptom_cervix')->firstOrFail();
         $questions = [
+            
 
             // 1️⃣ Saignement vaginal anormal
             [
