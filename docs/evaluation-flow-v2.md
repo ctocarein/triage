@@ -1,120 +1,138 @@
-﻿# Flow d'evaluation et moteur de triage (doc unifie)
+﻿# CHEREH - Specification Officielle du Moteur de Triage vNext
 
-Ce document unifie le flux technique actuel (DecisionPath, routing_rules) et la vision vNext (facts, risk, flags, confidence, gouvernance). Il sert de reference unique.
+Version: 1.0  
+Statut: Ready for Implementation  
+Scope: API Triage + Backoffice Clinique
 
-**Resume executif (1 page)**
-- Le moteur actuel orchestre un `DecisionPath` (arbre de decision) et des `routing_rules` pour naviguer entre questions. La navigation est geree par `DecisionPathEngine` (`app/Services/Decisions/DecisionPathEngine.php`) et l'orchestration par `EvaluationFlowService` (`app/Domains/Evaluation/Services/EvaluationFlowService.php`).
-- Les questions sont des `DynamicQuestionTemplate` (`app/Domains/Evaluation/Models/DynamicQuestionTemplate.php`) avec `visible_if` et `routing_rules`, evalues par `QuestionFlowService` (`app/Domains/Evaluation/Services/QuestionFlowService.php`).
-- Les sessions d'evaluation sont stockees via `EvaluationSession` (`app/Domains/Evaluation/Models/EvaluationSession.php`) avec `current_question_id` et `current_node_key`.
-- Le score et la qualite existent deja via `DecisionInsightService` (`app/Domains/Decision/Services/DecisionInsightService.php`), `RiskModelService` (`app/Domains/Evaluation/Services/RiskModelService.php`) et `DataQualityService` (`app/Domains/Evaluation/Services/DataQualityService.php`), puis un rapport final via `ReportGenerationService` (`app/Domains/Report/Services/ReportGenerationService.php`).
-- La vision vNext introduit des moteurs explicites (`FactsEngine`, `RiskEngine`, `FlagEngine`, `DataQualityEngine`) pour separer clairement la navigation, le risque, les flags d'urgence et la confiance, tout en gardant une execution incrementale et audit-ready.
-- Le document aligne les noms de classes/services et propose un tableau "etat actuel vs cible" pour guider l'implementation sans casser le runtime existant.
+---
 
-**1. Objectif**
-- Piloter une session d'evaluation medicale deterministe, explicable, versionnee et audit-ready.
-- Separer clairement navigation, risque clinique, qualite de donnees et orchestration.
+# 1. Objectif
 
-**2. Composants (etat actuel)**
-- `DecisionPath` (`app/Domains/Decision/Models/DecisionPath.php`) et `DecisionNode` (`app/Domains/Decision/Models/DecisionNode.php`): arbre de decision, nodes de questions ou terminaux (`end`/`recommendation`).
-- `DynamicQuestionTemplate` (`app/Domains/Evaluation/Models/DynamicQuestionTemplate.php`): questions, `visible_if`, `routing_rules`, `bloc_key`, `answer_target`.
-- `EvaluationSession` (`app/Domains/Evaluation/Models/EvaluationSession.php`): etat courant (path, node, question).
-- Services:
-- `DecisionPathEngine` (`app/Services/Decisions/DecisionPathEngine.php`)
-- `EvaluationFlowService` (`app/Domains/Evaluation/Services/EvaluationFlowService.php`)
-- `QuestionFlowService` (`app/Domains/Evaluation/Services/QuestionFlowService.php`)
-- `DecisionInsightService` (`app/Domains/Decision/Services/DecisionInsightService.php`)
-- `RiskModelService` (`app/Domains/Evaluation/Services/RiskModelService.php`)
-- `DataQualityService` (`app/Domains/Evaluation/Services/DataQualityService.php`)
-- `ReportGenerationService` (`app/Domains/Report/Services/ReportGenerationService.php`)
+Mettre en place un moteur de triage medical:
 
-**3. Moteurs vNext (cibles)**
-- `FactsEngine`: reponses -> facts cliniques.
-- `RiskEngine`: facts -> score incremental (remplace/encapsule la logique de `RiskModelService`).
-- `FlagEngine`: facts -> urgences (override).
-- `DataQualityEngine`: completude -> confidence (remplace/encapsule la logique de `DataQualityService`).
-- `DecisionInsightService`: synthese explicable (reste l'interface de sortie).
+- Deterministe
+- Incremental (O(1) par reponse)
+- Explicable
+- Versionne
+- Audit-ready
+- Safe-by-design
+- Gouvernable via Backoffice
 
-**3.1 Tableau etat actuel vs cible**
-| Domaine | Etat actuel (code) | Cible vNext | Impact principal |
-| --- | --- | --- | --- |
-| Navigation | `DecisionPathEngine` + `QuestionFlowService` | Identique | Stable, aucune rupture |
-| Orchestration | `EvaluationFlowService::start/advance` | Identique + snapshot v2 | Ajout snapshot versionne |
-| Score | `RiskModelService` | `RiskEngine` | Extraction logique en moteur explicite |
-| Qualite | `DataQualityService` | `DataQualityEngine` | Extraction logique en moteur explicite |
-| Flags urgents | disperses dans `routing_rules` | `FlagEngine` + flags explicites | Separation urgences vs navigation |
-| Insight | `DecisionInsightService` | identique | Extension champs si besoin |
-| Audit | implicit via DB | snapshot versionne + hash | Reproductibilite forte |
-| Backoffice | non detaille ici | endpoints gouvernance | Ajout API gouvernance |
+Le systeme separe strictement:
 
-**4. Flux d'evaluation (etat actuel)**
-**Demarrage**
-1. `EvaluationFlowService::start` valide le type (`complete`/`thematic`).
-1. Selection du `DecisionPath` (`dp_full_assessment` ou bloc thematique actif).
-1. Creation de session.
-1. `DecisionPathEngine::getFirstNode` -> premiere question.
+1. Navigation (DecisionPath)
+2. Modele Clinique (Facts + Risk + Flags)
+3. Qualite des Donnees (Confidence)
+4. Orchestration d'Evaluation
 
-**Avancement (une reponse)**
-1. Sauvegarde reponse (+ sync profils si besoin).
-1. Application des `routing_rules`.
-1. Si routing:
-- `jump_question` par `question_key`.
-- `jump_bloc` vers premier template visible du bloc.
-- `end_session` termine.
-1. Sinon: `DecisionPathEngine::getNextNode`.
-1. Node terminal -> completion + rapport.
+---
 
-**DecisionPathEngine (regles)**
-- Compare la reponse aux `branches` du node.
-- Si pas de match, `default` sinon prochain par `order`.
+# 2. Architecture Logique
 
-**visible_if**
-- Evalue par `QuestionFlowService::shouldBeVisible`.
-- Scope: `answers`, `profile.medical`, `profile.personal`, `session`, `question`, `answer`.
-- Conditions: `any`, `all`, `not`, comparaisons (`=`, `!=`, `>`, `<`, `in`, etc.).
+## 2.1 Moteurs Internes
 
-**Priorite**
-`routing_rules` > `DecisionPath` (branches/default/order).
+| Moteur | Responsabilite |
+| --- | --- |
+| DecisionPathEngine | Navigation pure dans l'arbre |
+| QuestionFlowService | visible_if + routing_rules |
+| FactsEngine | Reponse -> Faits |
+| RiskEngine | Faits -> Score incremental |
+| FlagEngine | Faits -> Urgence |
+| DataQualityEngine | Completude -> Confiance |
+| DecisionInsightService | Synthese explicable |
 
-**Insight & Report**
-- `DecisionInsightService` (risk + data quality) sur `start` et `advance`.
-- Rapport final via `ReportGenerationService`.
+Navigation != Risque != Confiance
 
-**5. Execution server vNext (cible)**
-1. Store Answer (append-only).
-1. FactsEngine -> snapshot.
-1. RiskEngine -> snapshot.
-1. FlagEngine -> overrides.
-1. QuestionFlowService -> `routing_rules`.
-1. DecisionPathEngine -> next node.
-1. DataQualityEngine -> confidence.
-1. DecisionInsightService -> synthese.
-1. Persist snapshot.
-1. Return next question or report.
+---
 
-**6. Modele clinique vNext**
-**Facts**
-- Signaux cliniques derives des reponses (ex: `has_mass`, `nipple_bleeding`).
-- Les poids sont attaches aux facts, pas aux questions.
+# 3. Modele Clinique
 
-**Score**
-- `S_raw = sum(weights)`.
-- `S_norm = 100 * (S_raw / S_max)`.
-- Classification stable (ex: low/moderate/high).
+## 3.1 Facts
 
-**Flags (override clinique)**
-- Priorite absolue: `emergency` > `urgent` > score.
-- Un flag ne peut pas etre annule par le score.
+Les facts sont des signaux cliniques derives des reponses.
 
-**Confidence**
-- Basee sur completude, manquants critiques, incoherences.
-- Ne modifie pas le risque, mais peut exiger validation humaine.
+Exemples:
 
-**7. Snapshot runtime vNext**
-Chaque session conserve un snapshot versionne et reproductible:
+- `has_mass`
+- `nipple_bleeding`
+- `pelvic_mass`
+- `age_over_45`
+
+Les poids sont associes aux facts, jamais aux questions.
+
+---
+
+## 3.2 Score
+
+### Etape 1 - Score Brut
+
+`S_raw = sum(w_i)`
+
+Somme des poids associes aux facts actives.
+
+Calcul incremental a chaque reponse.
+
+---
+
+### Etape 2 - Normalisation
+
+`S_norm = 100 * (S_raw / S_max)`
+
+`S_max` est defini et versionne dans le RiskModel.
+
+---
+
+### Etape 3 - Classification
+
+- 0-30 -> Faible
+- 30-60 -> Modere
+- > 60 -> Eleve
+
+Seuils stables independamment du nombre de questions.
+
+---
+
+## 3.3 Flags (Override Clinique)
+
+Priorite absolue:
+
+1. `emergency`
+2. `urgent`
+3. score-based decision
+
+Un flag ne peut jamais etre annule par le score.
+
+---
+
+## 3.4 Confiance (Confidence Score)
+
+La confiance depend de:
+
+- Completude des reponses
+- Donnees critiques manquantes
+- Incoherences detectees
+
+La confiance n'altere pas le niveau de risque.
+
+Elle determine uniquement:
+
+- `requires_human_validation`
+- `human_validation_reason`
+
+---
+
+# 4. Snapshot Runtime
+
+Chaque `EvaluationSession` contient un snapshot incremental:
+
 ```json
 {
   "facts": {},
-  "risk": { "raw": 0, "norm": 0, "level": "low" },
+  "risk": {
+    "raw": 0,
+    "norm": 0,
+    "level": "low"
+  },
   "flags": {},
   "confidence": 1,
   "versions": {
@@ -125,110 +143,560 @@ Chaque session conserve un snapshot versionne et reproductible:
 }
 ```
 
-**8. DecisionPaths seedes (etat actuel)**
-- `dp_full_assessment`: parcours complet par blocs.
-- `dp_breast_pain`: douleur sein.
-- `dp_breast_mass`: masse mammaire.
+Le snapshot est:
 
-**9. Endpoints (cible)**
-- Triage: start, answer, complete.
-- Backoffice: decision-paths, questions, facts, risk-models, risk-signals, risk-flags, publish.
+- Persiste
+- Versionne
+- Reproductible
+- Audit-ready
 
-**10. Versioning & securite (cible)**
-- Versions: protocol, risk_model, engine, snapshot_hash.
-- Securite: idempotency, session locking, append-only answers, anti-loop routing, logs structures.
+---
 
-**11. Contraintes & defis (anticipation)**
-**11.1 Complexite de la toile (graph integrity)**
-- Risque: cycles (A -> bloc B -> retourne a A), nodes orphelins, routing incoherent.
-- Garde-fou: ajouter un test de coherence qui parcourt les chemins possibles et detecte les cycles et cibles invalides.
-- Action: etendre `CheckEvaluationCatalog` ou ajouter une commande dediee pour valider routing_rules + DecisionPath.
+# 5. Flow Triage Runtime
 
-**11.2 Conflit Path vs Rules**
-- Problematique: un `DecisionPath` lineaire peut etre court-circuite par une `routing_rule` (jump bloc/question).
-- Impact: le calcul de `DataQualityService` peut etre fausse si on considere les questions sautees comme manquantes.
-- Garde-fou: marquer explicitement les questions sautees comme `non_applicable` ou exclure du total.
-- Action: introduire une logique de comptage "questions attendues" selon le chemin reel.
+## 5.1 Demarrage d'Evaluation
 
-**11.3 Re-entry (retour en arriere)**
-- Risque: changer une reponse qui avait declenche un jump laisse des reponses obsoletes.
-- Impact: `RiskModelService` et vNext peuvent compter des reponses d'une branche invalide.
-- Garde-fou: invalider les reponses en aval lors d'un changement de reponse "pivot".
-- Action: ajouter une strategie de purge/invalidation des answers a partir du node courant.
+`POST /api/triage/evaluations`
 
-**11.4 Performance DB**
-- Risque: recalculs complets (visible_if, risk, quality) a chaque question.
-- Optimisation: cache par bloc des `DynamicQuestionTemplate` + preload des answers.
-- Action: ajouter cache applicatif (memoization/Redis) et limiter les requetes N+1.
+### Payload
 
-**11.5 Tableau de bord de risque systeme (resume)**
-- `DecisionPathEngine`: tres rapide, contrainte sur la stabilite des `order` a travers versions.
-- `visible_if`: cout modere, attention a la complexite des conditions imbriquees.
-- `RiskModel`: instantane, risque de double comptage si boucles non gerees.
+```json
+{
+  "type": "complete",
+  "bloc_keys": []
+}
+```
 
-**Recommandation**
-Finaliser les seeders en isolant strictement les blocs symptomatiques (Cervix, Breast, Pain) et n'autoriser les sauts (`routing_rules`) qu'entre les entry points de ces blocs.
+### Response
 
-**12. Architecture des blocs (scalabilite)**
-Le triage est divise en blocs logiques independants. Chaque bloc peut etre mis a jour sans affecter le reste du `DecisionPath`.
+```json
+{
+  "session_id": "uuid",
+  "decision_path_key": "dp_full_assessment",
+  "decision_path_version": "1.0",
+  "next_question": {},
+  "decision_insight_preview": {},
+  "progress": 0
+}
+```
 
-| ID Bloc | Nom du Bloc | Role strategique |
+---
+
+## 5.2 Soumission d'une Reponse
+
+`POST /api/triage/evaluations/{session_id}/answers`
+
+### Payload
+
+```json
+{
+  "question_key": "breast_mass",
+  "answer": true,
+  "idempotency_key": "uuid"
+}
+```
+
+---
+
+## 5.3 Ordre d'Execution Serveur
+
+1. Store Answer (append-only)
+2. FactsEngine -> update snapshot
+3. RiskEngine -> update snapshot
+4. FlagEngine -> evaluate overrides
+5. QuestionFlowService -> routing_rules
+6. DecisionPathEngine -> next node
+7. DataQualityEngine -> confidence
+8. DecisionInsightService -> synthese
+9. Persist snapshot
+10. Return next question or report
+
+---
+
+## 5.4 Reponse API Intermediaire
+
+```json
+{
+  "next_question": {},
+  "decision_insight": {
+    "risk_score_raw": 12,
+    "risk_score_norm": 68,
+    "risk_level": "high",
+    "flags": [],
+    "confidence_score": 0.74,
+    "requires_human_validation": false
+  },
+  "progress": 42
+}
+```
+
+---
+
+## 5.5 Completion
+
+`POST /api/triage/evaluations/{session_id}/complete`
+
+### Response
+
+```json
+{
+  "report": {},
+  "decision_insight": {},
+  "audit_trace_id": "hash"
+}
+```
+
+---
+
+# 6. Backoffice - Gouvernance Clinique
+
+Le backoffice permet:
+
+- Gerer DecisionPaths
+- Gerer Questions
+- Gerer Facts
+- Gerer RiskModels
+- Gerer RiskSignals (poids)
+- Gerer RiskFlags
+- Publier versions
+- Verrouiller modeles
+
+---
+
+# 7. Endpoints Backoffice
+
+## 7.1 DecisionPaths
+
+- `GET /api/backoffice/decision-paths`
+- `POST /api/backoffice/decision-paths`
+- `PUT /api/backoffice/decision-paths/{id}`
+- `POST /api/backoffice/decision-paths/{id}/publish`
+
+---
+
+## 7.2 Questions
+
+- `GET /api/backoffice/questions`
+- `POST /api/backoffice/questions`
+- `PUT /api/backoffice/questions/{id}`
+
+---
+
+## 7.3 Facts
+
+- `GET /api/backoffice/facts`
+- `POST /api/backoffice/facts`
+- `PUT /api/backoffice/facts/{id}`
+
+---
+
+## 7.4 Fact Mapping
+
+`POST /api/backoffice/fact-mappings`
+
+```json
+{
+  "question_key": "breast_mass",
+  "answer_value": true,
+  "fact_key": "has_mass"
+}
+```
+
+---
+
+## 7.5 Risk Models
+
+- `GET /api/backoffice/risk-models`
+- `POST /api/backoffice/risk-models`
+- `PUT /api/backoffice/risk-models/{id}`
+- `POST /api/backoffice/risk-models/{id}/publish`
+
+---
+
+## 7.6 Risk Signals
+
+`POST /api/backoffice/risk-signals`
+
+```json
+{
+  "risk_model_key": "breast_v1",
+  "fact_key": "has_mass",
+  "weight": 6
+}
+```
+
+---
+
+## 7.7 Risk Flags
+
+`POST /api/backoffice/risk-flags`
+
+```json
+{
+  "risk_model_key": "breast_v1",
+  "fact_key": "nipple_bleeding",
+  "type": "urgent",
+  "priority": 100
+}
+```
+
+---
+
+# 8. Versioning
+
+Chaque session stocke:
+
+- `protocol_version`
+- `risk_model_version`
+- `engine_version`
+- `snapshot_hash`
+
+Permet:
+
+- Reproduction exacte
+- Audit medical
+- Conformite reglementaire
+
+---
+
+# 9. Securite
+
+- Idempotency obligatoire
+- Session locking
+- Append-only answers
+- Anti-loop routing
+- Logs structures
+
+---
+
+# 10. Priorite Decisionnelle
+
+Ordre strict:
+
+1. Flags
+2. Score normalise
+3. Confiance
+4. Navigation
+
+Navigation ne modifie jamais le risque.
+
+---
+
+# 11. Resultat
+
+Le moteur est:
+
+- Scalable
+- Explicable
+- Audit-ready
+- Multi-pays
+- Multi-protocoles
+- Compatible terrain a faible connectivite
+
+CHEREH devient un moteur de triage clinique industriel.
+
+---
+
+# 12. Contraintes et Defis (Anticipation Systeme)
+
+Cette section formalise les risques structurels du moteur et les garde-fous obligatoires.
+
+---
+
+## 12.1 La Complexite de la Toile (Graph Integrity)
+
+### Probleme
+
+L'augmentation des `routing_rules` (`jump_bloc`, `jump_question`) peut:
+
+- Creer des boucles infinies
+- Generer des nodes orphelins
+- Produire des chemins impossibles
+
+Exemple critique:  
+A -> Bloc B -> regle -> retour vers A
+
+### Risque
+
+- Boucle infinie runtime
+- Blocage session
+- Double comptage risque
+- UX incoherente
+
+### Solution Obligatoire
+
+Implementer un **Graph Validation Script** execute:
+
+- A chaque publish de DecisionPath
+- A chaque publish de RiskModel
+
+Le script doit:
+
+1. Construire le graphe complet (nodes + routing edges)
+2. Detecter les cycles (DFS ou algorithme de Tarjan)
+3. Verifier qu'il existe au moins un chemin terminal
+4. Identifier les nodes inaccessibles
+5. Refuser la publication si incoherence detectee
+
+Publication impossible si le graphe n'est pas valide.
+
+---
+
+## 12.2 Conflit "DecisionPath vs Routing Rules"
+
+### Probleme
+
+Le DecisionPath definit un ordre lineaire:  
+1 -> 2 -> 3 -> 4
+
+Mais une `routing_rule` peut forcer:  
+2 -> 10
+
+Les nodes 3-9 deviennent implicitement ignores.
+
+### Impact
+
+- Faussage de la completude
+- Mauvais calcul du DataQualityScore
+- Score clinique incoherent
+
+### Regle Architecturale
+
+Les questions court-circuitees doivent etre marquees:
+
+- `status = "skipped"`
+- `skip_reason = "routing_rule"`
+
+Le DataQualityEngine doit:
+
+- Calculer la completude uniquement sur le chemin reellement execute
+- Exclure les nodes marques `skipped`
+
+La completude devient relative au chemin effectif.
+
+---
+
+## 12.3 Gestion des Re-entry (Retour arriere)
+
+### Probleme
+
+Si une reponse change apres avoir declenche un `jump_bloc`:
+
+- Le chemin parcouru apres le saut devient invalide
+- Des points de risque peuvent rester actifs
+
+### Risque
+
+- Double comptage
+- Faux positifs
+- Incoherence snapshot
+
+### Solution
+
+Implementer un mecanisme de **Branch Invalidation**.
+
+Lorsqu'une reponse modifiee impacte:
+
+- Un fact cle
+- Un routing declenche
+- Un flag
+
+Le moteur doit:
+
+1. Identifier le node pivot
+2. Supprimer toutes les reponses apres ce node
+3. Recalculer snapshot depuis le pivot
+4. Nettoyer les facts/risk lies a la branche supprimee
+
+Les reponses supprimees doivent rester en base (append-only) mais marquees:
+
+- `invalidated = true`
+- `invalidation_reason`
+
+Le RiskEngine ne doit jamais compter des facts invalides.
+
+---
+
+## 12.4 Performance Base de Donnees
+
+### Probleme
+
+A chaque question:
+
+- Chargement DecisionPath
+- Evaluation `visible_if`
+- Calcul score
+
+Sous forte charge (campagne nationale):
+
+- Explosion requetes SQL
+- Latence croissante
+
+### Optimisations Obligatoires
+
+1. Cache en memoire des `DynamicQuestionTemplate` par bloc
+2. Cache du DecisionPath compile
+3. Pre-compilation des expressions `visible_if`
+4. Snapshot incremental (eviter recalcul global)
+5. Indexation forte sur:
+- `session_id`
+- `question_key`
+- `fact_key`
+
+Objectif: temps constant par reponse.
+
+---
+
+# 13. Tableau de Bord de Risque Systeme
+
+| Composant | Performance | Contrainte Majeure |
 | --- | --- | --- |
-| B0_TRIAGE | Aiguillage | Identifie le motif principal et redirige vers le bon bloc. |
-| B1_PROFIL | Contexte patient | Age, menopause, antecedents, statut vaccinal (HPV). |
-| B2_CERVIX | Signes col | Saignements, pertes anormales, douleurs post-coitales. |
-| B3_MASSE | Compression | Masses palpables, troubles urinaires/digestifs. |
-| B4_SYSTEM | Etat general | Fatigue, perte de poids, ganglions. |
+| DecisionPathEngine | Rapide (O(1) a O(n)) | Maintenir coherence des versions |
+| VisibleIf Logic | Moderee | Complexite conditions imbriquees |
+| RiskEngine | Instantane | Eviter double comptage |
+| FlagEngine | Instantane | Priorite absolue garantie |
+| DataQualityEngine | Leger | Coherence chemin reel |
 
-**Mapping propose (conceptuel -> `bloc_key` actuel)**
-| Bloc conceptuel | `bloc_key` actuel |
-| --- | --- |
-| B0_TRIAGE | `medical_profile` (ex: `primary_symptom_type`) |
-| B1_PROFIL | `profile_personal`, `profil_identite`, `profil_socio` |
-| B2_CERVIX | `symptom_cervix` |
-| B3_MASSE | `symptom_breast` |
-| B4_SYSTEM | `lifestyle` |
+---
 
-**13. Logique de routage "smart-path"**
-**13.1 Pivot de triage (entree)**
-```json
-{
-  "key": "primary_symptom_type",
-  "text": "Quel signe vous inquiete aujourd'hui ?",
-  "type": "select_one",
-  "routing_rules": [
-    { "if": { "source": "answer", "value": "bleeding", "operator": "=" }, "next": "bloc:symptom_cervix" },
-    { "if": { "source": "answer", "value": "mass", "operator": "=" }, "next": "bloc:symptom_breast" },
-    { "if": { "source": "answer", "value": "none", "operator": "=" }, "next": "bloc:profile_personal" }
-  ]
-}
-```
+# 14. Recommandation Structurante
 
-**13.2 Detection de red flags (urgences)**
-```json
-{
-  "key": "pelvic_mass_hard",
-  "text": "La masse ressentie est-elle dure et fixe ?",
-  "risk_weight": 5,
-  "routing_rules": [
-    { "if": { "source": "answer", "value": true, "operator": "=" }, "next": "end_session:urgent_oncology_referral" }
-  ]
-}
-```
+Pour limiter la complexite:
 
-**14. Innovation data quality**
-- Indice de completude: si < 70% des questions du bloc critique sont repondues, le `confidence_score` diminue.
-- Detection d'incoherence: ex. patiente "menopausee" mais choisit "saignements durant les regles".
-- Action: le systeme genere un `DecisionInsight` avec `requires_human_validation`.
+1. Isoler strictement les blocs symptomatiques (Breast, Cervix, Pain)
+2. Autoriser les `routing_rules` uniquement entre "Entry Points" de blocs
+3. Interdire les sauts internes non controles
+4. Forcer validation graphe avant publication
+5. Versionner tout changement structurel
 
-**15. Contraintes de scalabilite (securite logicielle)**
-- Acyclic graph check: avant chaque deploiement de seeder, un test verifie qu'aucune `routing_rule` ne cree de boucle infinie.
-- Versionnage des paths: chaque `EvaluationSession` est liee a une version precise du `DecisionPath` pour eviter les erreurs si une question est supprimee en cours d'utilisation.
+Principe directeur:
 
-**Schema**
-```text
-Start -> DecisionPath (first node)
-   Answer -> routing_rules ?
-       yes -> jump_question/jump_bloc/end_session
-       no  -> DecisionPathEngine (branches -> default -> next order)
-```
+Moins de sauts transversaux = plus de stabilite.
+
+Le moteur doit rester un graphe maitrise, pas une toile incontrolee.
+
+---
+
+# 15. Regles Strictes de Design des Blocs
+
+Cette section formalise les regles obligatoires pour garantir stabilite, coherence et auditabilite.
+
+## 15.1 Definition d'un Bloc
+
+Un bloc est une unite logique coherente representant:
+
+- Un theme fonctionnel (ex: `profil_socio`)
+- Un ensemble de questions sequentielles
+- Un seul point d'entree
+
+## 15.2 Regles Obligatoires
+
+1. Un bloc = exactement un `entry_point`.
+2. Les questions internes ne peuvent jamais etre ciblees par routing externe.
+3. Les `routing_rules` ne peuvent cibler que:
+- `bloc:<entry_point>`
+- `end_session`
+4. Aucun jump question->question hors bloc.
+5. Les blocs ne doivent pas dependre d'un order global inter-bloc.
+6. Un bloc doit pouvoir etre execute independamment.
+7. Un bloc ne doit pas contenir de logique clinique implicite non versionnee.
+
+## 15.3 Typologie des Blocs
+
+- Bloc Structurel (profil, consentement)
+- Bloc Clinique (symptomes)
+- Bloc Conditionnel (`cmu_details`)
+- Bloc Terminal (recommendation / end)
+
+Les blocs conditionnels doivent toujours etre atteints via routing explicite.
+
+---
+
+# 16. Validateur de Seeder (Anti-Incoherence)
+
+Tout publish doit declencher un validateur automatique.
+
+## 16.1 Validation Structurelle
+
+Le validateur doit verifier:
+
+1. Chaque bloc possede un seul `entry_point`.
+2. Tous les blocs sont accessibles depuis le DecisionPath.
+3. Aucun bloc n'est orphelin.
+4. Aucun routing ne cible une question non-entry.
+5. Aucun cycle infini dans le graphe.
+6. Tous les chemins menent a au moins un node terminal.
+
+## 16.2 Validation Graphique (Cycle Detection)
+
+Algorithme recommande:
+
+- Construction d'un graphe dirige
+- DFS avec detection de back-edge
+- Refus de publication si cycle non autorise
+
+## 16.3 Validation Clinique
+
+1. `S_max` recalcule automatiquement.
+2. Aucune duplication de fact dans `RiskSignals`.
+3. Aucun flag sans fact associe.
+4. Aucun fact sans mapping question.
+
+## 16.4 Validation Navigation vs Routing
+
+Le validateur doit simuler:
+
+- Parcours lineaire
+- Parcours avec chaque routing active
+- Parcours avec retour arriere
+
+Si un etat produit:
+
+- Boucle
+- Node inaccessible
+- Bloc jamais termine
+
+-> Publication refusee.
+
+---
+
+# 17. Hierarchie Officielle: DecisionPath vs Routing Rules
+
+La hierarchie suivante est obligatoire.
+
+## 17.1 Ordre d'Autorite
+
+1. FlagEngine (override absolu)
+2. Routing Rules
+3. DecisionPath
+4. Order interne du bloc
+
+Navigation ne doit jamais modifier le risque.
+
+## 17.2 Regle d'Execution
+
+Dans `advance()`:
+
+1. Apply FactsEngine
+2. Apply RiskEngine
+3. Apply FlagEngine
+4. If flag triggered -> terminate
+5. Apply RoutingRules
+- Si routing -> jump bloc entry
+- Stop execution
+6. Sinon -> DecisionPathEngine
+
+RoutingRules sont un override controle du DecisionPath.  
+DecisionPath est la navigation par defaut.
+
+## 17.3 Interdictions Strictes
+
+- RoutingRules ne doivent jamais modifier snapshot risk.
+- DecisionPath ne doit jamais dependre d'un score.
+- Aucun calcul clinique dans DecisionPath.
+
+---
+
+Ces regles structurent le moteur pour un deploiement a grande echelle tout en conservant stabilite, auditabilite et securite clinique.
+
+---

@@ -47,14 +47,14 @@ class PersonalProfileQuestionSeeder extends Seeder
                     'order' => 2,
                     'is_entry_point' => true,
                 ],
-                [
-                    'key' => 'language',
-                    'text' => '🗣️La langue vous parlez le mieux ?',
-                    'type' => 'text',
-                    'bloc_key' => 'profil_socio',
-                    'answer_target' => 'personal_profile',
-                    'order' => 3,
-                ],
+                // [
+                //     'key' => 'language',
+                //     'text' => '🗣️La langue vous parlez le mieux ?',
+                //     'type' => 'text',
+                //     'bloc_key' => 'profil_socio',
+                //     'answer_target' => 'personal_profile',
+                //     'order' => 3,
+                // ],
                 [
                     'key' => 'commune',
                     'text' => '🏠 Dans quelle commune habitez-vous ?',
