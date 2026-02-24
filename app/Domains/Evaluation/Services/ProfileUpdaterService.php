@@ -3,8 +3,6 @@
 namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Profile\Infrastructure\Persistence\Models\PersonalProfile;
-use App\Domains\Profile\Infrastructure\Persistence\Models\MedicalProfile;
 use Carbon\Carbon;
 
 class ProfileUpdaterService
@@ -17,7 +15,11 @@ class ProfileUpdaterService
         $medicalData = [];
 
         foreach ($answers as $answer) {
-            // On ignore les réponses aux questions qui n'ont pas de cible
+            if (! $answer->question) {
+                continue;
+            }
+
+            // Ignore questions that do not target profile persistence.
             $target = $answer->question->answer_target;
             $key = $answer->question->key;
             $value = $this->castValue($key, $answer->question->type, $answer->value);
@@ -31,22 +33,25 @@ class ProfileUpdaterService
             }
         }
 
-        // On récupère les profils liés à l'utilisateur
         $identity = $session->identity;
 
-        if (!empty($personalData)) {
+        if (! empty($personalData)) {
             $identity->personalProfile()->updateOrCreate([], $personalData);
         }
 
-        if (!empty($medicalData)) {
+        if (! empty($medicalData)) {
             $identity->medicalProfile()->updateOrCreate([], $medicalData);
         }
     }
 
-    private function castValue(string $key, string $type, $value)
+    private function castValue(string $key, string $type, mixed $value): mixed
     {
         if ($key === 'birth_date') {
             return $this->normalizeBirthDate($value);
+        }
+
+        if ($key === 'last_screening_date') {
+            return $this->normalizeLastScreeningDate($value);
         }
 
         if ($key === 'education_level') {
@@ -54,7 +59,7 @@ class ProfileUpdaterService
                 'aucun' => 'none',
                 'primaire' => 'primary',
                 'secondaire' => 'secondary',
-                'supérieur' => 'university',
+                'superieur' => 'university',
                 'superieur' => 'university',
                 'autodidacte' => 'university',
                 'none' => 'none',
@@ -63,17 +68,22 @@ class ProfileUpdaterService
                 'university' => 'university',
             ];
 
-            $lower = strtolower($value);
+            if (! is_string($value)) {
+                return null;
+            }
+
+            $lower = strtolower(trim($value));
+
             return $map[$lower] ?? null;
         }
 
         if ($type === 'boolean') {
             if (is_string($value)) {
-                $lower = strtolower($value);
-                if (in_array($lower, ['oui', 'yes', 'true', '1'])) {
+                $lower = strtolower(trim($value));
+                if (in_array($lower, ['oui', 'yes', 'true', '1'], true)) {
                     return true;
                 }
-                if (in_array($lower, ['non', 'no', 'false', '0'])) {
+                if (in_array($lower, ['non', 'no', 'false', '0'], true)) {
                     return false;
                 }
             }
@@ -84,7 +94,7 @@ class ProfileUpdaterService
         return $value;
     }
 
-    private function normalizeBirthDate($value): ?string
+    private function normalizeBirthDate(mixed $value): ?string
     {
         if ($value === null || $value === '') {
             return null;
@@ -105,4 +115,38 @@ class ProfileUpdaterService
         return null;
     }
 
+    private function normalizeLastScreeningDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_array($value) && array_key_exists('value', $value)) {
+            $value = $value['value'];
+        }
+
+        if (! is_string($value) && ! is_int($value)) {
+            return null;
+        }
+
+        $stringValue = is_int($value) ? (string) $value : trim($value);
+        if ($stringValue === '') {
+            return null;
+        }
+
+        // Questionnaire uses relative buckets here, not literal dates.
+        if (in_array($stringValue, ['never', 'over_3_years', 'over_5_year', 'less_than_1_year'], true)) {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}$/', $stringValue) === 1) {
+            return sprintf('%04d-01-01', (int) $stringValue);
+        }
+
+        try {
+            return Carbon::parse($stringValue)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 }
