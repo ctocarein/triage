@@ -26,11 +26,11 @@ class ConsentDeclinedQuestionSeeder extends Seeder
             [
                 'key' => 'consent_declined_thank_you',
                 'text' => 'Merci pour votre retour.',
-                'type' => 'select_one',
+                'type' => 'custom',
                 'bloc_key' => 'consent_declined',
                 'answer_target' => 'custom',
                 'options' => [
-                    ['value' => 'continue', 'label' => 'Continuer'],
+                    ['value' => 'continue', 'label' => 'Je vous en prie'],
                 ],
                 'routing_rules' => [
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'continue'], 'next' => 'question:consent_declined_whatsapp'],
@@ -46,7 +46,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'bloc_key' => 'consent_declined',
                 'answer_target' => 'custom',
                 'is_required' => false,
-                'placeholder' => 'Ex: 0700000000',
+                'placeholder' => 'Ex: +225 0700000000',
                 'routing_rules' => [
                     ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],
@@ -81,7 +81,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
             [
                 'key' => 'consent_declined_end',
                 'text' => 'Aucune recommandation ne sera chargee pour ce parcours. Appuyez sur Terminer pour quitter.',
-                'type' => 'select_one',
+                'type' => 'custom',
                 'bloc_key' => 'consent_declined',
                 'answer_target' => 'custom',
                 'options' => [

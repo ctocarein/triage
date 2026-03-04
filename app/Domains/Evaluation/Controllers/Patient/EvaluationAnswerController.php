@@ -7,16 +7,17 @@ use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\AnswerService;
-use App\Domains\Evaluation\Services\ProfileUpdaterService;
 use App\Domains\Evaluation\Services\QuestionFlowService;
+use App\Domains\Evaluation\Http\Concerns\ValidatesEvaluationSession;
 use App\Http\Controllers\Controller;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
 
 class EvaluationAnswerController extends Controller
 {
+    use ValidatesEvaluationSession;
+
     /**
      * @OA\Get(
      *     path="/answers/session/{session}",
@@ -53,7 +54,9 @@ class EvaluationAnswerController extends Controller
      * @OA\Post(
      *     path="/answers",
      *     operationId="storeAnswer",
-     *     summary="Enregistrer une reponse a une question.",
+     *     summary="[DEPRECATED] Enregistrer une reponse a une question.",
+     *     description="Route deprecie. Utiliser POST /evaluations/{session}/advance a la place.",
+     *     deprecated=true,
      *     tags={"Answers"},
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/EvaluationAnswerStoreRequest")),
@@ -73,7 +76,6 @@ class EvaluationAnswerController extends Controller
     public function store(
         EvaluationAnswerStoreRequest $request,
         AnswerService $answerService,
-        ProfileUpdaterService $profileUpdater,
         QuestionFlowService $flow
     ): JsonResponse {
         $session = $request->get('active_evaluation_session');
@@ -99,13 +101,6 @@ class EvaluationAnswerController extends Controller
         try {
             $answer = $answerService->saveAnswer($validated);
             $answer->load(['question', 'session']);
-
-            if (
-                $answer->question &&
-                in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'])
-            ) {
-                $profileUpdater->syncFromAnswers($session);
-            }
 
             $routing = null;
             if ($answer->question) {
@@ -134,7 +129,8 @@ class EvaluationAnswerController extends Controller
                 'message' => 'Reponse enregistree avec succes.',
                 'answer' => $answer,
                 'routing' => $routing,
-            ], 201);
+            ], 201)->header('Deprecation', 'true')
+                   ->header('Link', '</evaluations/{session}/advance>; rel="successor-version"');
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => true,
@@ -147,7 +143,9 @@ class EvaluationAnswerController extends Controller
      * @OA\Delete(
      *     path="/answers/{id}",
      *     operationId="deleteAnswer",
-     *     summary="Supprimer une reponse (optionnel).",
+     *     summary="[DEPRECATED] Supprimer une reponse.",
+     *     description="Route deprecie. La suppression de reponse n'est plus supportee dans le flux canonical.",
+     *     deprecated=true,
      *     tags={"Answers"},
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -168,47 +166,8 @@ class EvaluationAnswerController extends Controller
         $answer = EvaluationAnswer::findOrFail($id);
         $answer->delete();
 
-        return response()->json(['message' => 'Reponse supprimee.']);
+        return response()->json(['message' => 'Reponse supprimee.'])
+            ->header('Deprecation', 'true');
     }
 
-    private function ensureSessionAccess(Request $request, EvaluationSession $session): void
-    {
-        try {
-            $this->authorize('view', $session);
-        } catch (AuthorizationException $exception) {
-            abort(404, 'Session introuvable.');
-        }
-
-        if ($this->tokenInvalidatesSession($request, $session)) {
-            $this->expireSession($session);
-            abort(410, 'Session invalidee.');
-        }
-
-        if ($session->isExpired()) {
-            $this->expireSession($session);
-            abort(410, 'Session expiree.');
-        }
-    }
-
-    private function tokenInvalidatesSession(Request $request, EvaluationSession $session): bool
-    {
-        $tokenId = $request->user()?->currentAccessToken()?->id;
-        $context = $session->context ?? [];
-        $sessionTokenId = is_array($context) ? ($context['token_id'] ?? null) : null;
-
-        return $tokenId !== null
-            && $sessionTokenId !== null
-            && (int) $tokenId !== (int) $sessionTokenId;
-    }
-
-    private function expireSession(EvaluationSession $session): void
-    {
-        if ($session->status !== 'expired') {
-            $updates = ['status' => 'expired'];
-            if ($session->expires_at === null) {
-                $updates['expires_at'] = now();
-            }
-            $session->update($updates);
-        }
-    }
 }

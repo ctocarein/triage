@@ -2,15 +2,22 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Support\HandlesConditionArrays;
 use InvalidArgumentException;
 
 class QuestionTemplateContractValidator
 {
-    private ConditionContractValidator $conditionValidator;
+    use HandlesConditionArrays;
 
-    public function __construct(?ConditionContractValidator $conditionValidator = null)
-    {
+    private ConditionContractValidator $conditionValidator;
+    private RoutingRulesValidator $routingValidator;
+
+    public function __construct(
+        ?ConditionContractValidator $conditionValidator = null,
+        ?RoutingRulesValidator $routingValidator = null
+    ) {
         $this->conditionValidator = $conditionValidator ?? new ConditionContractValidator();
+        $this->routingValidator   = $routingValidator   ?? new RoutingRulesValidator();
     }
 
     /**
@@ -22,7 +29,7 @@ class QuestionTemplateContractValidator
         $errors = [];
 
         if (array_key_exists('visible_if', $question) && $question['visible_if'] !== null) {
-            $visible = $this->decodeJsonIfNeeded($question['visible_if'], "{$questionKey}.visible_if", $errors);
+            $visible = $this->decodeJsonOrCollect($question['visible_if'], "{$questionKey}.visible_if", $errors);
             if ($visible !== null) {
                 $errors = array_merge(
                     $errors,
@@ -32,37 +39,15 @@ class QuestionTemplateContractValidator
         }
 
         if (array_key_exists('routing_rules', $question) && $question['routing_rules'] !== null) {
-            $rules = $this->decodeJsonIfNeeded($question['routing_rules'], "{$questionKey}.routing_rules", $errors);
-            if ($rules !== null) {
-                if (!is_array($rules) || !$this->isList($rules)) {
-                    $errors[] = "{$questionKey}.routing_rules must be a list.";
-                } else {
-                    foreach ($rules as $idx => $rule) {
-                        if (!is_array($rule)) {
-                            $errors[] = "{$questionKey}.routing_rules[{$idx}] must be an object.";
-                            continue;
-                        }
-
-                        if (!array_key_exists('if', $rule)) {
-                            $errors[] = "{$questionKey}.routing_rules[{$idx}].if is required.";
-                        } else {
-                            $errors = array_merge(
-                                $errors,
-                                $this->conditionValidator->validate(
-                                    $rule['if'],
-                                    "{$questionKey}.routing_rules[{$idx}].if"
-                                )
-                            );
-                        }
-
-                        if (!array_key_exists('next', $rule) || !is_string($rule['next']) || trim($rule['next']) === '') {
-                            $errors[] = "{$questionKey}.routing_rules[{$idx}].next must be a non-empty string.";
-                        } elseif (!$this->isAllowedNext($rule['next'])) {
-                            $errors[] = "{$questionKey}.routing_rules[{$idx}].next has invalid format '{$rule['next']}'.";
-                        }
-                    }
-                }
-            }
+            $errors = array_merge(
+                $errors,
+                $this->routingValidator->validateRoutingRules(
+                    $question['routing_rules'],
+                    [],
+                    [],
+                    $questionKey
+                )
+            );
         }
 
         if ($errors !== []) {
@@ -122,7 +107,7 @@ class QuestionTemplateContractValidator
     {
         if (array_key_exists('visible_if', $question) && $question['visible_if'] !== null) {
             $ignored = [];
-            $decoded = $this->decodeJsonIfNeeded($question['visible_if'], 'visible_if', $ignored);
+            $decoded = $this->decodeJsonOrCollect($question['visible_if'], 'visible_if', $ignored);
             $question['visible_if'] = $this->normalizeConditionNode($decoded);
         }
 
@@ -132,33 +117,14 @@ class QuestionTemplateContractValidator
     /**
      * @param array<int, string> $errors
      */
-    private function decodeJsonIfNeeded(mixed $value, string $path, array &$errors): mixed
+    private function decodeJsonOrCollect(mixed $value, string $path, array &$errors): mixed
     {
-        if (!is_string($value)) {
-            return $value;
-        }
-
-        $decoded = json_decode($value, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        $decoded = $this->decodeJsonIfNeeded($value);
+        if (is_string($value) && $decoded === null) {
             $errors[] = "{$path} contains invalid JSON: " . json_last_error_msg() . ".";
-            return null;
         }
 
         return $decoded;
-    }
-
-    private function isAllowedNext(string $next): bool
-    {
-        return $next === 'end_session'
-            || str_starts_with($next, 'end_session:')
-            || str_starts_with($next, 'bloc:')
-            || str_starts_with($next, 'question:')
-            || str_starts_with($next, 'level:');
-    }
-
-    private function isList(array $value): bool
-    {
-        return array_keys($value) === range(0, count($value) - 1);
     }
 
     private function normalizeConditionNode(mixed $condition): mixed

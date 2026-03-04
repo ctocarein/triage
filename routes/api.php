@@ -31,3 +31,4 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 require __DIR__.'/patient/api.php';
+require base_path('app/Domains/Evaluation/Presentation/Http/Routes/admin.routes.php');

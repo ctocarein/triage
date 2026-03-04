@@ -3,6 +3,7 @@
 namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Decision\Models\DecisionNode;
+use App\Domains\Evaluation\Enums\AnswerStatus;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 
@@ -69,7 +70,7 @@ class RiskModelService
 
     public function shouldCountAnswer(EvaluationAnswer $answer): bool
     {
-        if (in_array($answer->status, ['invalidated', 'non_applicable'], true)) {
+        if (in_array($answer->status, [AnswerStatus::Invalidated, AnswerStatus::NonApplicable], true)) {
             return false;
         }
 

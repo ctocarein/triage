@@ -2,20 +2,21 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Domains\Evaluation\Enums\AnswerStatus;
 use App\Domains\Evaluation\Models\EvaluationSession;
 
 class DataQualityService
 {
-    public function assess(EvaluationSession $session): array
+    public function assess(EvaluationSession $session, bool $excludeNonApplicable = true): array
     {
         $totalQuestions = $this->resolveTotalQuestions($session);
         $answeredCount = $session->answers()
-            ->whereIn('status', ['answered', 'skipped'])
+            ->whereIn('status', [AnswerStatus::Answered->value, AnswerStatus::Skipped->value])
             ->count();
 
-        $nonApplicable = $session->answers()
-            ->where('status', 'non_applicable')
-            ->count();
+        $nonApplicable = $excludeNonApplicable
+            ? $session->answers()->where('status', AnswerStatus::NonApplicable->value)->count()
+            : 0;
 
         $expectedTotal = max(0, $totalQuestions - $nonApplicable);
 

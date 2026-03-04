@@ -1695,6 +1695,2324 @@
                 ]
             }
         },
+        "/admin/sessions": {
+            "get": {
+                "tags": [
+                    "Admin - Sessions"
+                ],
+                "summary": "Lister les sessions d'evaluation (supervision).",
+                "operationId": "adminSessionsIndex",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "in_progress",
+                                "completed",
+                                "cancelled",
+                                "expired"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "risk_level",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 30
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste paginee des sessions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginationMeta"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/sessions/{session}": {
+            "get": {
+                "tags": [
+                    "Admin - Sessions"
+                ],
+                "summary": "Detail d'une session d'evaluation.",
+                "operationId": "adminSessionsShow",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session avec reponses, rapport et insight"
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/sessions/{session}/cancel": {
+            "patch": {
+                "tags": [
+                    "Admin - Sessions"
+                ],
+                "summary": "Annuler une session d'evaluation en cours.",
+                "operationId": "adminSessionsCancel",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Session annulee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "public_id": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        },
+                                        "completed_at": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Session non annulable (pas en cours)"
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/facts": {
+            "get": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Lister les faits.",
+                "operationId": "adminFactsIndex",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "inactive_only",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des faits avec comptage mappings"
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Creer un fait.",
+                "operationId": "adminFactsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "key",
+                                    "label"
+                                ],
+                                "properties": {
+                                    "key": {
+                                        "type": "string"
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Fait cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/facts/{fact}": {
+            "get": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Detail d'un fait avec ses mappings.",
+                "operationId": "adminFactsShow",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fait avec mappings et comptage signaux/flags"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Mettre a jour un fait.",
+                "operationId": "adminFactsUpdate",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Fait mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Supprimer un fait.",
+                "operationId": "adminFactsDestroy",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fait supprime"
+                    },
+                    "409": {
+                        "description": "Fait utilise dans des signaux ou flags de risque"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/facts/{fact}/toggle": {
+            "patch": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Activer / desactiver un fait.",
+                "operationId": "adminFactsToggle",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut mis a jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "key": {
+                                            "type": "string"
+                                        },
+                                        "is_active": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/facts/{fact}/mappings": {
+            "get": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Lister les mappings d'un fait.",
+                "operationId": "adminFactMappingsIndex",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des mappings"
+                    },
+                    "404": {
+                        "description": "Fait non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Ajouter un mapping a un fait.",
+                "operationId": "adminFactMappingsStore",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "question_key",
+                                    "answer_value",
+                                    "operator"
+                                ],
+                                "properties": {
+                                    "question_key": {
+                                        "type": "string"
+                                    },
+                                    "answer_value": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "operator": {
+                                        "type": "string",
+                                        "enum": [
+                                            "=",
+                                            "!=",
+                                            "in",
+                                            "not_in",
+                                            ">=",
+                                            "<=",
+                                            ">",
+                                            "<"
+                                        ]
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Mapping cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/facts/{fact}/mappings/{mapping}": {
+            "put": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Mettre a jour un mapping.",
+                "operationId": "adminFactMappingsUpdate",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "mapping",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mapping mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Facts"
+                ],
+                "summary": "Supprimer un mapping.",
+                "operationId": "adminFactMappingsDestroy",
+                "parameters": [
+                    {
+                        "name": "fact",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "mapping",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mapping supprime"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/model-versions": {
+            "get": {
+                "tags": [
+                    "Admin - Model Versions"
+                ],
+                "summary": "Lister les versions de modele.",
+                "operationId": "adminModelVersionsIndex",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "catalog",
+                                "risk_model"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des versions"
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Model Versions"
+                ],
+                "summary": "Creer une version de modele.",
+                "operationId": "adminModelVersionsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "version"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "enum": [
+                                            "catalog",
+                                            "risk_model"
+                                        ]
+                                    },
+                                    "version": {
+                                        "type": "string",
+                                        "example": "1.0.0"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "checksum": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "metadata": {
+                                        "type": "object",
+                                        "nullable": true
+                                    },
+                                    "released_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Version creee"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/model-versions/{model_version}": {
+            "get": {
+                "tags": [
+                    "Admin - Model Versions"
+                ],
+                "summary": "Detail d'une version de modele.",
+                "operationId": "adminModelVersionsShow",
+                "parameters": [
+                    {
+                        "name": "model_version",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Version"
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Model Versions"
+                ],
+                "summary": "Mettre a jour une version de modele.",
+                "operationId": "adminModelVersionsUpdate",
+                "parameters": [
+                    {
+                        "name": "model_version",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Version mise a jour"
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Model Versions"
+                ],
+                "summary": "Supprimer une version de modele.",
+                "operationId": "adminModelVersionsDestroy",
+                "parameters": [
+                    {
+                        "name": "model_version",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Version supprimee"
+                    },
+                    "409": {
+                        "description": "Impossible de supprimer une version active"
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/model-versions/{model_version}/activate": {
+            "patch": {
+                "tags": [
+                    "Admin - Model Versions"
+                ],
+                "summary": "Activer une version de modele (desactive les autres du meme nom).",
+                "operationId": "adminModelVersionsActivate",
+                "parameters": [
+                    {
+                        "name": "model_version",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Version activee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "version": {
+                                            "type": "string"
+                                        },
+                                        "is_active": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/question-groups": {
+            "get": {
+                "tags": [
+                    "Admin - Question Groups"
+                ],
+                "summary": "Lister les groupes de questions.",
+                "operationId": "adminQuestionGroupsIndex",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "inactive_only",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des groupes"
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Question Groups"
+                ],
+                "summary": "Creer un groupe de questions.",
+                "operationId": "adminQuestionGroupsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "key",
+                                    "label"
+                                ],
+                                "properties": {
+                                    "key": {
+                                        "type": "string"
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "order": {
+                                        "type": "integer"
+                                    },
+                                    "parent_key": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Groupe cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/question-groups/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Question Groups"
+                ],
+                "summary": "Detail d'un groupe de questions.",
+                "operationId": "adminQuestionGroupsShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Groupe avec blocs thematiques"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Question Groups"
+                ],
+                "summary": "Mettre a jour un groupe de questions.",
+                "operationId": "adminQuestionGroupsUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Groupe mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Question Groups"
+                ],
+                "summary": "Supprimer un groupe de questions.",
+                "operationId": "adminQuestionGroupsDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Groupe supprime"
+                    },
+                    "409": {
+                        "description": "Groupe contient des questions ou des blocs"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/question-groups/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Admin - Question Groups"
+                ],
+                "summary": "Activer / desactiver un groupe de questions.",
+                "operationId": "adminQuestionGroupsToggle",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut mis a jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "key": {
+                                            "type": "string"
+                                        },
+                                        "is_active": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/questions": {
+            "get": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Lister les questions du catalogue.",
+                "operationId": "adminQuestionsIndex",
+                "parameters": [
+                    {
+                        "name": "bloc_key",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "answer_target",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "inactive_only",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste paginee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginationMeta"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Creer une question dans le catalogue.",
+                "operationId": "adminQuestionsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Question creee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EvaluationQuestion"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/questions/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Detail d'une question.",
+                "operationId": "adminQuestionsShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Question",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EvaluationQuestion"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Mettre a jour une question.",
+                "operationId": "adminQuestionsUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Question mise a jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EvaluationQuestion"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Supprimer une question.",
+                "operationId": "adminQuestionsDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Question supprimee"
+                    },
+                    "409": {
+                        "description": "Question referencee dans des reponses existantes"
+                    },
+                    "404": {
+                        "description": "Non trouvee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/questions/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Activer / desactiver une question.",
+                "operationId": "adminQuestionsToggle",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut mis a jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "key": {
+                                            "type": "string"
+                                        },
+                                        "is_active": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/questions/catalog/validate": {
+            "get": {
+                "tags": [
+                    "Admin - Questions"
+                ],
+                "summary": "Verifier la coherence du catalogue de questions.",
+                "operationId": "adminQuestionsCatalogValidate",
+                "responses": {
+                    "200": {
+                        "description": "Resultat de la validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "errors": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models": {
+            "get": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Lister les modeles de risque.",
+                "operationId": "adminRiskModelsIndex",
+                "responses": {
+                    "200": {
+                        "description": "Liste des modeles avec comptage signaux/flags"
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Creer un modele de risque.",
+                "operationId": "adminRiskModelsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "key",
+                                    "label"
+                                ],
+                                "properties": {
+                                    "key": {
+                                        "type": "string"
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Modele cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models/{risk_model}": {
+            "get": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Detail d'un modele de risque avec ses signaux et flags.",
+                "operationId": "adminRiskModelsShow",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modele avec signaux et flags"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Mettre a jour un modele de risque.",
+                "operationId": "adminRiskModelsUpdate",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Modele mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Supprimer un modele de risque.",
+                "operationId": "adminRiskModelsDestroy",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modele supprime"
+                    },
+                    "409": {
+                        "description": "Le modele contient des signaux ou flags"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models/{risk_model}/toggle": {
+            "patch": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Activer / desactiver un modele de risque.",
+                "operationId": "adminRiskModelsToggle",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut mis a jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "key": {
+                                            "type": "string"
+                                        },
+                                        "is_active": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models/{risk_model}/signals": {
+            "get": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Lister les signaux d'un modele de risque.",
+                "operationId": "adminRiskSignalsIndex",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des signaux"
+                    },
+                    "404": {
+                        "description": "Modele non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Ajouter un signal a un modele de risque.",
+                "operationId": "adminRiskSignalsStore",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fact_key",
+                                    "weight"
+                                ],
+                                "properties": {
+                                    "fact_key": {
+                                        "type": "string"
+                                    },
+                                    "weight": {
+                                        "type": "number",
+                                        "maximum": 100,
+                                        "minimum": 0
+                                    },
+                                    "model_version_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Signal cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models/{risk_model}/signals/{signal}": {
+            "put": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Mettre a jour un signal.",
+                "operationId": "adminRiskSignalsUpdate",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "signal",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Signal mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Supprimer un signal.",
+                "operationId": "adminRiskSignalsDestroy",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "signal",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Signal supprime"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models/{risk_model}/flags": {
+            "get": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Lister les flags d'un modele de risque.",
+                "operationId": "adminRiskFlagsIndex",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des flags"
+                    },
+                    "404": {
+                        "description": "Modele non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Ajouter un flag a un modele de risque.",
+                "operationId": "adminRiskFlagsStore",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fact_key",
+                                    "type",
+                                    "label"
+                                ],
+                                "properties": {
+                                    "fact_key": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "warning",
+                                            "critical",
+                                            "info",
+                                            "exclusion",
+                                            "urgent"
+                                        ]
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "priority": {
+                                        "type": "integer"
+                                    },
+                                    "model_version_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Flag cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/risk-models/{risk_model}/flags/{flag}": {
+            "put": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Mettre a jour un flag.",
+                "operationId": "adminRiskFlagsUpdate",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "flag",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Flag mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Risk Models"
+                ],
+                "summary": "Supprimer un flag.",
+                "operationId": "adminRiskFlagsDestroy",
+                "parameters": [
+                    {
+                        "name": "risk_model",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "flag",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Flag supprime"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/thematic-blocs": {
+            "get": {
+                "tags": [
+                    "Admin - Thematic Blocs"
+                ],
+                "summary": "Lister les blocs thematiques.",
+                "operationId": "adminThematicBlocsIndex",
+                "parameters": [
+                    {
+                        "name": "question_group_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "inactive_only",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des blocs"
+                    },
+                    "401": {
+                        "description": "Non authentifie"
+                    },
+                    "403": {
+                        "description": "Acces refuse"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Thematic Blocs"
+                ],
+                "summary": "Creer un bloc thematique.",
+                "operationId": "adminThematicBlocsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "key",
+                                    "label",
+                                    "question_group_id"
+                                ],
+                                "properties": {
+                                    "key": {
+                                        "type": "string"
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "order": {
+                                        "type": "integer"
+                                    },
+                                    "question_group_id": {
+                                        "type": "integer"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Bloc cree"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/thematic-blocs/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Thematic Blocs"
+                ],
+                "summary": "Detail d'un bloc thematique.",
+                "operationId": "adminThematicBlocsShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bloc avec groupe"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Thematic Blocs"
+                ],
+                "summary": "Mettre a jour un bloc thematique.",
+                "operationId": "adminThematicBlocsUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionTemplateWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Bloc mis a jour"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    },
+                    "422": {
+                        "description": "Validation echouee"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Thematic Blocs"
+                ],
+                "summary": "Supprimer un bloc thematique.",
+                "operationId": "adminThematicBlocsDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bloc supprime"
+                    },
+                    "404": {
+                        "description": "Non trouve"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/thematic-blocs/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Admin - Thematic Blocs"
+                ],
+                "summary": "Activer / desactiver un bloc thematique.",
+                "operationId": "adminThematicBlocsToggle",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut mis a jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "key": {
+                                            "type": "string"
+                                        },
+                                        "is_active": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/answers/session/{session}": {
             "get": {
                 "tags": [
@@ -1762,7 +4080,8 @@
                 "tags": [
                     "Answers"
                 ],
-                "summary": "Enregistrer une reponse a une question.",
+                "summary": "[DEPRECATED] Enregistrer une reponse a une question.",
+                "description": "Route deprecie. Utiliser POST /evaluations/{session}/advance a la place.",
                 "operationId": "storeAnswer",
                 "requestBody": {
                     "required": true,
@@ -1808,6 +4127,7 @@
                         }
                     }
                 },
+                "deprecated": true,
                 "security": [
                     {
                         "sanctum": []
@@ -1820,7 +4140,8 @@
                 "tags": [
                     "Answers"
                 ],
-                "summary": "Supprimer une reponse (optionnel).",
+                "summary": "[DEPRECATED] Supprimer une reponse.",
+                "description": "Route deprecie. La suppression de reponse n'est plus supportee dans le flux canonical.",
                 "operationId": "deleteAnswer",
                 "parameters": [
                     {
@@ -1863,6 +4184,7 @@
                         "description": "Reponse non trouvee"
                     }
                 },
+                "deprecated": true,
                 "security": [
                     {
                         "sanctum": []
@@ -2398,6 +4720,116 @@
                 "responses": {
                     "200": {
                         "description": "Logged out"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/identity/unlock": {
+            "post": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Unlock the security gate using pin/agent/biometric",
+                "operationId": "identityUnlock",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IdentityUnlockRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Gate unlocked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IdentityUnlockResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/identity/panic-lock": {
+            "post": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Panic lock the security gate and revoke devices",
+                "operationId": "identityPanicLock",
+                "responses": {
+                    "200": {
+                        "description": "Gate locked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IdentityPanicLockResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/identity/security/status": {
+            "get": {
+                "tags": [
+                    "Identity"
+                ],
+                "summary": "Get the current security gate status",
+                "operationId": "identitySecurityStatus",
+                "parameters": [
+                    {
+                        "name": "device_fingerprint",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IdentitySecurityStatusResponse"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -3922,6 +6354,36 @@
                 },
                 "type": "object"
             },
+            "SecurityGate": {
+                "properties": {
+                    "state": {
+                        "type": "string",
+                        "enum": [
+                            "entry",
+                            "limited",
+                            "full",
+                            "locked"
+                        ]
+                    },
+                    "gate_required": {
+                        "type": "boolean"
+                    },
+                    "locked_until": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "panic_locked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "device_trusted": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
             "Organization": {
                 "properties": {
                     "id": {
@@ -4280,10 +6742,10 @@
             },
             "EvaluationAdvanceRequest": {
                 "required": [
-                    "question_id"
+                    "dynamic_question_template_id"
                 ],
                 "properties": {
-                    "question_id": {
+                    "dynamic_question_template_id": {
                         "type": "integer"
                     },
                     "value": {},
@@ -4292,7 +6754,8 @@
                         "items": {
                             "type": "string",
                             "format": "uuid"
-                        }
+                        },
+                        "nullable": true
                     },
                     "is_skipped": {
                         "type": "boolean"
@@ -4342,8 +6805,29 @@
                         "type": "object",
                         "nullable": true
                     },
+                    "file_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "nullable": true
+                    },
                     "is_skipped": {
                         "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "answered",
+                            "skipped",
+                            "invalidated",
+                            "non_applicable"
+                        ]
+                    },
+                    "order": {
+                        "type": "integer",
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
@@ -4414,6 +6898,10 @@
                         "type": "string",
                         "example": "1234"
                     },
+                    "device_fingerprint": {
+                        "type": "string",
+                        "example": "device-123"
+                    },
                     "role": {
                         "type": "string",
                         "enum": [
@@ -4447,6 +6935,9 @@
                     },
                     "membership": {
                         "$ref": "#/components/schemas/Membership"
+                    },
+                    "security_gate": {
+                        "$ref": "#/components/schemas/SecurityGate"
                     }
                 },
                 "type": "object"
@@ -4469,6 +6960,10 @@
                         "description": "Optional for phone credentials.",
                         "type": "string",
                         "example": "secret123"
+                    },
+                    "device_fingerprint": {
+                        "type": "string",
+                        "example": "device-123"
                     }
                 },
                 "type": "object"
@@ -4480,6 +6975,41 @@
                     },
                     "identity": {
                         "$ref": "#/components/schemas/Identity"
+                    },
+                    "security_gate": {
+                        "$ref": "#/components/schemas/SecurityGate"
+                    }
+                },
+                "type": "object"
+            },
+            "IdentityUnlockRequest": {
+                "required": [
+                    "method"
+                ],
+                "properties": {
+                    "method": {
+                        "type": "string",
+                        "enum": [
+                            "pin",
+                            "agent",
+                            "biometric"
+                        ]
+                    },
+                    "secret": {
+                        "type": "string",
+                        "example": "1234"
+                    },
+                    "device_fingerprint": {
+                        "type": "string",
+                        "example": "device-123"
+                    }
+                },
+                "type": "object"
+            },
+            "IdentityUnlockResponse": {
+                "properties": {
+                    "security_gate": {
+                        "$ref": "#/components/schemas/SecurityGate"
                     }
                 },
                 "type": "object"
@@ -5596,6 +8126,127 @@
                     }
                 },
                 "type": "object"
+            },
+            "IdentityPanicLockResponse": {
+                "properties": {
+                    "security_gate": {
+                        "$ref": "#/components/schemas/SecurityGate"
+                    }
+                },
+                "type": "object"
+            },
+            "IdentitySecurityStatusResponse": {
+                "properties": {
+                    "security_gate": {
+                        "$ref": "#/components/schemas/SecurityGate"
+                    }
+                },
+                "type": "object"
+            },
+            "QuestionTemplateWriteRequest": {
+                "required": [
+                    "key",
+                    "text",
+                    "type",
+                    "bloc_key"
+                ],
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "number",
+                            "boolean",
+                            "select",
+                            "multiselect",
+                            "date",
+                            "file",
+                            "scale",
+                            "consent"
+                        ]
+                    },
+                    "bloc_key": {
+                        "type": "string"
+                    },
+                    "answer_target": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "order": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "risk_weight": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "is_entry_point": {
+                        "type": "boolean"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "visible_if": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "routing_rules": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "outcome_message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "media_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "media_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "specialties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "max": {
+                        "type": "number",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -5618,6 +8269,34 @@
         {
             "name": "QR Codes",
             "description": "QR Codes"
+        },
+        {
+            "name": "Admin - Sessions",
+            "description": "Admin - Sessions"
+        },
+        {
+            "name": "Admin - Facts",
+            "description": "Admin - Facts"
+        },
+        {
+            "name": "Admin - Model Versions",
+            "description": "Admin - Model Versions"
+        },
+        {
+            "name": "Admin - Question Groups",
+            "description": "Admin - Question Groups"
+        },
+        {
+            "name": "Admin - Questions",
+            "description": "Admin - Questions"
+        },
+        {
+            "name": "Admin - Risk Models",
+            "description": "Admin - Risk Models"
+        },
+        {
+            "name": "Admin - Thematic Blocs",
+            "description": "Admin - Thematic Blocs"
         },
         {
             "name": "Answers",

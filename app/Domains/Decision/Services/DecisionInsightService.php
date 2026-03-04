@@ -10,7 +10,6 @@ use App\Domains\Evaluation\Services\RiskModelService;
 use App\Domains\Evaluation\Services\FactsEngine;
 use App\Domains\Evaluation\Services\RiskEngine;
 use App\Domains\Evaluation\Services\FlagEngine;
-use App\Domains\Evaluation\Services\DataQualityEngine;
 use App\Domains\Report\Models\Report;
 
 class DecisionInsightService
@@ -161,7 +160,7 @@ class DecisionInsightService
         $facts = app(FactsEngine::class)->evaluate($session);
         $risk = app(RiskEngine::class)->evaluate($session, $facts);
         $flags = app(FlagEngine::class)->evaluate($session, $facts);
-        $quality = app(DataQualityEngine::class)->assess($session);
+        $quality = app(DataQualityService::class)->assess($session);
 
         return [
             'facts' => $facts,

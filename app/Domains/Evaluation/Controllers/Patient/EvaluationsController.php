@@ -7,6 +7,7 @@ use App\Domains\Evaluation\DTOs\Patient\EvaluationSessionStartRequest;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Services\EvaluationFlowService;
 use App\Domains\Evaluation\Services\IdempotencyService;
+use App\Domains\Evaluation\Http\Concerns\ValidatesEvaluationSession;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,8 @@ use OpenApi\Annotations as OA;
 
 class EvaluationsController extends Controller
 {
+    use ValidatesEvaluationSession;
+
     /**
      * @OA\Post(
      *     path="/evaluations/start",
@@ -296,44 +299,4 @@ class EvaluationsController extends Controller
         return response()->json($result['payload'], $result['status']);
     }
 
-    private function ensureSessionAccess(Request $request, EvaluationSession $session): void
-    {
-        try {
-            $this->authorize('view', $session);
-        } catch (AuthorizationException $exception) {
-            abort(404, 'Session introuvable.');
-        }
-
-        if ($this->tokenInvalidatesSession($request, $session)) {
-            $this->expireSession($session);
-            abort(410, 'Session invalidee.');
-        }
-
-        if ($session->isExpired()) {
-            $this->expireSession($session);
-            abort(410, 'Session expiree.');
-        }
-    }
-
-    private function tokenInvalidatesSession(Request $request, EvaluationSession $session): bool
-    {
-        $tokenId = $request->user()?->currentAccessToken()?->id;
-        $context = $session->context ?? [];
-        $sessionTokenId = is_array($context) ? ($context['token_id'] ?? null) : null;
-
-        return $tokenId !== null
-            && $sessionTokenId !== null
-            && (int) $tokenId !== (int) $sessionTokenId;
-    }
-
-    private function expireSession(EvaluationSession $session): void
-    {
-        if ($session->status !== 'expired') {
-            $updates = ['status' => 'expired'];
-            if ($session->expires_at === null) {
-                $updates['expires_at'] = now();
-            }
-            $session->update($updates);
-        }
-    }
 }

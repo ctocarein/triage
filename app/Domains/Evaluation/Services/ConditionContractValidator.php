@@ -2,8 +2,12 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Support\HandlesConditionArrays;
+
 class ConditionContractValidator
 {
+    use HandlesConditionArrays;
+
     /**
      * @var array<int, string>
      */
@@ -37,6 +41,54 @@ class ConditionContractValidator
         'age_lt',
         'age_eq',
     ];
+
+    /**
+     * @return array<int, string>
+     */
+    /**
+     * Extract all question keys referenced by `source: "question"` nodes in a condition tree.
+     *
+     * @return array<int, string>
+     */
+    public function extractQuestionRefs(mixed $condition): array
+    {
+        $refs = [];
+        $this->collectQuestionRefs($condition, $refs);
+        return array_values(array_unique($refs));
+    }
+
+    private function collectQuestionRefs(mixed $condition, array &$refs): void
+    {
+        if (!is_array($condition)) {
+            return;
+        }
+
+        if ($this->isList($condition)) {
+            foreach ($condition as $item) {
+                $this->collectQuestionRefs($item, $refs);
+            }
+            return;
+        }
+
+        if (($condition['source'] ?? 'question') === 'question') {
+            $key = $condition['key'] ?? $condition['question'] ?? null;
+            if (is_string($key) && $key !== '') {
+                $refs[] = $key;
+            }
+        }
+
+        foreach (['all', 'any'] as $groupKey) {
+            if (isset($condition[$groupKey]) && is_array($condition[$groupKey])) {
+                foreach ($condition[$groupKey] as $item) {
+                    $this->collectQuestionRefs($item, $refs);
+                }
+            }
+        }
+
+        if (array_key_exists('not', $condition)) {
+            $this->collectQuestionRefs($condition['not'], $refs);
+        }
+    }
 
     /**
      * @return array<int, string>
@@ -123,9 +175,5 @@ class ConditionContractValidator
         return [];
     }
 
-    private function isList(array $value): bool
-    {
-        return array_keys($value) === range(0, count($value) - 1);
-    }
 }
 

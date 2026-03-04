@@ -281,10 +281,10 @@ use OpenApi\Annotations as OA;
  * @OA\Schema(
  *     schema="EvaluationAdvanceRequest",
  *     type="object",
- *     required={"question_id"},
- *     @OA\Property(property="question_id", type="integer"),
+ *     required={"dynamic_question_template_id"},
+ *     @OA\Property(property="dynamic_question_template_id", type="integer"),
  *     @OA\Property(property="value"),
- *     @OA\Property(property="file_ids", type="array", @OA\Items(type="string", format="uuid")),
+ *     @OA\Property(property="file_ids", type="array", nullable=true, @OA\Items(type="string", format="uuid")),
  *     @OA\Property(property="is_skipped", type="boolean")
  * )
  * @OA\Schema(
@@ -307,7 +307,10 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="evaluation_session_id", type="integer"),
  *     @OA\Property(property="dynamic_question_template_id", type="integer"),
  *     @OA\Property(property="value", type="object", nullable=true),
+ *     @OA\Property(property="file_ids", type="array", nullable=true, @OA\Items(type="string", format="uuid")),
  *     @OA\Property(property="is_skipped", type="boolean"),
+ *     @OA\Property(property="status", type="string", enum={"answered","skipped","invalidated","non_applicable"}),
+ *     @OA\Property(property="order", type="integer", nullable=true),
  *     @OA\Property(property="created_at", type="string", format="date-time"),
  *     @OA\Property(property="updated_at", type="string", format="date-time")
  * )
@@ -795,6 +798,30 @@ use OpenApi\Annotations as OA;
  *     schema="IdentitySecurityStatusResponse",
  *     type="object",
  *     @OA\Property(property="security_gate", ref="#/components/schemas/SecurityGate")
+ * )
+ * @OA\Schema(
+ *     schema="QuestionTemplateWriteRequest",
+ *     type="object",
+ *     required={"key","text","type","bloc_key"},
+ *     @OA\Property(property="key",            type="string"),
+ *     @OA\Property(property="text",           type="string"),
+ *     @OA\Property(property="type",           type="string", enum={"text","number","boolean","select","multiselect","date","file","scale","consent"}),
+ *     @OA\Property(property="bloc_key",       type="string"),
+ *     @OA\Property(property="answer_target",  type="string", nullable=true),
+ *     @OA\Property(property="order",          type="integer", nullable=true),
+ *     @OA\Property(property="risk_weight",    type="number", format="float", nullable=true),
+ *     @OA\Property(property="is_entry_point", type="boolean"),
+ *     @OA\Property(property="is_active",      type="boolean"),
+ *     @OA\Property(property="options",        type="array", nullable=true, @OA\Items(type="object")),
+ *     @OA\Property(property="visible_if",     type="array", nullable=true, @OA\Items(type="object")),
+ *     @OA\Property(property="routing_rules",  type="array", nullable=true, @OA\Items(type="object")),
+ *     @OA\Property(property="group_id",       type="integer", nullable=true),
+ *     @OA\Property(property="outcome_message",type="string", nullable=true),
+ *     @OA\Property(property="media_type",     type="string", nullable=true),
+ *     @OA\Property(property="media_url",      type="string", nullable=true),
+ *     @OA\Property(property="specialties",    type="array", nullable=true, @OA\Items(type="string")),
+ *     @OA\Property(property="min",            type="number", nullable=true),
+ *     @OA\Property(property="max",            type="number", nullable=true)
  * )
  */
 final class OpenApiSpec {}

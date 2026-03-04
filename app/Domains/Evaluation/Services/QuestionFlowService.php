@@ -39,7 +39,7 @@ class QuestionFlowService
 
         foreach ($session->answers()->with('question:id,key')->get() as $answer) {
             $normalized = $this->normalizeAnswerValue($answer->value);
-            $answersById[$answer->question_id] = $normalized;
+            $answersById[$answer->dynamic_question_template_id] = $normalized;
 
             $questionKey = $answer->question?->key;
             if ($questionKey) {
@@ -587,7 +587,7 @@ class QuestionFlowService
 
     public function calculateScore(EvaluationSession $session): array
     {
-        $answers = $session->answers->keyBy('question_id');
+        $answers = $session->answers->keyBy('dynamic_question_template_id');
         $blocs = [];
 
         foreach ($this->getAllTemplates() as $question) {

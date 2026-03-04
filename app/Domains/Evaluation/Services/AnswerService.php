@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Domains\Evaluation\Enums\AnswerStatus;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
@@ -19,7 +20,7 @@ class AnswerService
     public function saveAnswer(array $data): EvaluationAnswer
     {
         $session = EvaluationSession::findOrFail($data['evaluation_session_id']);
-        $questionId = $data['question_id'] ?? $data['dynamic_question_template_id'] ?? null;
+        $questionId = $data['dynamic_question_template_id'] ?? null;
 
         if (! $questionId) {
             throw new \Exception('Question id manquant.');
@@ -33,7 +34,7 @@ class AnswerService
 
         $existing = EvaluationAnswer::where([
             'evaluation_session_id' => $session->id,
-            'question_id' => $question->id,
+            'dynamic_question_template_id' => $question->id,
         ])->first();
 
         $payload = [
@@ -50,9 +51,6 @@ class AnswerService
             if (! $existing->order) {
                 $existing->forceFill(['order' => $this->resolveNextOrder($session)])->save();
             }
-            if (! $existing->dynamic_question_template_id) {
-                $existing->forceFill(['dynamic_question_template_id' => $question->id])->save();
-            }
             if ($valueChanged) {
                 $this->invalidateDownstreamAnswers($session, (int) ($existing->order ?? 0));
             }
@@ -64,7 +62,6 @@ class AnswerService
         // Nouvelle reponse
         $answer = EvaluationAnswer::create([
             'evaluation_session_id' => $session->id,
-            'question_id' => $question->id,
             'dynamic_question_template_id' => $question->id,
             'value' => $payload['value'],
             'file_ids' => $payload['file_ids'],
@@ -91,10 +88,14 @@ class AnswerService
     protected function resolveStatus(array $data): string
     {
         if (!empty($data['status'])) {
-            return (string) $data['status'];
+            $raw = $data['status'] instanceof AnswerStatus
+                ? $data['status']->value
+                : (string) $data['status'];
+
+            return AnswerStatus::from($raw)->value;
         }
 
-        return !empty($data['is_skipped']) ? 'skipped' : 'answered';
+        return !empty($data['is_skipped']) ? AnswerStatus::Skipped->value : AnswerStatus::Answered->value;
     }
 
     protected function resolveNextOrder(EvaluationSession $session): int
@@ -121,7 +122,7 @@ class AnswerService
             return;
         }
 
-        $update = ['status' => 'invalidated'];
+        $update = ['status' => AnswerStatus::Invalidated->value];
         if ((bool) config('vnext.purge_invalidated', false)) {
             $update['value'] = null;
             $update['file_ids'] = null;
@@ -130,7 +131,7 @@ class AnswerService
 
         $session->answers()
             ->where('order', '>', $order)
-            ->whereNotIn('status', ['invalidated'])
+            ->whereNotIn('status', [AnswerStatus::Invalidated->value])
             ->update($update);
     }
 }

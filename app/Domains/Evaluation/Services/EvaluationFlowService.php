@@ -9,7 +9,6 @@ use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Decision\Services\DecisionInsightService;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Models\EvaluationSnapshot;
 use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
 use App\Domains\Report\Models\Report;
@@ -19,10 +18,8 @@ use App\Domains\Ambassador\Domain\Events\ReferralUsed;
 use App\Services\Decisions\DecisionPathEngine;
 use App\Domains\Evaluation\Services\ProfileUpdaterService;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\FactsEngine;
-use App\Domains\Evaluation\Services\RiskEngine;
-use App\Domains\Evaluation\Services\DataQualityEngine;
-use App\Domains\Evaluation\Services\FlagEngine;
+use App\Domains\Evaluation\Enums\AnswerStatus;
+use App\Domains\Evaluation\Services\EvaluationSnapshotService;
 
 class EvaluationFlowService
 {
@@ -31,7 +28,8 @@ class EvaluationFlowService
         protected DecisionInsightService $insightService,
         protected ReportGenerationService $reportService,
         protected ProfileUpdaterService $profileUpdater,
-        protected QuestionFlowService $questionFlow
+        protected QuestionFlowService $questionFlow,
+        protected EvaluationSnapshotService $snapshotService
     ) {
     }
 
@@ -350,7 +348,7 @@ class EvaluationFlowService
         }
 
         $session->update([
-            'current_question_id' => $answer->question_id,
+            'current_question_id' => $answer->dynamic_question_template_id,
         ]);
 
         $routing = null;
@@ -534,7 +532,7 @@ class EvaluationFlowService
         ?Report $report,
         ?string $message
     ): array {
-        $this->maybeRecordVnextSnapshot($session);
+        $this->snapshotService->maybeRecord($session);
 
         $payload = [
             'session' => $this->mapSession($session),
@@ -550,64 +548,14 @@ class EvaluationFlowService
         return $payload;
     }
 
-    protected function maybeRecordVnextSnapshot(EvaluationSession $session): void
-    {
-        if (! $this->isVnextShadowMode()) {
-            return;
-        }
-
-        $facts = app(FactsEngine::class)->evaluate($session);
-        $risk = app(RiskEngine::class)->evaluate($session, $facts);
-        $flags = app(FlagEngine::class)->evaluate($session, $facts);
-        $quality = app(DataQualityEngine::class)->assess($session);
-
-        $snapshot = [
-            'facts' => $facts,
-            'risk' => $risk,
-            'flags' => $flags,
-            'versions' => [
-                'protocol' => $this->resolveProtocolVersion($session),
-                'risk_model_version_id' => $session->risk_model_version ?? $this->resolveActiveVersionId('risk_model'),
-                'engine' => 'vnext_shadow',
-            ],
-            'confidence_score' => $quality['data_quality_score'] ?? null,
-        ];
-
-        $hash = hash('sha256', json_encode($snapshot));
-
-        EvaluationSnapshot::create([
-            'evaluation_session_id' => $session->id,
-            'facts' => $facts,
-            'risk' => $risk,
-            'flags' => $flags,
-            'versions' => $snapshot['versions'],
-            'confidence_score' => $snapshot['confidence_score'],
-            'snapshot_hash' => $hash,
-        ]);
-    }
-
-    protected function isVnextShadowMode(): bool
-    {
-        return (bool) config('vnext.shadow_mode', false);
-    }
-
-    protected function resolveProtocolVersion(EvaluationSession $session): ?string
-    {
-        if ($session->decision_path_key && $session->decision_path_version) {
-            return $session->decision_path_key . '@' . $session->decision_path_version;
-        }
-
-        return $session->decision_path_key ?: null;
-    }
-
     protected function recordPathTrace(EvaluationSession $session, EvaluationAnswer $answer, ?array $routing): void
     {
         $trace = $session->path_trace ?? [];
         $trace[] = [
-            'question_id' => $answer->question_id,
+            'question_id' => $answer->dynamic_question_template_id,
             'question_key' => $answer->question?->key,
             'node_key' => $session->current_node_key,
-            'status' => $answer->status,
+            'status' => $answer->status instanceof AnswerStatus ? $answer->status->value : $answer->status,
             'order' => $answer->order,
             'routing' => $routing,
             'at' => now()->toISOString(),
@@ -642,7 +590,7 @@ class EvaluationFlowService
         foreach ($questions as $question) {
             $existing = EvaluationAnswer::query()->where([
                 'evaluation_session_id' => $session->id,
-                'question_id' => $question->id,
+                'dynamic_question_template_id' => $question->id,
             ])->first();
 
             if ($existing) {
@@ -651,12 +599,11 @@ class EvaluationFlowService
 
             EvaluationAnswer::create([
                 'evaluation_session_id' => $session->id,
-                'question_id' => $question->id,
                 'dynamic_question_template_id' => $question->id,
                 'value' => null,
                 'file_ids' => null,
                 'is_skipped' => true,
-                'status' => 'non_applicable',
+                'status' => AnswerStatus::NonApplicable->value,
                 'order' => null,
             ]);
         }
@@ -680,10 +627,10 @@ class EvaluationFlowService
         foreach ($questions as $question) {
             EvaluationAnswer::query()
                 ->where('evaluation_session_id', $session->id)
-                ->where('question_id', $question->id)
-                ->where('status', 'non_applicable')
+                ->where('dynamic_question_template_id', $question->id)
+                ->where('status', AnswerStatus::NonApplicable->value)
                 ->update([
-                    'status' => 'invalidated',
+                    'status' => AnswerStatus::Invalidated->value,
                     'value' => null,
                     'file_ids' => null,
                     'is_skipped' => false,
@@ -709,7 +656,7 @@ class EvaluationFlowService
             'catalog_version' => $session->catalog_version,
             'risk_model_version' => $session->risk_model_version,
             'versions' => [
-                'protocol' => $this->resolveProtocolVersion($session),
+                'protocol' => $this->snapshotService->resolveProtocolVersion($session),
                 'catalog_version_id' => $session->catalog_version,
                 'risk_model_version_id' => $session->risk_model_version,
             ],
@@ -801,7 +748,7 @@ class EvaluationFlowService
 
     protected function resolveNodeForBlocKey(EvaluationSession $session, string $blocKey): ?DecisionNode
     {
-        $answeredIds = $session->answers()->pluck('question_id')->all();
+        $answeredIds = $session->answers()->pluck('dynamic_question_template_id')->all();
         $question = DynamicQuestionTemplate::query()
             ->where('bloc_key', $blocKey)
             ->whereNotIn('id', $answeredIds)
@@ -871,7 +818,7 @@ class EvaluationFlowService
 
     protected function resolveFirstVisibleQuestionInBloc(EvaluationSession $session, string $blocKey): ?DynamicQuestionTemplate
     {
-        $answeredIds = $session->answers()->pluck('question_id')->all();
+        $answeredIds = $session->answers()->pluck('dynamic_question_template_id')->all();
         $context = $this->questionFlow->getSessionContext($session);
 
         return DynamicQuestionTemplate::query()

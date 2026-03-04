@@ -2,13 +2,18 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Support\HandlesConditionArrays;
+
 class RoutingRulesValidator
 {
-    private const ALLOWED_OPERATORS = [
-        '=', '!=', '>', '<', '>=', '<=', 'in', 'not_in',
-        'age_gte', 'age_gt', 'age_lte', 'age_lt', 'age_eq',
-        'empty', 'not_empty',
-    ];
+    use HandlesConditionArrays;
+
+    private ConditionContractValidator $conditionValidator;
+
+    public function __construct(?ConditionContractValidator $conditionValidator = null)
+    {
+        $this->conditionValidator = $conditionValidator ?? new ConditionContractValidator();
+    }
 
     /**
      * @param mixed $rules
@@ -54,10 +59,13 @@ class RoutingRulesValidator
             if (!array_key_exists('if', $rule)) {
                 $errors[] = "routing_rules[{$index}].if est requis pour {$questionKey}.";
             } else {
-                $errors = array_merge(
-                    $errors,
-                    $this->validateCondition($rule['if'], "routing_rules[{$index}].if", $questionKey)
+                $condErrors = $this->conditionValidator->validate(
+                    $rule['if'],
+                    "routing_rules[{$index}].if"
                 );
+                foreach ($condErrors as $err) {
+                    $errors[] = $err . " (question: {$questionKey})";
+                }
             }
 
             if (!array_key_exists('next', $rule)) {
@@ -71,72 +79,6 @@ class RoutingRulesValidator
         }
 
         return $errors;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function validateCondition(mixed $condition, string $path, string $questionKey): array
-    {
-        if (is_bool($condition) || is_string($condition) || is_int($condition) || is_float($condition)) {
-            return [];
-        }
-
-        if (!is_array($condition)) {
-            return ["{$path} doit etre un booleen, un scalaire ou un objet pour {$questionKey}."];
-        }
-
-        if ($this->isList($condition)) {
-            return [];
-        }
-
-        $allowedKeys = ['operator', 'value', 'all', 'any'];
-        $unknownKeys = array_diff(array_keys($condition), $allowedKeys);
-        if (!empty($unknownKeys)) {
-            return ["{$path} contient des cles interdites (" . implode(', ', $unknownKeys) . ") pour {$questionKey}."];
-        }
-
-        if (isset($condition['all']) || isset($condition['any'])) {
-            $errors = [];
-
-            if (isset($condition['all'])) {
-                if (!is_array($condition['all']) || !$this->isList($condition['all'])) {
-                    $errors[] = "{$path}.all doit etre une liste pour {$questionKey}.";
-                } else {
-                    foreach ($condition['all'] as $index => $item) {
-                        $errors = array_merge(
-                            $errors,
-                            $this->validateCondition($item, "{$path}.all[{$index}]", $questionKey)
-                        );
-                    }
-                }
-            }
-
-            if (isset($condition['any'])) {
-                if (!is_array($condition['any']) || !$this->isList($condition['any'])) {
-                    $errors[] = "{$path}.any doit etre une liste pour {$questionKey}.";
-                } else {
-                    foreach ($condition['any'] as $index => $item) {
-                        $errors = array_merge(
-                            $errors,
-                            $this->validateCondition($item, "{$path}.any[{$index}]", $questionKey)
-                        );
-                    }
-                }
-            }
-
-            return $errors;
-        }
-
-        if (array_key_exists('operator', $condition) || array_key_exists('value', $condition)) {
-            $operator = $condition['operator'] ?? '=';
-            if (!is_string($operator) || !in_array($operator, self::ALLOWED_OPERATORS, true)) {
-                return ["{$path}.operator invalide pour {$questionKey} (valeurs: " . implode(', ', self::ALLOWED_OPERATORS) . ")."];
-            }
-            return [];
-        }
-
-        return [];
     }
 
     /**
@@ -185,10 +127,5 @@ class RoutingRulesValidator
         }
 
         return ["{$path} doit utiliser un prefixe explicite (question:, bloc:, level:) ou end_session pour {$questionKey}."];
-    }
-
-    private function isList(array $value): bool
-    {
-        return array_keys($value) === range(0, count($value) - 1);
     }
 }

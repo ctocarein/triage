@@ -18,7 +18,7 @@ class EvaluationAdvanceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'question_id' => ['required', 'integer', 'exists:dynamic_question_templates,id'],
+            'dynamic_question_template_id' => ['required', 'integer', 'exists:dynamic_question_templates,id'],
             'value' => ['nullable'],
             'file_ids' => ['nullable', 'array'],
             'file_ids.*' => ['uuid', Rule::exists('uploads', 'file_id')],

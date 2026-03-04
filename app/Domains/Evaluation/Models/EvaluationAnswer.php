@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\Models;
 
+use App\Domains\Evaluation\Enums\AnswerStatus;
 use Illuminate\Database\Eloquent\Model;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
@@ -26,6 +27,7 @@ class EvaluationAnswer extends Model
         'value' => 'array',
         'file_ids' => 'array',
         'is_skipped' => 'boolean',
+        'status' => AnswerStatus::class,
     ];
 
     // Relations
@@ -33,9 +35,11 @@ class EvaluationAnswer extends Model
     {
         return $this->belongsTo(EvaluationSession::class, 'evaluation_session_id');
     }
+
+    /** FK canonique : dynamic_question_template_id. La colonne question_id est dépréciée et sera supprimée. */
     public function question()
     {
-        return $this->belongsTo(DynamicQuestionTemplate::class, 'question_id');
+        return $this->belongsTo(DynamicQuestionTemplate::class, 'dynamic_question_template_id');
     }
 
 
