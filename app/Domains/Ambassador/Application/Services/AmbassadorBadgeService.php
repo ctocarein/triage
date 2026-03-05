@@ -20,6 +20,27 @@ class AmbassadorBadgeService
     }
 
     /**
+     * Attribue le badge de bienvenue lors de l'activation du compte ambassadrice.
+     */
+    public function awardWelcomeBadge(Ambassador $ambassador): void
+    {
+        $this->awardBadge($ambassador, 'welcome', []);
+    }
+
+    /**
+     * Attribue le badge de premier lien lors de la création d'un referral.
+     */
+    public function awardFirstLinkBadge(Ambassador $ambassador): void
+    {
+        $referralCount = $ambassador->referrals()->count();
+        if ($referralCount >= 1) {
+            $this->awardBadge($ambassador, 'first_link_created', [
+                'referral_count' => $referralCount,
+            ]);
+        }
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function recompute(Ambassador $ambassador): array
@@ -28,14 +49,39 @@ class AmbassadorBadgeService
         $startedCount = (clone $usages)->where('event_type', 'started')->count();
         $completedCount = (clone $usages)->where('event_type', 'completed')->count();
 
+        // --- Activation ---
+        $this->awardBadge($ambassador, 'welcome', []);
+
+        // --- Referrals créés ---
+        $referralCount = $ambassador->referrals()->count();
+        if ($referralCount >= 1) {
+            $this->awardBadge($ambassador, 'first_link_created', [
+                'referral_count' => $referralCount,
+            ]);
+        }
+
+        // --- Partages (clics sur le lien) ---
         if ($startedCount >= 1) {
             $this->awardBadge($ambassador, 'first_share', [
                 'started_usages' => $startedCount,
             ]);
         }
 
+        // --- Évaluations complétées ---
         if ($completedCount >= 1) {
             $this->awardBadge($ambassador, 'first_completion', [
+                'completed_usages' => $completedCount,
+            ]);
+        }
+
+        if ($completedCount >= 10) {
+            $this->awardBadge($ambassador, 'top_10', [
+                'completed_usages' => $completedCount,
+            ]);
+        }
+
+        if ($completedCount >= 50) {
+            $this->awardBadge($ambassador, 'top_50', [
                 'completed_usages' => $completedCount,
             ]);
         }
@@ -46,9 +92,16 @@ class AmbassadorBadgeService
             ]);
         }
 
+        // --- Streaks ---
         if ($this->hasCompletedStreak($ambassador, 7)) {
             $this->awardBadge($ambassador, 'streak_7_days', [
                 'streak_days' => 7,
+            ]);
+        }
+
+        if ($this->hasCompletedStreak($ambassador, 30)) {
+            $this->awardBadge($ambassador, 'streak_30_days', [
+                'streak_days' => 30,
             ]);
         }
 

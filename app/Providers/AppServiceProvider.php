@@ -11,7 +11,11 @@ use App\Domains\Organization\Models\Organization;
 use App\Domains\Report\Models\Report;
 use App\Domains\Engagement\Infrastructure\Persistence\Models\ScanEvent;
 use App\Domains\Ambassador\Infrastructure\Providers\AmbassadorServiceProvider;
+use App\Domains\Ambassador\Domain\Events\AmbassadorActivated;
+use App\Domains\Ambassador\Domain\Events\ReferralCreated;
 use App\Domains\Ambassador\Domain\Events\ReferralUsed;
+use App\Domains\Ambassador\Application\Listeners\HandleAmbassadorActivated;
+use App\Domains\Ambassador\Application\Listeners\HandleReferralCreated;
 use App\Domains\Ambassador\Application\Listeners\HandleReferralUsed;
 use App\Domains\ExternalApi\Evaluation\Domain\Events\EvaluationCompleted;
 use App\Domains\ExternalApi\Integration\Application\HandleEvaluationCompleted;
@@ -57,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
         Report::observe(OrganizationDashboardCacheObserver::class);
         EvaluationSession::observe(OrganizationDashboardCacheObserver::class);
 
+        Event::listen(AmbassadorActivated::class, HandleAmbassadorActivated::class);
+        Event::listen(ReferralCreated::class, HandleReferralCreated::class);
         Event::listen(ReferralUsed::class, HandleReferralUsed::class);
         Event::listen(EvaluationCompleted::class, HandleEvaluationCompleted::class);
 
