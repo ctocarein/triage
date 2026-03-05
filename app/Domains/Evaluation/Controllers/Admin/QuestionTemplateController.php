@@ -5,6 +5,8 @@ namespace App\Domains\Evaluation\Controllers\Admin;
 use App\Domains\Evaluation\DTOs\Admin\QuestionTemplateRequest;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\CatalogConsistencyChecker;
+use App\Domains\Evaluation\Services\ConditionContractValidator;
+use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,14 +100,18 @@ class QuestionTemplateController extends Controller
      *     @OA\Response(response=422, description="Validation echouee")
      * )
      */
-    public function store(QuestionTemplateRequest $request, CatalogConsistencyChecker $checker): JsonResponse
-    {
-        $question = DynamicQuestionTemplate::create($request->validated());
+    public function store(
+        QuestionTemplateRequest $request,
+        CatalogConsistencyChecker $checker,
+        QuestionTemplateContractValidator $contractValidator
+    ): JsonResponse {
+        $data     = $contractValidator->normalize($request->validated());
+        $question = DynamicQuestionTemplate::create($data);
 
         $warnings = $checker->check();
 
         return response()->json([
-            'question' => $question,
+            'question'         => $question,
             'catalog_warnings' => $warnings,
         ], 201);
     }
@@ -127,14 +133,16 @@ class QuestionTemplateController extends Controller
     public function update(
         QuestionTemplateRequest $request,
         DynamicQuestionTemplate $question,
-        CatalogConsistencyChecker $checker
+        CatalogConsistencyChecker $checker,
+        QuestionTemplateContractValidator $contractValidator
     ): JsonResponse {
-        $question->update($request->validated());
+        $data = $contractValidator->normalize($request->validated());
+        $question->update($data);
 
         $warnings = $checker->check();
 
         return response()->json([
-            'question' => $question->fresh('group'),
+            'question'         => $question->fresh('group'),
             'catalog_warnings' => $warnings,
         ]);
     }
@@ -147,22 +155,68 @@ class QuestionTemplateController extends Controller
      *     tags={"Admin - Questions"},
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Question supprimee"),
-     *     @OA\Response(response=409, description="Question referencee dans des reponses existantes"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Question supprimee (avec avertissements optionnels si referencee dans visible_if)",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(
+     *                 property="warnings",
+     *                 nullable=true,
+     *                 type="object",
+     *                 @OA\Property(property="message", type="string"),
+     *                 @OA\Property(property="referenced_by", type="array", @OA\Items(type="string"))
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Suppression bloquee : reponses existantes ou ciblee dans routing_rules d'autres questions",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string"),
+     *             @OA\Property(property="referenced_by", type="array", nullable=true, @OA\Items(type="string"))
+     *         )
+     *     ),
      *     @OA\Response(response=404, description="Non trouvee")
      * )
      */
-    public function destroy(DynamicQuestionTemplate $question): JsonResponse
-    {
+    public function destroy(
+        DynamicQuestionTemplate $question,
+        ConditionContractValidator $conditionValidator
+    ): JsonResponse {
         if ($question->answers()->exists()) {
             return response()->json([
                 'error' => 'Cette question est referencee dans des reponses existantes et ne peut pas etre supprimee.',
             ], 409);
         }
 
+        // Bloquer si d'autres questions ciblent cette clé dans routing_rules
+        $routingRefs = DynamicQuestionTemplate::where('key', '!=', $question->key)
+            ->where('routing_rules', 'like', "%question:{$question->key}%")
+            ->pluck('key')
+            ->all();
+
+        if ($routingRefs !== []) {
+            return response()->json([
+                'error'        => 'Cette question est ciblee dans les routing_rules d\'autres questions. Corrigez-les d\'abord.',
+                'referenced_by' => $routingRefs,
+            ], 409);
+        }
+
+        // Avertissement si d'autres questions la référencent dans visible_if
+        $visibleIfWarnings = $this->findVisibleIfRefs($question->key, $conditionValidator);
+
         $question->delete();
 
-        return response()->json(['message' => 'Question supprimee.']);
+        $response = ['message' => 'Question supprimee.'];
+        if ($visibleIfWarnings !== []) {
+            $response['warnings'] = [
+                'message'       => 'Des questions referencent cette cle dans leur visible_if. Verifiez le catalogue.',
+                'referenced_by' => $visibleIfWarnings,
+            ];
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -202,5 +256,36 @@ class QuestionTemplateController extends Controller
         return response()->json([
             'errors' => $checker->check(),
         ]);
+    }
+
+    /**
+     * Retourne les clés des questions qui référencent $targetKey dans leur visible_if.
+     *
+     * @return array<int, string>
+     */
+    private function findVisibleIfRefs(string $targetKey, ConditionContractValidator $validator): array
+    {
+        // Chargement ciblé : seulement les questions dont visible_if contient la clé
+        $candidates = DynamicQuestionTemplate::where('key', '!=', $targetKey)
+            ->whereNotNull('visible_if')
+            ->where('visible_if', 'like', "%{$targetKey}%")
+            ->get(['key', 'visible_if']);
+
+        $matches = [];
+        foreach ($candidates as $candidate) {
+            $decoded = is_string($candidate->visible_if)
+                ? json_decode($candidate->visible_if, true)
+                : $candidate->visible_if;
+
+            if (!is_array($decoded)) {
+                continue;
+            }
+
+            if (in_array($targetKey, $validator->extractQuestionRefs($decoded), true)) {
+                $matches[] = $candidate->key;
+            }
+        }
+
+        return $matches;
     }
 }

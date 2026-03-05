@@ -2,13 +2,13 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Domains\Evaluation\Concerns\ResolvesRiskModel;
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Models\ModelVersion;
-use App\Domains\Evaluation\Models\RiskModel;
 use App\Domains\Evaluation\Models\RiskSignal;
 
 class RiskEngine
 {
+    use ResolvesRiskModel;
     public function evaluate(EvaluationSession $session, array $facts): array
     {
         $riskModel = $this->resolveRiskModel();
@@ -61,26 +61,4 @@ class RiskEngine
         ];
     }
 
-    protected function resolveRiskModel(): ?RiskModel
-    {
-        return RiskModel::query()
-            ->where('is_active', true)
-            ->orderByDesc('id')
-            ->first();
-    }
-
-    protected function resolveRiskModelVersionId(EvaluationSession $session): ?int
-    {
-        if ($session->risk_model_version) {
-            return (int) $session->risk_model_version;
-        }
-
-        $default = ModelVersion::query()
-            ->where('name', 'risk_model')
-            ->where('is_active', true)
-            ->orderByDesc('released_at')
-            ->first();
-
-        return $default?->id;
-    }
 }

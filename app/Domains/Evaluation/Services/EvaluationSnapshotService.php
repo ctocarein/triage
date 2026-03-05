@@ -8,39 +8,40 @@ use App\Domains\Evaluation\Models\ModelVersion;
 
 class EvaluationSnapshotService
 {
+    public function __construct(
+        protected FactsEngine       $factsEngine,
+        protected RiskEngine        $riskEngine,
+        protected FlagEngine        $flagEngine,
+        protected DataQualityService $dataQuality,
+    ) {}
+
     public function maybeRecord(EvaluationSession $session): void
     {
         if (! $this->isEnabled()) {
             return;
         }
 
-        $facts = app(FactsEngine::class)->evaluate($session);
-        $risk = app(RiskEngine::class)->evaluate($session, $facts);
-        $flags = app(FlagEngine::class)->evaluate($session, $facts);
-        $quality = app(DataQualityService::class)->assess($session);
+        $facts   = $this->factsEngine->evaluate($session);
+        $risk    = $this->riskEngine->evaluate($session, $facts);
+        $flags   = $this->flagEngine->evaluate($session, $facts);
+        $quality = $this->dataQuality->assess($session);
 
-        $snapshot = [
-            'facts' => $facts,
-            'risk' => $risk,
-            'flags' => $flags,
-            'versions' => [
-                'protocol' => $this->resolveProtocolVersion($session),
-                'risk_model_version_id' => $session->risk_model_version ?? $this->resolveActiveVersionId('risk_model'),
-                'engine' => 'vnext_shadow',
-            ],
-            'confidence_score' => $quality['data_quality_score'] ?? null,
+        $versions = [
+            'protocol'              => $this->resolveProtocolVersion($session),
+            'risk_model_version_id' => $session->risk_model_version ?? $this->resolveActiveVersionId('risk_model'),
+            'engine'                => 'facts_signals',
         ];
 
-        $hash = hash('sha256', json_encode($snapshot));
+        $hash = hash('sha256', json_encode(compact('facts', 'risk', 'flags', 'versions')));
 
         EvaluationSnapshot::create([
             'evaluation_session_id' => $session->id,
-            'facts' => $facts,
-            'risk' => $risk,
-            'flags' => $flags,
-            'versions' => $snapshot['versions'],
-            'confidence_score' => $snapshot['confidence_score'],
-            'snapshot_hash' => $hash,
+            'facts'                 => $facts,
+            'risk'                  => $risk,
+            'flags'                 => $flags,
+            'versions'              => $versions,
+            'confidence_score'      => $quality['data_quality_score'] ?? null,
+            'snapshot_hash'         => $hash,
         ]);
     }
 

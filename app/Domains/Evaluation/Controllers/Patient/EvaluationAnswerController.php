@@ -114,8 +114,7 @@ class EvaluationAnswerController extends Controller
                 $remaining = DynamicQuestionTemplate::where('bloc_key', $blocKey)
                     ->whereNotIn('id', $answeredIds)
                     ->get()
-                    ->filter(function ($q) use ($session) {
-                        $flow = app(\App\Domains\Evaluation\Services\QuestionFlowService::class);
+                    ->filter(function ($q) use ($session, $flow) {
                         $context = $flow->getSessionContext($session);
                         return $flow->shouldBeVisible($q, $context['answers'], $context['profile']);
                     });

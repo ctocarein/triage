@@ -80,7 +80,7 @@ class AnswerService
         $risk = app(RiskModelService::class)->evaluate($session);
 
         $session->forceFill([
-            'score' => (int) round($risk['score_total']),
+            'score' => round($risk['score_total'], 2),
             'risk_level' => $risk['risk_level'],
         ])->save();
     }

@@ -43,9 +43,6 @@ class ConditionContractValidator
     ];
 
     /**
-     * @return array<int, string>
-     */
-    /**
      * Extract all question keys referenced by `source: "question"` nodes in a condition tree.
      *
      * @return array<int, string>

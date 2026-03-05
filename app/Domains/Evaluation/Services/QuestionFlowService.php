@@ -14,12 +14,13 @@ class QuestionFlowService
 {
     use ComparesValues;
     protected ?Collection $cachedTemplates = null;
-    protected BlocRulesService $blocRules;
 
-    public function __construct(BlocRulesService $blocRules)
-    {
-        $this->blocRules = $blocRules;
-    }
+    public function __construct(
+        protected BlocRulesService $blocRules,
+        protected AdaptiveSequencingService $adaptive,
+        protected RiskModelService $riskModel,
+    ) {}
+
 
     public function getEntryPoints(?string $target = null): Collection
     {
@@ -34,7 +35,7 @@ class QuestionFlowService
 
     public function getSessionContext(EvaluationSession $session): array
     {
-        $answersById = [];
+        $answersById  = [];
         $answersByKey = [];
 
         foreach ($session->answers()->with('question:id,key')->get() as $answer) {
@@ -47,14 +48,28 @@ class QuestionFlowService
             }
         }
 
+        $profile = [
+            'medical'  => optional($session->identity->medicalProfile)->toArray() ?? [],
+            'personal' => optional($session->identity->personalProfile)->toArray() ?? [],
+        ];
+
+        // Injecter les champs du profil persisté dans le contexte des réponses.
+        // Les réponses de la session courante restent prioritaires (opérateur ??=).
+        // Permet aux conditions visible_if (source:question) de résoudre les champs
+        // de profil capturés lors d'une session complète précédente.
+        foreach ($profile as $fields) {
+            foreach ($fields as $key => $value) {
+                if ($value !== null) {
+                    $answersByKey[$key] ??= $value;
+                }
+            }
+        }
+
         return [
-            'answers' => $answersByKey,
+            'answers'       => $answersByKey,
             'answers_by_id' => $answersById,
-            'profile' => [
-                'medical' => optional($session->identity->medicalProfile)->toArray() ?? [],
-                'personal' => optional($session->identity->personalProfile)->toArray() ?? [],
-            ],
-            'answeredIds' => array_keys($answersById),
+            'profile'       => $profile,
+            'answeredIds'   => array_keys($answersById),
         ];
     }
 
@@ -83,10 +98,21 @@ class QuestionFlowService
             $allTemplates = $allTemplates->whereIn('question_group_id', $groupIds);
         }
 
-        $blocs = $allTemplates->pluck('bloc_key')->filter()->unique();
+        $blocs = $allTemplates->pluck('bloc_key')->filter()->unique()->values();
         $forcedBloc = $this->consumeForcedBloc($session, $allTemplates, $context['answeredIds'], $context['answers'], $context['profile']);
         if ($forcedBloc) {
             $blocs = collect([$forcedBloc])->merge($blocs->reject(fn($bloc) => $bloc === $forcedBloc))->values();
+        } elseif ($this->isAdaptiveEnabled()) {
+            $unvisited = $blocs->reject(fn($bloc) => $session->hasVisitedBloc($bloc));
+            $sorted    = $this->adaptive->prioritizeBlocs(
+                $unvisited,
+                $allTemplates,
+                $context['answeredIds'],
+                $context['answers'],
+                $context['profile'],
+                $this,
+            );
+            $blocs = $sorted->merge($blocs->filter(fn($bloc) => $session->hasVisitedBloc($bloc)))->values();
         }
 
         foreach ($blocs as $blocKey) {
@@ -97,6 +123,14 @@ class QuestionFlowService
             }
             $candidates = $allTemplates->where('bloc_key', $blocKey)
                 ->filter(fn($q) => !in_array($q->id, $context['answeredIds']));
+
+            // Exclure les questions de profil dans les sessions non-globales :
+            // le profil a déjà été saisi lors de la session complete initiale.
+            if ($this->isProfileAlreadyCaptured($session)) {
+                $candidates = $candidates->filter(
+                    fn($q) => ! in_array($q->answer_target, ['personal_profile', 'medical_profile'], true)
+                );
+            }
 
             if ($candidates->isEmpty()) {
                 $session->addVisitedBloc($blocKey);
@@ -114,6 +148,24 @@ class QuestionFlowService
             $session->current_bloc = $blocKey;
             $session->save();
             return $question;
+        }
+
+        // Early exit adaptatif : si le potentiel restant ne peut plus changer
+        // de zone de risque, on complète directement.
+        if ($this->isEarlyExitEnabled()) {
+            $remainingBlocs = $blocs->reject(fn($b) => $session->hasVisitedBloc($b));
+            if (! $this->adaptive->canChangeRiskLevel(
+                (float) ($session->score ?? 0),
+                $remainingBlocs,
+                $allTemplates,
+                $context['answeredIds'],
+                $context['answers'],
+                $context['profile'],
+                $this,
+            )) {
+                $session->markCompleted();
+                return null;
+            }
         }
 
         $session->markCompleted();
@@ -162,6 +214,12 @@ class QuestionFlowService
         return $allTemplates
             ->where('bloc_key', $blocActuel)
             ->sortBy('order')
+            ->when(
+                $this->isProfileAlreadyCaptured($session),
+                fn ($c) => $c->filter(
+                    fn ($q) => ! in_array($q->answer_target, ['personal_profile', 'medical_profile'], true)
+                )
+            )
             ->filter(fn($q) => $this->shouldBeVisible($q, $context['answers'], $context['profile']))
             ->values()
             ->all();
@@ -191,7 +249,17 @@ class QuestionFlowService
 
     private function hasValueInProfile(DynamicQuestionTemplate $question, array $profile): bool
     {
-        return !empty($profile[$question->answer_target][$question->key] ?? null);
+        $type = match ($question->answer_target) {
+            'personal_profile' => 'personal',
+            'medical_profile'  => 'medical',
+            default            => null,
+        };
+
+        if ($type === null) {
+            return false;
+        }
+
+        return ! empty($profile[$type][$question->key] ?? null);
     }
 
     private function isVisible(array $visibleIf, array $answers, array $profile): bool
@@ -640,21 +708,16 @@ class QuestionFlowService
 
     public function evaluateGlobalRisk(EvaluationSession $session): array
     {
+        // total_score et level sont délégués à RiskModelService (source canonique)
+        // pour garantir la cohérence avec DecisionInsightService et le moteur facts-based.
+        // calculateScore() fournit uniquement la ventilation par bloc (usage UI).
+        $risk  = $this->riskModel->evaluate($session);
         $blocs = $this->calculateScore($session);
-        $totalScore = collect($blocs)->sum('score');
-
-        $level = 'non déterminé';
-        foreach (config('risk-level.levels') as $zone) {
-            if ($totalScore >= $zone['min'] && $totalScore <= $zone['max']) {
-                $level = $zone['name'];
-                break;
-            }
-        }
 
         return [
-            'total_score' => $totalScore,
-            'level' => $level,
-            'blocs' => $blocs
+            'total_score' => $risk['score_total'],
+            'level'       => $risk['risk_level'],
+            'blocs'       => $blocs,
         ];
     }
 
@@ -675,6 +738,23 @@ class QuestionFlowService
     protected function shouldSkipBloc(string $blocKey, EvaluationSession $session): bool
     {
         return $this->blocRules->shouldSkip($blocKey, $session);
+    }
+
+    protected function isProfileAlreadyCaptured(EvaluationSession $session): bool
+    {
+        // La session complete (type=complete) est la seule à collecter le profil.
+        // Toute session thématique réutilise le profil existant de l'identité.
+        return ! $session->isFullEvaluation();
+    }
+
+    protected function isAdaptiveEnabled(): bool
+    {
+        return (bool) config('vnext.adaptive_sequencing', false);
+    }
+
+    protected function isEarlyExitEnabled(): bool
+    {
+        return (bool) config('vnext.adaptive_early_exit', false);
     }
 }
 

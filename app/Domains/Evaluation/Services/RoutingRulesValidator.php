@@ -96,7 +96,7 @@ class RoutingRulesValidator
             return ["{$path} doit etre une string non vide pour {$questionKey}."];
         }
 
-        if ($next === 'end_session') {
+        if ($next === 'end_session' || str_starts_with($next, 'end_session:')) {
             return [];
         }
 

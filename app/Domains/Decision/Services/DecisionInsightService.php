@@ -7,9 +7,6 @@ use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Services\DataQualityService;
 use App\Domains\Evaluation\Services\RiskModelService;
-use App\Domains\Evaluation\Services\FactsEngine;
-use App\Domains\Evaluation\Services\RiskEngine;
-use App\Domains\Evaluation\Services\FlagEngine;
 use App\Domains\Report\Models\Report;
 
 class DecisionInsightService
@@ -31,6 +28,12 @@ class DecisionInsightService
 
         $requiresHuman = $this->requiresHumanValidation($risk['risk_level'], $confidence, $quality);
         $humanReason = $this->resolveHumanValidationReason($risk['risk_level'], $confidence, $quality);
+
+        $quality = array_merge($quality, $this->computeZoneBoundaryInfo(
+            $risk['score_total'],
+            $risk['max_score'],
+            $confidence
+        ));
 
         $payload = [
             'evaluation_session_id' => $session->id,
@@ -131,7 +134,9 @@ class DecisionInsightService
         }
 
         if (is_numeric($value)) {
-            return $value > 0 ? 'increases_risk' : 'neutral';
+            if ($value > 0) return 'increases_risk';
+            if ($value < 0) return 'decreases_risk';
+            return 'neutral';
         }
 
         return 'neutral';
@@ -139,40 +144,36 @@ class DecisionInsightService
 
     protected function computeConfidence(array $risk, array $quality): float
     {
-        $thresholds = config('decision-thresholds.confidence', []);
-        $min = (float) ($thresholds['min'] ?? 0.7);
-        $highBonus = (float) ($thresholds['high_bonus'] ?? 0.05);
-
+        // La confiance reflète uniquement la qualité des données.
+        // Un bonus pour risque élevé produirait un IC artificiellement étroit
+        // pour les patients high-risk avec données médiocres — comportement inverse du principe de précaution.
         $base = $quality['data_quality_score'] ?? 1.0;
-        if ($risk['risk_level'] === 'high') {
-            $base = min(1.0, $base + $highBonus);
-        }
 
         return round(max(0.0, min(1.0, $base)), 4);
     }
 
+    /**
+     * Shadow mode : compare le score legacy (poids directs sur question.risk_weight)
+     * contre le score facts-based (production). Permet de valider la migration.
+     */
     protected function buildVnextShadow(EvaluationSession $session): ?array
     {
         if (! $this->isVnextShadowMode()) {
             return null;
         }
 
-        $facts = app(FactsEngine::class)->evaluate($session);
-        $risk = app(RiskEngine::class)->evaluate($session, $facts);
-        $flags = app(FlagEngine::class)->evaluate($session, $facts);
-        $quality = app(DataQualityService::class)->assess($session);
+        $legacyRisk    = $this->riskModel->evaluateDirectWeights($session);
+        $quality       = $this->dataQuality->assess($session);
 
         return [
-            'facts' => $facts,
-            'risk' => $risk,
-            'flags' => $flags,
+            'risk'             => $legacyRisk,
             'confidence_score' => $quality['data_quality_score'] ?? null,
-            'versions' => [
-                'protocol' => $session->decision_path_key && $session->decision_path_version
+            'versions'         => [
+                'protocol'             => $session->decision_path_key && $session->decision_path_version
                     ? $session->decision_path_key . '@' . $session->decision_path_version
                     : $session->decision_path_key,
                 'risk_model_version_id' => $session->risk_model_version,
-                'engine' => 'vnext_shadow',
+                'engine'               => 'legacy_direct_weights',
             ],
         ];
     }
@@ -180,6 +181,51 @@ class DecisionInsightService
     protected function isVnextShadowMode(): bool
     {
         return (bool) config('vnext.shadow_mode', false);
+    }
+
+    /**
+     * Calcule la distance entre le score brut et la frontière de zone la plus proche,
+     * et détecte si l'intervalle de confiance (converti en unités de score) franchit cette frontière.
+     *
+     * Ces informations aident le clinicien à évaluer si la classification de risque
+     * est robuste ou marginale.
+     */
+    protected function computeZoneBoundaryInfo(float $scoreTotal, float $maxScore, float $confidence): array
+    {
+        $levels = config('risk-level.levels', []);
+        $thresholds = config('decision-thresholds.confidence', []);
+        $marginFactor = (float) ($thresholds['margin_factor'] ?? 0.2);
+        $minMargin = (float) ($thresholds['min_margin'] ?? 0.05);
+
+        // Frontières = bornes min de chaque zone sauf la zone la plus basse (min=0)
+        $boundaries = collect($levels)
+            ->pluck('min')
+            ->filter(fn ($v) => $v > 0)
+            ->sort()
+            ->values()
+            ->all();
+
+        if (empty($boundaries)) {
+            return ['zone_boundary_distance' => null, 'ci_crosses_zone_boundary' => false];
+        }
+
+        $minDistance = PHP_INT_MAX;
+        foreach ($boundaries as $boundary) {
+            $dist = abs($scoreTotal - $boundary);
+            if ($dist < $minDistance) {
+                $minDistance = $dist;
+            }
+        }
+        $minDistance = round((float) $minDistance, 2);
+
+        // Marge de l'IC traduite en unités de score brut
+        $margin = max($minMargin, $marginFactor * (1 - $confidence));
+        $ciMarginScore = $maxScore > 0 ? round($margin * $maxScore, 2) : 0.0;
+
+        return [
+            'zone_boundary_distance' => $minDistance,
+            'ci_crosses_zone_boundary' => $ciMarginScore >= $minDistance,
+        ];
     }
 
     protected function computeConfidenceInterval(float $riskScore, float $confidence): array

@@ -11,15 +11,16 @@ class BlocRulesService
      */
     public function shouldSkip(string $blocKey, EvaluationSession $session): bool
     {
+        $exclusions = config(‘bloc-rules.age_exclusions’, []);
+
+        if (! array_key_exists($blocKey, $exclusions)) {
+            return false;
+        }
+
         $birthDate = $session->identity->personalProfile?->birth_date;
         $age = $birthDate ? $this->calculateAge($birthDate) : null;
 
-        return match ($blocKey) {
-            'symptom_breast' => $age !== null && $age < 25,
-            'symptom_cervix' => $age !== null && $age < 22,
-            // ➕ Ajouter d’autres règles spécifiques ici
-            default => false,
-        };
+        return $age !== null && $age < $exclusions[$blocKey];
     }
 
     /**

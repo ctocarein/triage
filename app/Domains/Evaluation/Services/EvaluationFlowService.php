@@ -821,11 +821,18 @@ class EvaluationFlowService
         $answeredIds = $session->answers()->pluck('dynamic_question_template_id')->all();
         $context = $this->questionFlow->getSessionContext($session);
 
-        return DynamicQuestionTemplate::query()
+        $query = DynamicQuestionTemplate::query()
             ->where('bloc_key', $blocKey)
             ->whereNotIn('id', $answeredIds)
-            ->orderBy('order')
-            ->get()
+            ->orderBy('order');
+
+        // Exclure les questions de profil dans les sessions non-globales :
+        // le profil a déjà été saisi lors de la session complete initiale.
+        if (! $session->isFullEvaluation()) {
+            $query->whereNotIn('answer_target', ['personal_profile', 'medical_profile']);
+        }
+
+        return $query->get()
             ->first(fn (DynamicQuestionTemplate $question) => $this->questionFlow->shouldBeVisible(
                 $question,
                 $context['answers'],

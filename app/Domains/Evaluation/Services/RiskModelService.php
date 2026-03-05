@@ -2,14 +2,42 @@
 
 namespace App\Domains\Evaluation\Services;
 
-use App\Domains\Decision\Models\DecisionNode;
 use App\Domains\Evaluation\Enums\AnswerStatus;
+use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 
 class RiskModelService
 {
+    public function __construct(
+        protected FactsEngine $factsEngine,
+        protected RiskEngine  $riskEngine,
+    ) {}
+
+    /**
+     * Évalue le risque pour une session.
+     *
+     * Stratégie :
+     * 1. Primaire  — FactsEngine → faits, RiskEngine → score via signaux configurés
+     * 2. Fallback  — poids directs sur question.risk_weight (toujours disponible)
+     */
     public function evaluate(EvaluationSession $session): array
+    {
+        $facts  = $this->factsEngine->evaluate($session);
+        $result = $this->riskEngine->evaluate($session, $facts);
+
+        if ($result['max_score'] > 0) {
+            return $result;
+        }
+
+        return $this->evaluateDirectWeights($session);
+    }
+
+    /**
+     * Calcul de score par poids directs (legacy).
+     * Exposé pour usage dans le shadow mode comparatif.
+     */
+    public function evaluateDirectWeights(EvaluationSession $session): array
     {
         $answers = $session->answers()->with('question')->get();
 
@@ -19,11 +47,10 @@ class RiskModelService
                 continue;
             }
 
-            $weight = $this->resolveAnswerWeight($answer);
-            $scoreTotal += $weight;
+            $scoreTotal += $this->resolveAnswerWeight($answer);
         }
 
-        $maxScore = $this->resolveMaxScore($session);
+        $maxScore  = $this->resolveMaxScore($session);
         $riskScore = $maxScore > 0 ? min(1, $scoreTotal / $maxScore) : 0.0;
 
         $riskLevel = 'low';
@@ -35,37 +62,11 @@ class RiskModelService
         }
 
         return [
-            'risk_score' => round($riskScore, 4),
-            'risk_level' => $riskLevel,
+            'risk_score'  => round($riskScore, 4),
+            'risk_level'  => $riskLevel,
             'score_total' => round($scoreTotal, 2),
-            'max_score' => round($maxScore, 2),
+            'max_score'   => round($maxScore, 2),
         ];
-    }
-
-    protected function resolveMaxScore(EvaluationSession $session): float
-    {
-        $decisionPath = $session->decisionPath;
-        if ($decisionPath) {
-            $nodes = $decisionPath->nodes()->with('question')->get();
-            $total = 0.0;
-            foreach ($nodes as $node) {
-                $weight = $node->risk_weight;
-                if ($weight <= 0 && $node->question) {
-                    $weight = $node->question->risk_weight ?? 0;
-                }
-                if ($weight > 0) {
-                    $total += $weight;
-                }
-            }
-            if ($total > 0) {
-                return $total;
-            }
-        }
-
-        $fallback = $session->answers()->with('question')->get()
-            ->sum(fn($answer) => max(0, $answer->question?->risk_weight ?? 0));
-
-        return max(1, (float) $fallback);
     }
 
     public function shouldCountAnswer(EvaluationAnswer $answer): bool
@@ -98,10 +99,39 @@ class RiskModelService
         return true;
     }
 
+    protected function resolveMaxScore(EvaluationSession $session): float
+    {
+        $decisionPath = $session->decisionPath;
+        if ($decisionPath) {
+            $nodes = $decisionPath->nodes()->with('question')->get();
+            $total = 0.0;
+            foreach ($nodes as $node) {
+                $weight = $node->risk_weight;
+                if ($weight <= 0 && $node->question) {
+                    $weight = $node->question->risk_weight ?? 0;
+                }
+                if ($weight > 0) {
+                    $total += $weight;
+                }
+            }
+            if ($total > 0) {
+                return $total;
+            }
+        }
+
+        // Le max_score doit refléter le catalogue complet, pas seulement les réponses de la session.
+        // Une session incomplète (early exit, abandon) ne doit pas produire un max_score sous-estimé
+        // qui gonflerait artificiellement le risk_score normalisé.
+        $catalogMax = (float) DynamicQuestionTemplate::where('is_active', true)
+            ->where('risk_weight', '>', 0)
+            ->sum('risk_weight');
+
+        return max(1.0, $catalogMax);
+    }
+
     protected function resolveAnswerWeight(EvaluationAnswer $answer): float
     {
-        $weight = $answer->question?->risk_weight ?? 0;
-        $weight = (float) $weight;
+        $weight = (float) ($answer->question?->risk_weight ?? 0);
 
         return $weight > 0 ? $weight : 0.0;
     }

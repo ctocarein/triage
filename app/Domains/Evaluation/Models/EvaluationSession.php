@@ -46,7 +46,7 @@ class EvaluationSession extends Model
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'expires_at' => 'datetime',
-        'score' => 'integer',
+        'score' => 'float',
         'target_blocs' => 'array',
         'visited_blocs' => 'array',
         'path_trace' => 'array',

@@ -31,7 +31,7 @@ class PersonalProfileQuestionSeeder extends Seeder
         $questions = [
             [
                 'key' => 'first_name',
-                'text' => 'Quel est votre prénom ?',
+                'text' => 'Quel est votre prÃ©nom ?',
                 'type' => 'text',
                 'bloc_key' => 'profil_identite',
                 'answer_target' => 'personal_profile',
@@ -40,7 +40,7 @@ class PersonalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'birth_date',
-                'text' => 'Quelle est votre année de naissance ?',
+                'text' => 'Quelle est votre annÃ©e de naissance ?',
                 'type' => 'select_one',
                 'bloc_key' => 'profil_identite',
                 'answer_target' => 'personal_profile',
@@ -67,7 +67,7 @@ class PersonalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'cmu',
-                'text' => 'Bénéficiez-vous de la Couverture Maladie Universelle (CMU) ?',
+                'text' => 'BÃ©nÃ©ficiez-vous de la Couverture Maladie Universelle (CMU) ?',
                 'type' => 'boolean',
                 'bloc_key' => 'profil_socio',
                 'answer_target' => 'personal_profile',
@@ -82,22 +82,22 @@ class PersonalProfileQuestionSeeder extends Seeder
                 'text' => 'Quel est votre statut matrimonial ?',
                 'type' => 'select_one',
                 'bloc_key' => 'profil_socio',
-                'options' => ['Célibataire', 'Marié(e)', 'Divorcé(e)', 'Veuf(ve)'],
+                'options' => ['CÃ©libataire', 'MariÃ©(e)', 'DivorcÃ©(e)', 'Veuf(ve)'],
                 'answer_target' => 'personal_profile',
                 'order' => 6,
             ],
             [
                 'key' => 'education_level',
-                'text' => 'Quel est votre niveau d\'éducation ?',
+                'text' => 'Quel est votre niveau d\'Ã©ducation ?',
                 'type' => 'select_one',
                 'bloc_key' => 'profil_socio',
-                'options' => ['Aucun', 'Primaire', 'Secondaire', 'Supérieur', 'Autodidacte'],
+                'options' => ['Aucun', 'Primaire', 'Secondaire', 'SupÃ©rieur', 'Autodidacte'],
                 'answer_target' => 'personal_profile',
                 'order' => 7,
             ],
             [
                 'key' => 'occupation',
-                'text' => 'Quelle est votre profession ou activité principale ?',
+                'text' => 'Quelle est votre profession ou activitÃ© principale ?',
                 'type' => 'text',
                 'bloc_key' => 'profil_socio',
                 'answer_target' => 'personal_profile',

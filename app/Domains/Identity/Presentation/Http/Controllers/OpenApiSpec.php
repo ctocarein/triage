@@ -245,7 +245,15 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="confidence_score", type="number", format="float"),
  *     @OA\Property(property="confidence_interval_low", type="number", format="float"),
  *     @OA\Property(property="confidence_interval_high", type="number", format="float"),
- *     @OA\Property(property="data_quality", type="object"),
+ *     @OA\Property(
+ *         property="data_quality",
+ *         type="object",
+ *         @OA\Property(property="data_quality_score", type="number", format="float"),
+ *         @OA\Property(property="answered_count", type="integer"),
+ *         @OA\Property(property="total_count", type="integer"),
+ *         @OA\Property(property="zone_boundary_distance", type="number", format="float", nullable=true),
+ *         @OA\Property(property="ci_crosses_zone_boundary", type="boolean", nullable=true)
+ *     ),
  *     @OA\Property(property="explanations", type="array", @OA\Items(type="object")),
  *     @OA\Property(property="suggested_action", type="string"),
  *     @OA\Property(property="requires_human_validation", type="boolean"),
