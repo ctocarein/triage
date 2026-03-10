@@ -119,6 +119,10 @@ class IdentityAuthService
 
         $identity = $credential->identity;
 
+        if (in_array($identity->status, ['email_unverified', 'pending_validation'], true)) {
+            abort(423, 'Votre compte est en attente de validation.');
+        }
+
         if ($identity->status !== 'active') {
             throw ValidationException::withMessages([
                 'identity' => ['Identity is not active.'],
@@ -141,9 +145,11 @@ class IdentityAuthService
         $token = $identity->createToken('identity-token')->plainTextToken;
 
         return [
-            'token' => $token,
-            'identity' => $identity->load('memberships'),
-            'security_gate' => $this->buildSecurityPayload($securityGate, $device),
+            'token'                => $token,
+            'identity'             => $identity->load('memberships'),
+            'security_gate'        => $this->buildSecurityPayload($securityGate, $device),
+            'must_change_password' => (bool) ($credential->must_change_password ?? false),
+            'is_new'               => false,
         ];
     }
 
@@ -264,6 +270,7 @@ class IdentityAuthService
             'token' => $payload['token'],
             'identity' => $payload['identity']->load('memberships'),
             'security_gate' => $payload['security_gate'] ?? null,
+            'is_new' => true,
         ];
     }
 
@@ -369,12 +376,19 @@ class IdentityAuthService
         $isLocked = $this->isGateLocked($gate);
         $state = $isLocked ? 'locked' : $gate->state;
 
+        $secretSet = Credential::where('identity_id', $gate->identity_id)
+            ->where('type', 'phone')
+            ->whereNotNull('secret_hash')
+            ->exists();
+
         return [
             'state' => $state,
             'gate_required' => $state !== 'full',
             'locked_until' => $gate->locked_until,
             'panic_locked_at' => $gate->panic_locked_at,
             'device_trusted' => $device?->trusted_at !== null,
+            'secret_set' => $secretSet,
+            'unlocked_at' => $gate->unlocked_at,
         ];
     }
 

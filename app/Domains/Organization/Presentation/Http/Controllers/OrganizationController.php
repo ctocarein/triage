@@ -74,6 +74,24 @@ class OrganizationController extends Controller
      *     @OA\Response(response=404, description="Not found", @OA\JsonContent(ref="#/components/schemas/ApiMessage"))
      * )
      */
+    /**
+     * @OA\Get(
+     *     path="/organizations/public",
+     *     operationId="organizationsPublic",
+     *     summary="List active organizations (public, for onboarding form)",
+     *     tags={"Organizations"},
+     *     @OA\Response(response=200, description="List of organizations")
+     * )
+     */
+    public function publicList(): JsonResponse
+    {
+        $organizations = Organization::where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json(['organizations' => $organizations]);
+    }
+
     public function default(Request $request): JsonResponse
     {
         $organization = Organization::query()

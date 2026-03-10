@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'ambassador', 'middleware' => ['auth:sanctum']], function () {
     Route::post('/activate', [AmbassadorController::class, 'activate'])->middleware('role:PlatformAdmin');
+    Route::get('/admin/list', [AmbassadorController::class, 'adminIndex'])->middleware('role:PlatformAdmin');
 
     Route::middleware('role:Ambassador')->group(function () {
         Route::get('/profile', [AmbassadorController::class, 'profile']);

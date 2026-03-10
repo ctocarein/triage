@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 // })->middleware('auth:sanctum');
 
 Route::get('/organizations/default', [OrganizationController::class, 'default']);
+Route::get('/organizations/public', [OrganizationController::class, 'publicList']);
 Route::get('/r/{code}', [ReferralRedirectController::class, 'handle']);
 Route::get('/referrals/expired', function () {
     return response()->file(public_path('referrals/expired.html'), ['Content-Type' => 'text/html'], 410);

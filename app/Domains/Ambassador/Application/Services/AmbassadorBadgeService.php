@@ -127,7 +127,7 @@ class AmbassadorBadgeService
                 'status' => 'earned',
                 'earned_at' => $badge->earned_at ?? now(),
                 'revoked_at' => null,
-                'evidence' => $evidence ?: null,
+                'evidence' => $evidence,
             ])->save();
         }
     }

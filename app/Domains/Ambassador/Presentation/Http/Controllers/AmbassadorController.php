@@ -8,6 +8,7 @@ use App\Domains\Ambassador\Application\Handlers\RecomputeAmbassadorLevelHandler;
 use App\Domains\Ambassador\Application\Queries\GetAmbassadorDashboardQuery;
 use App\Domains\Ambassador\Application\Queries\GetAmbassadorMetricsQuery;
 use App\Domains\Ambassador\Application\Queries\GetAmbassadorProfileQuery;
+use App\Domains\Ambassador\Infrastructure\Persistence\Models\Ambassador;
 use App\Domains\Ambassador\Presentation\Http\Requests\ActivateAmbassadorRequest;
 use App\Domains\Ambassador\Presentation\Http\Requests\DeactivateAmbassadorRequest;
 use App\Domains\Ambassador\Presentation\Http\Resources\AmbassadorMetricsResource;
@@ -221,6 +222,37 @@ class AmbassadorController extends Controller
             'message' => 'Level recomputed.',
             'level' => $level,
         ]);
+    }
+
+    /**
+     * GET /ambassador/admin/list
+     * Liste tous les ambassadeurs actifs (PlatformAdmin).
+     */
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $ambassadors = Ambassador::with(['identity.credentials', 'level', 'badges', 'referrals'])
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        $ambassadors->getCollection()->transform(function (Ambassador $a) {
+            $email = $a->identity?->credentials()
+                ->where('type', 'email')
+                ->value('identifier');
+
+            return [
+                'id'           => $a->id,
+                'status'       => $a->status,
+                'activated_at' => $a->activated_at,
+                'email'        => $email,
+                'identity_id'  => $a->user_id,
+                'level'        => $a->level?->label ?? null,
+                'badges_count' => $a->badges->count(),
+                'referrals_total' => $a->referrals->count(),
+                'referrals_used'  => $a->referrals->where('status', 'used')->count(),
+            ];
+        });
+
+        return response()->json($ambassadors);
     }
 
 }

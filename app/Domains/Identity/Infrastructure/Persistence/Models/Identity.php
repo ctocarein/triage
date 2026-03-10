@@ -96,6 +96,29 @@ class Identity extends Authenticatable
         return $this->hasMany(UserReminder::class, 'identity_id');
     }
 
+    public function onboardingRequests(): HasMany
+    {
+        return $this->hasMany(OrgManagerOnboardingRequest::class, 'identity_id');
+    }
+
+    public function latestOnboardingRequest(): HasOne
+    {
+        return $this->hasOne(OrgManagerOnboardingRequest::class, 'identity_id')->latestOfMany();
+    }
+
+    /**
+     * Routing mail : utilise l'identifiant du credential email.
+     */
+    public function routeNotificationForMail(): ?string
+    {
+        return $this->credentials()->where('type', 'email')->value('identifier');
+    }
+
+    public function isPendingOnboarding(): bool
+    {
+        return in_array($this->status, ['email_unverified', 'pending_validation'], true);
+    }
+
     public function hasMembershipRole(string $role, ?string $organizationId = null, ?string $status = 'active'): bool
     {
         $query = $this->memberships()->where('role', $role);

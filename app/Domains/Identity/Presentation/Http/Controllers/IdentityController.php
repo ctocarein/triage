@@ -40,7 +40,7 @@ class IdentityController extends Controller
         }
 
         $filters = $request->validated();
-        $query = Identity::query()->with(['memberships.organization:id,name']);
+        $query = Identity::query()->with(['memberships.organization:id,name', 'credentials']);
 
         if (! empty($filters['kind'])) {
             $query->where('kind', $filters['kind']);
@@ -74,9 +74,25 @@ class IdentityController extends Controller
             });
         }
 
+        if (! empty($filters['phone'])) {
+            $query->whereHas('credentials', function ($q) use ($filters) {
+                $q->where('type', 'phone')
+                  ->where('identifier', 'like', '%' . $filters['phone'] . '%');
+            });
+        }
+
         $perPage = $filters['per_page'] ?? 15;
 
-        return response()->json($query->paginate($perPage));
+        $paginated = $query->paginate($perPage);
+
+        // Append _email and _phone to each identity for frontend consumption
+        $paginated->getCollection()->transform(function (Identity $identity) {
+            $identity->setAttribute('_email', $identity->credentials->where('type', 'email')->first()?->identifier);
+            $identity->setAttribute('_phone', $identity->credentials->where('type', 'phone')->first()?->identifier);
+            return $identity;
+        });
+
+        return response()->json($paginated);
     }
 
     /**

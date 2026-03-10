@@ -20,6 +20,9 @@ class Organization extends Model
         'id',
         'type',
         'name',
+        'country',
+        'city',
+        'address',
         'status',
     ];
 

@@ -8,6 +8,7 @@ use App\Console\Commands\CheckRiskSignals;
 use App\Console\Commands\CheckRoutingCycles;
 use App\Console\Commands\ReplayGoldenPaths;
 use App\Console\Commands\RecomputeAmbassadorStats;
+use App\Console\Commands\SendOnboardingAdminReminders;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -20,10 +21,12 @@ class Kernel extends ConsoleKernel
         ImportQuestionnaire::class,
         ReplayGoldenPaths::class,
         RecomputeAmbassadorStats::class,
+        SendOnboardingAdminReminders::class,
     ];
 
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('ambassador:recompute-stats')->dailyAt('02:00');
+        $schedule->command('onboarding:send-admin-reminders')->dailyAt('08:00');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Domains\Identity\Presentation\Http\Controllers;
 use App\Domains\Identity\Application\Services\IdentityAuthService;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Identity\Presentation\Http\Requests\LoginIdentityRequest;
+use App\Domains\Identity\Presentation\Http\Requests\PhoneAuthRequest;
 use App\Domains\Identity\Presentation\Http\Requests\RegisterIdentityRequest;
 use App\Domains\Identity\Presentation\Http\Requests\SetCredentialSecretRequest;
 use App\Domains\Identity\Presentation\Http\Requests\UnlockSecurityGateRequest;
@@ -15,6 +16,35 @@ use OpenApi\Annotations as OA;
 
 class IdentityAuthController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/identity/phone",
+     *     operationId="identityPhoneAuth",
+     *     summary="Login or create an identity via phone number (loginOrCreate)",
+     *     tags={"Identity"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone"},
+     *             @OA\Property(property="phone", type="string", example="+2250709584445"),
+     *             @OA\Property(property="device_fingerprint", type="string", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Auth result with token and security gate status")
+     * )
+     */
+    public function phoneAuth(PhoneAuthRequest $request, IdentityAuthService $service): JsonResponse
+    {
+        $data = array_merge($request->validated(), [
+            'credential_type' => 'phone',
+            'identifier'      => $request->validated()['phone'],
+        ]);
+
+        $payload = $service->login($data);
+
+        return response()->json($payload);
+    }
+
     /**
      * @OA\Post(
      *     path="/identity/register",

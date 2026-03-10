@@ -14,11 +14,13 @@ class Credential extends Model
         'secret_hash',
         'verified_at',
         'last_used_at',
+        'must_change_password',
     ];
 
     protected $casts = [
-        'verified_at' => 'datetime',
-        'last_used_at' => 'datetime',
+        'verified_at'          => 'datetime',
+        'last_used_at'         => 'datetime',
+        'must_change_password' => 'boolean',
     ];
 
     protected $hidden = [

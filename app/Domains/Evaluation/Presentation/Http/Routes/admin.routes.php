@@ -7,6 +7,12 @@ use App\Domains\Evaluation\Controllers\Admin\QuestionGroupController;
 use App\Domains\Evaluation\Controllers\Admin\QuestionTemplateController;
 use App\Domains\Evaluation\Controllers\Admin\RiskModelController;
 use App\Domains\Evaluation\Controllers\Admin\ThematicBlocController;
+use App\Domains\Evaluation\Controllers\Admin\TriageStatsController;
+use App\Domains\Decision\Controllers\Admin\DecisionInsightAdminController;
+use App\Domains\Identity\Presentation\Http\Controllers\Admin\OrgManagerOnboardingAdminController;
+use App\Domains\Identity\Presentation\Http\Controllers\Admin\PatientAdminController;
+use App\Domains\Identity\Presentation\Http\Controllers\Admin\UserAdminController;
+use App\Domains\Identity\Presentation\Http\Controllers\Admin\UserProvisioningController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'role:PlatformAdmin,OrgManager'])
@@ -97,6 +103,31 @@ Route::middleware(['auth:sanctum', 'role:PlatformAdmin,OrgManager'])
             Route::get('/',                                [EvaluationSessionAdminController::class, 'index']);
             Route::get('/{session}',                       [EvaluationSessionAdminController::class, 'show']);
             Route::post('/{session}/cancel',               [EvaluationSessionAdminController::class, 'cancel']);
+        });
+
+        // --- Onboarding OrgManager ---
+        Route::prefix('onboarding')->group(function () {
+            Route::get('/',                           [OrgManagerOnboardingAdminController::class, 'index']);
+            Route::patch('/{onboardingRequest}/approve', [OrgManagerOnboardingAdminController::class, 'approve']);
+            Route::patch('/{onboardingRequest}/reject',  [OrgManagerOnboardingAdminController::class, 'reject']);
+        });
+
+        // --- Patients (beneficiaries scoped to org) ---
+        Route::get('/patients', [PatientAdminController::class, 'index']);
+
+        // --- Utilisateurs (Practitioner / FieldAgent scoped to org) ---
+        Route::get('/users', [UserAdminController::class, 'index']);
+        Route::post('/users/practitioner',  [UserProvisioningController::class, 'createPractitioner']);
+        Route::post('/users/field-agent',   [UserProvisioningController::class, 'createFieldAgent']);
+        Route::patch('/users/change-password', [UserProvisioningController::class, 'changePassword']);
+
+        // --- Triage stats ---
+        Route::get('/triage/stats', [TriageStatsController::class, 'index']);
+
+        // --- Decision insights (tableau de bord de décision) ---
+        Route::prefix('decisions')->group(function () {
+            Route::get('/',       [DecisionInsightAdminController::class, 'index']);
+            Route::get('/stats',  [DecisionInsightAdminController::class, 'stats']);
         });
 
     });

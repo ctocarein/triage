@@ -28,6 +28,7 @@ class IdentityIndexRequest extends FormRequest
                 'System',
             ])],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'phone'    => ['sometimes', 'string', 'max:30'],
         ];
     }
 }

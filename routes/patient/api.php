@@ -7,6 +7,7 @@ use App\Domains\Report\Controllers\Patient\ReportController;
 use App\Domains\Decision\Controllers\Patient\DecisionPathController;
 use App\Domains\Evaluation\Controllers\Patient\ThematicBlocController;
 use App\Domains\Notification\Controllers\Patient\ReminderController;
+use App\Domains\Identity\Presentation\Http\Controllers\FieldAgentController;
 
 require base_path('app/Domains/Identity/Presentation/Http/Routes/identity.routes.php');
 require base_path('app/Domains/Profile/Presentation/Http/Routes/profile.routes.php');
@@ -47,4 +48,9 @@ Route::middleware('auth:sanctum')->prefix('decision-paths')->group(function () {
 // route for getting capsules
 Route::middleware(['auth:sanctum'])->prefix('capsules')->group(function () {
     Route::get('/{id}', [CapsuleController::class, 'show']);
+});
+
+// Routes FieldAgent : création de bénéficiaires et évaluation assistée
+Route::middleware(['auth:sanctum'])->prefix('agent')->group(function () {
+    Route::post('/beneficiaries', [FieldAgentController::class, 'createBeneficiary']);
 });

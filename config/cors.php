@@ -15,9 +15,15 @@ return [
         'https://on.chereh.com',
         'https://on.dev.chereh.com',
         'http://localhost:3000',
+        'http://localhost:3001',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        // Autorise toutes les origines LAN (192.168.x.x) sur n'importe quel port — dev uniquement
+        '#^http://192\.168\.\d+\.\d+(:\d+)?$#',
+        // Autorise localhost sur n'importe quel port (Flutter Web dev server) — dev uniquement
+        '#^http://localhost(:\d+)?$#',
+    ],
 
     'allowed_headers' => ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Idempotency-Key', 'idempotency-key', 'X-Idempotency-Key'],
 

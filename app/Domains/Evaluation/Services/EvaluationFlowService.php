@@ -43,8 +43,32 @@ class EvaluationFlowService
         $blocKeys = $validated['bloc_keys'] ?? [];
         $referralCode = $validated['referral_code'] ?? null;
         $clientIp = $validated['client_ip'] ?? null;
+        $subjectId = $validated['subject_id'] ?? null;
         $referral = null;
         $decisionPath = null;
+        $agentIdentity = null;
+
+        // Si subject_id fourni, l'acteur doit être FieldAgent et on crée la session pour le bénéficiaire
+        if ($subjectId !== null) {
+            if (! $identity->hasMembershipRole('FieldAgent')) {
+                return [
+                    'status' => 403,
+                    'payload' => [
+                        'message' => 'Seul un agent de terrain peut démarrer une évaluation pour un bénéficiaire.',
+                        'error_code' => 'AGENT_REQUIRED',
+                    ],
+                ];
+            }
+            $subject = Identity::find($subjectId);
+            if (! $subject) {
+                return [
+                    'status' => 404,
+                    'payload' => ['message' => 'Bénéficiaire introuvable.'],
+                ];
+            }
+            $agentIdentity = $identity;
+            $identity = $subject;
+        }
 
         if ($referralCode !== null) {
             $referral = Referral::query()->where('code', $referralCode)->first();
@@ -260,11 +284,12 @@ class EvaluationFlowService
             'target_blocs' => $blocKeys ?: null,
             'visited_blocs' => [],
             'path_trace' => [],
-            'context' => [
+            'context' => array_filter([
                 'bloc_keys' => $blocKeys,
                 'token_id' => $identity->currentAccessToken()?->id,
                 'client_ip' => $clientIp,
-            ],
+                'agent_id' => $agentIdentity?->id,
+            ], fn ($v) => $v !== null),
             'referral_id' => $referral?->id,
         ]);
 

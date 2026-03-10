@@ -54,6 +54,18 @@ class ProfileUpdaterService
             return $this->normalizeLastScreeningDate($value);
         }
 
+        if ($key === 'menopause_status') {
+            if (! is_string($value)) {
+                return 'unknown';
+            }
+            $lower = strtolower(trim($value));
+            // Questionnaire uses 'post-' / 'post+' — ENUM only allows 'post'.
+            if (str_starts_with($lower, 'post')) {
+                return 'post';
+            }
+            return in_array($lower, ['pre', 'post', 'unknown'], true) ? $lower : 'unknown';
+        }
+
         if ($key === 'education_level') {
             $map = [
                 'aucun' => 'none',
