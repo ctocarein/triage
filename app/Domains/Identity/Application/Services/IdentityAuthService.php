@@ -91,13 +91,7 @@ class IdentityAuthService
             }
 
             if ($credential->secret_hash) {
-                if ($secret === null) {
-                    throw ValidationException::withMessages([
-                        'secret' => ['Secret is required.'],
-                    ]);
-                }
-
-                if (! Hash::check($secret, $credential->secret_hash)) {
+                if ($secret !== null && ! Hash::check($secret, $credential->secret_hash)) {
                     throw ValidationException::withMessages([
                         'secret' => ['Invalid secret.'],
                     ]);
@@ -133,7 +127,7 @@ class IdentityAuthService
 
         $securityGate = $this->resolveSecurityGate($identity);
         $device = $this->touchDevice($identity, $data['device_fingerprint'] ?? null);
-        $state = $this->determineLoginGateState($type, $credential);
+        $state = $this->determineLoginGateState($type, $credential, $secret !== null);
         if ($this->isGateLocked($securityGate)) {
             $state = 'locked';
         }
@@ -342,13 +336,14 @@ class IdentityAuthService
         return $secret ? 'full' : 'limited';
     }
 
-    private function determineLoginGateState(string $type, Credential $credential): string
+    private function determineLoginGateState(string $type, Credential $credential, bool $secretProvided = false): string
     {
         if ($type === 'email') {
             return 'full';
         }
 
-        return $credential->secret_hash ? 'full' : 'limited';
+        // Pour phone : 'full' uniquement si le secret a été fourni ET vérifié
+        return ($credential->secret_hash && $secretProvided) ? 'full' : 'limited';
     }
 
     private function isGateLocked(IdentitySecurityGate $gate): bool

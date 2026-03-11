@@ -127,14 +127,19 @@ class IdentityController extends Controller
      *     @OA\Response(response=401, description="Unauthenticated")
      * )
      */
-    public function me(Request $request): JsonResponse
+    public function me(Request $request, IdentityAuthService $service): JsonResponse
     {
         $identity = $request->user()?->load([
             'memberships.organization:id,name',
             'credentials',
         ]);
 
-        return response()->json(['identity' => $identity]);
+        $securityGate = $service->getSecurityStatus($identity, null);
+
+        return response()->json([
+            'identity'      => $identity,
+            'security_gate' => $securityGate['security_gate'],
+        ]);
     }
 
     /**
