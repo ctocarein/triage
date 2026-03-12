@@ -132,6 +132,7 @@ class IdentityController extends Controller
         $identity = $request->user()?->load([
             'memberships.organization:id,name',
             'credentials',
+            'personalProfile',
         ]);
 
         $securityGate = $service->getSecurityStatus($identity, null);

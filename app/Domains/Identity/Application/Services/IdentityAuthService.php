@@ -140,7 +140,7 @@ class IdentityAuthService
 
         return [
             'token'                => $token,
-            'identity'             => $identity->load('memberships'),
+            'identity'             => $identity->load(['memberships', 'personalProfile']),
             'security_gate'        => $this->buildSecurityPayload($securityGate, $device),
             'must_change_password' => (bool) ($credential->must_change_password ?? false),
             'is_new'               => false,
@@ -262,7 +262,7 @@ class IdentityAuthService
 
         return [
             'token' => $payload['token'],
-            'identity' => $payload['identity']->load('memberships'),
+            'identity' => $payload['identity']->load(['memberships', 'personalProfile']),
             'security_gate' => $payload['security_gate'] ?? null,
             'is_new' => true,
         ];

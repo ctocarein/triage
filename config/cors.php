@@ -12,6 +12,8 @@ return [
 
     'allowed_origins' => [
         'https://triage.carein.cloud',
+        'https://clinique.carein.pro',
+        'https://open.chereh.com',
         'https://on.chereh.com',
         'https://on.dev.chereh.com',
         'http://localhost:3000',
