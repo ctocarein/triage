@@ -11,5 +11,12 @@ return [
         'default_expires_days' => env('AMBASSADOR_REFERRAL_DEFAULT_EXPIRES_DAYS', 30),
         'weekly_limit' => env('AMBASSADOR_REFERRAL_WEEKLY_LIMIT', 25),
         'cookie_name' => env('AMBASSADOR_REFERRAL_COOKIE', 'ambassador_referral'),
+        // URLs store pour le redirect intelligent (Android / iOS)
+        'play_store_url' => env('AMBASSADOR_PLAY_STORE_URL', ''),
+        'app_store_url'  => env('AMBASSADOR_APP_STORE_URL', ''),
+        // Durée de vie du token de clic (jours) — couvre 95% des délais d'installation
+        'click_token_ttl_days' => (int) env('AMBASSADOR_CLICK_TOKEN_TTL_DAYS', 7),
+        // Anti-fraude : nombre max de claims par IP par jour (fingerprint)
+        'max_claims_per_ip_per_day' => (int) env('AMBASSADOR_MAX_CLAIMS_PER_IP_DAY', 3),
     ],
 ];
