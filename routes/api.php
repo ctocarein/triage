@@ -3,7 +3,6 @@
 use App\Domains\Engagement\Presentation\Http\Controllers\CampaignController;
 use App\Domains\Engagement\Presentation\Http\Controllers\QrCodeController;
 use App\Domains\Organization\Presentation\Http\Controllers\OrganizationController;
-use App\Domains\Ambassador\Presentation\Http\Controllers\ReferralRedirectController;
 use App\Domains\Ambassador\Presentation\Http\Controllers\ReferralClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -14,7 +13,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/organizations/default', [OrganizationController::class, 'default']);
 Route::get('/organizations/public', [OrganizationController::class, 'publicList']);
-Route::get('/r/{code}', [ReferralRedirectController::class, 'handle']);
 Route::post('/referral/claim', [ReferralClaimController::class, 'claimByToken']);
 Route::post('/referral/claim/fingerprint', [ReferralClaimController::class, 'claimByFingerprint']);
 Route::get('/referrals/expired', function () {

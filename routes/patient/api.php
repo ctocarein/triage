@@ -59,4 +59,5 @@ Route::middleware('auth:sanctum')->prefix('qr')->group(function () {
 // Routes FieldAgent : création de bénéficiaires et évaluation assistée
 Route::middleware(['auth:sanctum'])->prefix('agent')->group(function () {
     Route::post('/beneficiaries', [FieldAgentController::class, 'createBeneficiary']);
+    Route::post('/qr-scan',       [FieldAgentController::class, 'scanQr']);
 });

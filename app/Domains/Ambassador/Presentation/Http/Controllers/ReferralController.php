@@ -12,6 +12,7 @@ use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use OpenApi\Annotations as OA;
 
 class ReferralController extends Controller
@@ -77,10 +78,20 @@ class ReferralController extends Controller
         $baseUrl = config('ambassador.referrals.base_url', config('app.url'));
         $url = rtrim((string) $baseUrl, '/').'/r/'.$referral->code;
 
+        $shortUrl = $url;
+        try {
+            $response = Http::timeout(3)->get('https://tinyurl.com/api-create.php', ['url' => $url]);
+            if ($response->successful() && str_starts_with($response->body(), 'https://')) {
+                $shortUrl = trim($response->body());
+            }
+        } catch (\Throwable) {
+            // TinyURL indisponible — on garde l'URL originale
+        }
+
         return (new ReferralResource($referral))
             ->additional([
                 'message' => $reused ? 'Referral link reused.' : 'Referral link generated.',
-                'url' => $url,
+                'url' => $shortUrl,
                 'reused' => $reused,
                 'remaining_weekly' => $remainingWeekly,
             ])
