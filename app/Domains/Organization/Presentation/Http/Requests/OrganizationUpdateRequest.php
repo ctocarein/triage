@@ -15,9 +15,10 @@ class OrganizationUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'string', 'max:255'],
-            'type' => ['sometimes', 'string', 'max:100'],
+            'name'   => ['sometimes', 'string', 'max:255'],
+            'type'   => ['sometimes', 'string', 'max:100'],
             'status' => ['sometimes', Rule::in(['active', 'inactive'])],
+            'plan'   => ['sometimes', Rule::in(['Freemium', 'Premium', 'Entreprise'])],
         ];
     }
 }

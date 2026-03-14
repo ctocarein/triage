@@ -24,6 +24,7 @@ class Organization extends Model
         'city',
         'address',
         'status',
+        'plan',
     ];
 
     protected static function booted(): void
