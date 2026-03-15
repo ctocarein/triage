@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use Carbon\Carbon;
 
@@ -44,7 +45,7 @@ class ProfileUpdaterService
         }
     }
 
-    private function castValue(string $key, string $type, mixed $value): mixed
+    private function castValue(string $key, QuestionType $type, mixed $value): mixed
     {
         if ($key === 'birth_date') {
             return $this->normalizeBirthDate($value);
@@ -89,7 +90,7 @@ class ProfileUpdaterService
             return $map[$lower] ?? null;
         }
 
-        if ($type === 'boolean') {
+        if ($type === QuestionType::Boolean) {
             if (is_string($value)) {
                 $lower = strtolower(trim($value));
                 if (in_array($lower, ['oui', 'yes', 'true', '1'], true)) {

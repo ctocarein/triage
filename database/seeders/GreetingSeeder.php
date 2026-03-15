@@ -37,7 +37,7 @@ class GreetingSeeder extends Seeder
             [
                 'key' => 'explicit_consent',
                 'text' => 'Acceptez-vous de repondre a ces questions afin de recevoir une orientation medicale personnalisee ?',
-                'type' => 'select_one',
+                'type' => 'checkbox',
                 'bloc_key' => 'greeting',
                 'answer_target' => 'consent',
                 'options' => json_encode([

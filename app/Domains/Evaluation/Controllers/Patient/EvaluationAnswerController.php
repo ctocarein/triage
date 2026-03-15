@@ -3,6 +3,7 @@
 namespace App\Domains\Evaluation\Controllers\Patient;
 
 use App\Domains\Evaluation\DTOs\Patient\EvaluationAnswerStoreRequest;
+use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
@@ -89,12 +90,12 @@ class EvaluationAnswerController extends Controller
 
         $question = DynamicQuestionTemplate::findOrFail($validated['dynamic_question_template_id']);
 
-        if ($question->type === 'file' && $request->hasFile('value')) {
+        if ($question->type === QuestionType::File && $request->hasFile('value')) {
             $file = $request->file('value');
             $validated['value'] = $file->store('uploads/responses', 'public');
         }
 
-        if ($question->type === 'select_multiple' && is_array($request->value)) {
+        if ($question->type === QuestionType::SelectMultiple && is_array($request->value)) {
             $validated['value'] = json_encode($request->value);
         }
 

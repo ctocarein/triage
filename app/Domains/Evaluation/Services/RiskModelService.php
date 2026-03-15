@@ -3,6 +3,7 @@
 namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Evaluation\Enums\AnswerStatus;
+use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
@@ -84,7 +85,7 @@ class RiskModelService
             return false;
         }
 
-        if ($question->type === 'boolean') {
+        if ($question->type === QuestionType::Boolean) {
             return $this->isPositiveAnswer($answer->value);
         }
 

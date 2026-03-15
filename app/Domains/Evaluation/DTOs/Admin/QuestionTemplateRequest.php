@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\DTOs\Admin;
 
+use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\ConditionContractValidator;
 use App\Domains\Evaluation\Services\RoutingRulesValidator;
@@ -25,11 +26,7 @@ class QuestionTemplateRequest extends FormRequest
                 Rule::unique('dynamic_question_templates', 'key')->ignore($id),
             ],
             'text'               => ['required', 'string', 'max:1000'],
-            'type'               => ['required', Rule::in([
-                'boolean', 'text', 'number', 'date', 'select_one', 'select_multiple',
-                'info', 'file', 'hidden', 'checkbox', 'radio', 'slider', 'scale',
-                'textarea', 'dynamic', 'custom', 'map',
-            ])],
+            'type'               => ['required', Rule::enum(QuestionType::class)],
             'answer_target'      => ['nullable', Rule::in([
                 'personal_profile', 'medical_profile', 'evaluation',
                 'followup', 'tracking', 'survey', 'greeting', 'custom', 'consent',

@@ -40,8 +40,8 @@ class PersonalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key' => 'birth_date',
-                'text' => 'Quelle est votre année de naissance ?',
-                'type' => 'select_one',
+                'text' => 'Puis-je avoir votre année de naissance ?',
+                'type' => 'date',
                 'bloc_key' => 'profil_identite',
                 'answer_target' => 'personal_profile',
                 'options' => array_map(fn ($y) => ['value' => (string) $y, 'label' => (string) $y], range($endYear, $startYear)),
@@ -74,7 +74,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                 'order' => 5,
                 'routing_rules' => [
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'question:cmu_number'],
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => false], 'next' => 'question:last_screening_date'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => false], 'next' => 'question:marital_status'],
                 ],
             ],
             [

@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\Models;
 
+use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\QuestionGroup;
 
@@ -39,13 +40,14 @@ class DynamicQuestionTemplate extends Model
     ];
 
     protected $casts = [
-        'visible_if' => 'array',
-        'options' => 'array',
-        'meta' => 'array',
-        'routing_rules' => 'array',
-        'is_required' => 'boolean',
+        'type'         => QuestionType::class,
+        'visible_if'   => 'array',
+        'options'      => 'array',
+        'meta'         => 'array',
+        'routing_rules'=> 'array',
+        'is_required'  => 'boolean',
         'is_entry_point' => 'boolean',
-        'is_active' => 'boolean',
+        'is_active'    => 'boolean',
     ];
 
     // Relations

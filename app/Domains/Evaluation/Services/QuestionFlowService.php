@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Services\BlocRulesService;
 use App\Domains\Evaluation\Models\QuestionGroup;
 use App\Domains\Evaluation\Models\EvaluationSession;
@@ -664,7 +665,7 @@ class QuestionFlowService
             $value = optional($answer)->value;
 
             // Applique la logique booléenne spécifique
-            if ($question->type === 'boolean' && $question->risk_weight > 0) {
+            if ($question->type === QuestionType::Boolean && $question->risk_weight > 0) {
                 // Si la réponse est "oui"/true, on ajoute le poids, sinon non
                 if (in_array($value, [true, 1, "1", "oui", "yes"], true)) {
                     $blocs[$bloc] ??= [
