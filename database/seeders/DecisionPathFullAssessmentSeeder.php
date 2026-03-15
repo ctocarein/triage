@@ -28,9 +28,6 @@ class DecisionPathFullAssessmentSeeder extends Seeder
             // Les blocs "routing-only" (ex: consent_declined) ne doivent pas être ici.
             $blocKeys = [
                 'greeting',
-                'profil_identite',
-                'profil_socio',
-                'medical_profile',
                 'symptom_breast',
                 'symptom_cervix',
                 'lifestyle',
