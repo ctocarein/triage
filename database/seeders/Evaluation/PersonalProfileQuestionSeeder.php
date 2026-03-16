@@ -105,7 +105,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                 'is_required'   => true,
                 'placeholder'     => 'Ex: Étudiante, commerçante, sans emploi...',
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'question:breast_palpation'],
+                    ['if' => true, 'next' => 'question:poids_kg,taille_cm'], // pas de question suivante, mais permet de lancer la suite du parcours
                 ],
 
             ],

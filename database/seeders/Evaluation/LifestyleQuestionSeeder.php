@@ -110,7 +110,7 @@ class LifestyleQuestionSeeder extends Seeder
                 'is_required'   => false,
                 'placeholder'   => 'Ex: 170',
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:'], // pas de question suivante, mais permet de calculer l'IMC côté front
+                    ['if' => true, 'next' => 'queue:breast_palpation'], // pas de question suivante, mais permet de calculer l'IMC côté front
                 ],
             ],
 
