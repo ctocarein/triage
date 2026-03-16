@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Catalog;
 
 use App\Support\HandlesConditionArrays;
 
@@ -33,6 +33,8 @@ class ConditionContractValidator
         '<=',
         'in',
         'not_in',
+        'contains',
+        'not_contains',
         'empty',
         'not_empty',
         'age_gte',

@@ -5,8 +5,8 @@ namespace App\Domains\Decision\Services;
 use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\ModelVersion;
-use App\Domains\Evaluation\Services\DataQualityService;
-use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\Insight\DataQualityService;
+use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 use App\Domains\Report\Models\Report;
 
 class DecisionInsightService

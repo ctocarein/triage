@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Insight;
 
 use App\Domains\Evaluation\Enums\AnswerStatus;
 use App\Domains\Evaluation\Models\EvaluationSession;

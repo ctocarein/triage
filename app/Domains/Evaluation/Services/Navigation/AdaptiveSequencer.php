@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Navigation;
 
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
@@ -17,13 +17,13 @@ use Illuminate\Support\Collection;
  *           Si le score courant + le potentiel restant maximal ne peut pas
  *           changer de zone de risque, la session est considérée terminée.
  */
-class AdaptiveSequencingService
+class AdaptiveSequencer
 {
     /**
      * Réordonne les blocs par potentiel de contribution décroissant.
      *
      * Les blocs déjà visités sont exclus ; un forced_bloc éventuellement
-     * positionné en tête par QuestionFlowService reste en place (il n'est
+     * positionné en tête par QuestionSequencer reste en place (il n'est
      * pas passé ici).
      *
      * @param  Collection<int, string>              $blocs          Clés de blocs dans l'ordre courant
@@ -39,16 +39,25 @@ class AdaptiveSequencingService
         array $answeredIds,
         array $answers,
         array $profile,
-        QuestionFlowService $flow,
+        QuestionSequencer $flow,
     ): Collection {
-        return $blocs
-            ->map(fn (string $bloc) => [
-                'key'         => $bloc,
-                'potential'   => $this->blocPotential($bloc, $allTemplates, $answeredIds, $answers, $profile, $flow),
-            ])
-            ->sortByDesc('potential')
-            ->pluck('key')
-            ->values();
+        $withPotential    = [];
+        $withoutPotential = [];
+
+        foreach ($blocs as $bloc) {
+            $potential = $this->blocPotential($bloc, $allTemplates, $answeredIds, $answers, $profile, $flow);
+            if ($potential > 0) {
+                $withPotential[] = ['key' => $bloc, 'potential' => $potential];
+            } else {
+                $withoutPotential[] = $bloc;
+            }
+        }
+
+        $sorted = collect($withPotential)->sortByDesc('potential')->pluck('key');
+
+        // Les blocs sans potentiel (accueil, profil, etc.) conservent
+        // leur ordre original et passent avant les blocs à risque triés.
+        return collect($withoutPotential)->merge($sorted)->values();
     }
 
     /**
@@ -71,7 +80,7 @@ class AdaptiveSequencingService
         array $answeredIds,
         array $answers,
         array $profile,
-        QuestionFlowService $flow,
+        QuestionSequencer $flow,
     ): bool {
         // Mode conservatif : on inclut TOUTES les questions non répondues du bloc,
         // même celles masquées par visible_if. Des conditions non encore évaluées
@@ -85,7 +94,7 @@ class AdaptiveSequencingService
             return false;
         }
 
-        $levels = config('risk-level.levels', []);
+        $levels      = config('risk-level.levels', []);
         $currentZone = $this->resolveZone($currentScore, $levels);
         $maxZone     = $this->resolveZone($currentScore + $remainingPotential, $levels);
 
@@ -107,7 +116,7 @@ class AdaptiveSequencingService
         array $answeredIds,
         array $answers,
         array $profile,
-        QuestionFlowService $flow,
+        QuestionSequencer $flow,
         bool $conservative = false,
     ): float {
         $candidates = $allTemplates

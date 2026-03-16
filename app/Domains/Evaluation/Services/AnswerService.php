@@ -6,7 +6,7 @@ use App\Domains\Evaluation\Enums\AnswerStatus;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 
 class AnswerService
 {

@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"$this->isVisible\\\\|$this->buildRuleScope\\\\|$this->evaluateCondition\\\\|$this->normalizeAnswerValue\\\\|$this->extractComparable\\\\|$this->isList\\\\|$this->compare\" c:/laragon/www/api.triage/app/Domains/Evaluation/Services/QuestionFlowService.php)",
+      "Bash(php -l c:/laragon/www/api.triage/app/Domains/Evaluation/Services/QuestionFlowService.php)",
+      "Bash(php -l c:/laragon/www/api.triage/app/Domains/Evaluation/Services/Navigation/ConditionEvaluator.php)",
+      "Bash(php -l c:/laragon/www/api.triage/app/Domains/Evaluation/Services/Navigation/RoutingEngine.php)",
+      "Bash(php -r \":*)",
+      "Bash(php artisan tinker --execute=\":*)",
+      "Bash(xargs -I{} php -l {})",
+      "Bash(composer dump-autoload:*)",
+      "Bash(php artisan:*)",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(1:*)",
+      "Bash(wc -l c:/laragon/www/api.triage/app/Domains/Evaluation/Controllers/Admin/*.php)",
+      "Bash(xargs head:*)",
+      "Bash(ls -la \"c:/dev/Chereh-Projets/chereh-dash/app/\\(admin-dash\\)/admin\")",
+      "Bash(npm run:*)",
+      "Bash(taskkill /f /im node.exe)"
+    ],
+    "additionalDirectories": [
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\types",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\hooks",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(admin-dash)\\admin\\questionnaires",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\components\\ui",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(dashboard)\\decisions",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(dashboard)\\patients",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(dashboard)\\evaluations",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(dashboard)\\utilisateurs",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(admin-dash)\\admin\\structures",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(dashboard)\\ambassadeurs",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(admin-dash)\\admin\\ambassadeurs",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\app\\(admin-dash)\\admin\\patients",
+      "c:\\dev\\Chereh-Projets\\chereh-dash\\.next"
+    ]
+  }
+}

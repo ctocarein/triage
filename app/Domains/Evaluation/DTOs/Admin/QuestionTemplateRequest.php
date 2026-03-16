@@ -4,8 +4,8 @@ namespace App\Domains\Evaluation\DTOs\Admin;
 
 use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\ConditionContractValidator;
-use App\Domains\Evaluation\Services\RoutingRulesValidator;
+use App\Domains\Evaluation\Services\Catalog\ConditionContractValidator;
+use App\Domains\Evaluation\Services\Catalog\RoutingRulesValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

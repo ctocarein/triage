@@ -4,71 +4,105 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
+use App\Domains\Evaluation\Services\Catalog\QuestionTemplateContractValidator;
 
 class GreetingSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $validator = new QuestionTemplateContractValidator();
 
-        $greetingInfos = [
+        $questions = [
+            // ----------------------------------------------------------------
+            // 1 — Message de bienvenue (informatif, pas de réponse)
+            // ----------------------------------------------------------------
             [
-                'key' => 'greeting_welcome',
-                'text' => 'Soyez la bienvenue sur CHEREH, votre outil de sante numerique concu pour aider a reperer plus tot certains signes de risque lies aux cancers feminins.',
-                'type' => 'custom',
-                'bloc_key' => 'greeting',
-                'answer_target' => null,
+                'key'            => 'greeting_welcome',
+                'text'           => 'Bienvenue sur CHEREH, votre outil de santé numérique conçu pour vous aider à repérer plus tôt certains signes de risque liés aux cancers féminins.',
+                'type'           => 'custom',
+                'bloc_key'       => 'greeting',
+                'answer_target'  => null,
                 'is_entry_point' => true,
-                'order' => 1,
+                'order'          => 1,
             ],
+
+            // ----------------------------------------------------------------
+            // 2 — Notice de confidentialité (informatif, pas de réponse)
+            // ----------------------------------------------------------------
             [
-                'key' => 'greeting_confidential',
-                'text' => "Information importante.\n\nCHEREH ne pose pas de diagnostic medical et ne remplace pas un professionnel de sante.\n\nLes resultats fournis servent uniquement a vous orienter.\n\nVos reponses resteront strictement confidentielles et securisees.",
-                'bloc_key' => 'greeting',
+                'key'            => 'greeting_confidential',
+                'text'           => "Information importante.\n\nCHEREH ne pose pas de diagnostic médical et ne remplace pas un professionnel de santé.\n\nLes résultats fournis servent uniquement à vous orienter.\n\nVos réponses resteront strictement confidentielles et sécurisées.",
+                'type'           => 'custom',
+                'bloc_key'       => 'greeting',
+                'answer_target'  => null,
                 'is_entry_point' => false,
-                'type' => 'custom',
-                'answer_target' => null,
-                'order' => 2,
+                'order'          => 2,
             ],
+
+            // ----------------------------------------------------------------
+            // 3 — Consentement explicite
+            // Refus → bloc consent_declined (end_session)
+            // Accepte → profil_identite (suite naturelle du parcours)
+            // ----------------------------------------------------------------
             [
-                'key' => 'explicit_consent',
-                'text' => 'Acceptez-vous de repondre a ces questions afin de recevoir une orientation medicale personnalisee ?',
-                'type' => 'checkbox',
-                'bloc_key' => 'greeting',
+                'key'           => 'explicit_consent',
+                'text'          => 'Acceptez-vous de répondre à ces questions afin de recevoir une orientation médicale personnalisée ?',
+                'type'          => 'checkbox',
+                'bloc_key'      => 'greeting',
                 'answer_target' => 'consent',
-                'options' => json_encode([
-                    [
-                        'value' => 'yes',
-                        'label' => 'Oui, j\'accepte',
-                    ],
-                    [
-                        'value' => 'no',
-                        'label' => 'Non, je ne veux pas continuer',
-                    ],
+                'order'         => 3,
+                'is_required'   => true,
+                'options'       => json_encode([
+                    ['value' => 'yes', 'label' => "Oui, j'accepte"],
+                    ['value' => 'no',  'label' => 'Non, je ne souhaite pas continuer'],
                 ]),
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'yes'], 'next' => 'bloc:profile_personal'],
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 'next' => 'bloc:consent_declined'],
                 ],
-                'order' => 3,
-                'is_required' => true,
             ],
 
+            // ----------------------------------------------------------------
+            // 4 — Raison de la visite (multiselect)
+            // Pré-queue les questions d'entrée des blocs concernés pour qu'elles
+            // soient posées en priorité dans leur bloc respectif.
+            // ----------------------------------------------------------------
+            [
+                'key'           => 'raison_visite',
+                'text'          => 'Qu\'est-ce qui vous amène aujourd\'hui ?',
+                'type'          => 'select_multiple',
+                'bloc_key'      => 'greeting',
+                'answer_target' => 'evaluation',
+                'order'         => 4,
+                'is_required'   => true,
+                'options'       => json_encode([
+                    ['value' => 'sein',      'label' => 'J\'ai des symptômes au niveau du sein'],
+                    ['value' => 'cervical',  'label' => 'J\'ai des symptômes gynécologiques'],
+                    ['value' => 'depistage', 'label' => 'Je viens pour un dépistage de routine'],
+                    ['value' => 'autre',     'label' => 'Autre raison'],
+                ]),
+                'routing_rules' => [
+                    [
+                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'sein'],
+                        'next' => 'queue:breast_pain',
+                    ],
+                    [
+                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'cervical'],
+                        'next' => 'queue:vaginal_bleeding_abnormal',
+                    ],
+                    [
+                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
+                        'next' => 'queue:profil_identite',
+                    ],
+                ],
+            ],
         ];
 
-        $validator->assertUniqueOrderPerBloc($greetingInfos, static::class);
+        $validator->assertUniqueOrderPerBloc($questions, static::class);
 
-        foreach ($greetingInfos as $q) {
+        foreach ($questions as $q) {
             $q = $validator->normalize($q);
             $validator->assertValid($q);
-            DynamicQuestionTemplate::updateOrCreate(
-                ['key' => $q['key']],
-                $q
-            );
+            DynamicQuestionTemplate::updateOrCreate(['key' => $q['key']], $q);
         }
     }
 }

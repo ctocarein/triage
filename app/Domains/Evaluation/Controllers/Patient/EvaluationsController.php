@@ -6,7 +6,7 @@ use App\Domains\Evaluation\DTOs\Patient\EvaluationAdvanceRequest;
 use App\Domains\Evaluation\DTOs\Patient\EvaluationSessionStartRequest;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Services\EvaluationFlowService;
-use App\Domains\Evaluation\Services\IdempotencyService;
+use App\Domains\Evaluation\Services\Support\IdempotencyService;
 use App\Domains\Evaluation\Http\Concerns\ValidatesEvaluationSession;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\Access\AuthorizationException;

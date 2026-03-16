@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Support;
 
 use App\Domains\Evaluation\Models\IdempotencyKey;
 use Illuminate\Http\Request;

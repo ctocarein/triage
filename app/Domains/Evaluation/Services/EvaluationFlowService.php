@@ -3,23 +3,22 @@
 namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
-use App\Domains\Decision\Models\DecisionNode;
-use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Decision\Services\DecisionInsightService;
 use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\ModelVersion;
+use App\Domains\Evaluation\Models\ThematicBloc;
 use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
 use App\Domains\Report\Models\Report;
 use App\Domains\Report\Services\ReportGenerationService;
 use App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral;
 use App\Domains\Ambassador\Domain\Events\ReferralUsed;
-use App\Services\Decisions\DecisionPathEngine;
 use App\Domains\Evaluation\Services\ProfileUpdaterService;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Enums\AnswerStatus;
-use App\Domains\Evaluation\Services\EvaluationSnapshotService;
+use App\Domains\Evaluation\Services\Navigation\QuestionSequencer;
+use App\Domains\Evaluation\Services\Scoring\EvaluationSnapshotService;
 
 class EvaluationFlowService
 {
@@ -28,7 +27,7 @@ class EvaluationFlowService
         protected DecisionInsightService $insightService,
         protected ReportGenerationService $reportService,
         protected ProfileUpdaterService $profileUpdater,
-        protected QuestionFlowService $questionFlow,
+        protected QuestionSequencer $questionSequencer,
         protected EvaluationSnapshotService $snapshotService
     ) {
     }
@@ -39,22 +38,21 @@ class EvaluationFlowService
      */
     public function start(Identity $identity, array $validated): array
     {
-        $type = $validated['type'];
-        $blocKeys = $validated['bloc_keys'] ?? [];
+        $type         = $validated['type'];
+        $blocKeys     = $validated['bloc_keys'] ?? [];
         $referralCode = $validated['referral_code'] ?? null;
-        $clientIp = $validated['client_ip'] ?? null;
-        $subjectId = $validated['subject_id'] ?? null;
-        $referral = null;
-        $decisionPath = null;
+        $clientIp     = $validated['client_ip'] ?? null;
+        $subjectId    = $validated['subject_id'] ?? null;
+        $referral     = null;
         $agentIdentity = null;
 
         // Si subject_id fourni, l'acteur doit être FieldAgent et on crée la session pour le bénéficiaire
         if ($subjectId !== null) {
             if (! $identity->hasMembershipRole('FieldAgent')) {
                 return [
-                    'status' => 403,
+                    'status'  => 403,
                     'payload' => [
-                        'message' => 'Seul un agent de terrain peut démarrer une évaluation pour un bénéficiaire.',
+                        'message'    => 'Seul un agent de terrain peut démarrer une évaluation pour un bénéficiaire.',
                         'error_code' => 'AGENT_REQUIRED',
                     ],
                 ];
@@ -62,31 +60,31 @@ class EvaluationFlowService
             $subject = Identity::find($subjectId);
             if (! $subject) {
                 return [
-                    'status' => 404,
+                    'status'  => 404,
                     'payload' => ['message' => 'Bénéficiaire introuvable.'],
                 ];
             }
             $agentIdentity = $identity;
-            $identity = $subject;
+            $identity      = $subject;
         }
 
         if ($referralCode !== null) {
             $referral = Referral::query()->where('code', $referralCode)->first();
             if (! $referral || $referral->revoked_at !== null || ($referral->expires_at !== null && $referral->expires_at->isPast())) {
                 return [
-                    'status' => 410,
+                    'status'  => 410,
                     'payload' => [
-                        'message' => 'Lien de parrainage invalide ou expire.',
-                        'error_code' => 'REFERRAL_EXPIRED',
+                        'message'      => 'Lien de parrainage invalide ou expire.',
+                        'error_code'   => 'REFERRAL_EXPIRED',
                         'redirect_url' => config('ambassador.referrals.expired_url'),
                     ],
                 ];
             }
             if ($referral->ambassador?->user_id === $identity->id) {
                 return [
-                    'status' => 403,
+                    'status'  => 403,
                     'payload' => [
-                        'message' => "Vous ne pouvez pas utiliser votre propre lien de parrainage.",
+                        'message'    => "Vous ne pouvez pas utiliser votre propre lien de parrainage.",
                         'error_code' => 'REFERRAL_SELF',
                     ],
                 ];
@@ -105,9 +103,9 @@ class EvaluationFlowService
 
         if ($existingInProgress) {
             return [
-                'status' => 403,
+                'status'  => 403,
                 'payload' => [
-                    'message' => 'Vous avez une evaluation en cours. Veuillez la terminer.',
+                    'message'    => 'Vous avez une evaluation en cours. Veuillez la terminer.',
                     'error_code' => 'SESSION_IN_PROGRESS',
                     'session_id' => $existingInProgress->public_id,
                 ],
@@ -121,12 +119,12 @@ class EvaluationFlowService
 
         if ($completedSession) {
             return [
-                'status' => 403,
+                'status'  => 403,
                 'payload' => [
-                    'message' => 'Vous avez deja complete une evaluation.',
-                    'error_code' => 'ALREADY_COMPLETED',
+                    'message'      => 'Vous avez deja complete une evaluation.',
+                    'error_code'   => 'ALREADY_COMPLETED',
                     'redirect_url' => config('ambassador.referrals.used_url'),
-                    'session_id' => $completedSession->public_id,
+                    'session_id'   => $completedSession->public_id,
                 ],
             ];
         }
@@ -140,10 +138,10 @@ class EvaluationFlowService
 
             if ($otherIpSession) {
                 return [
-                    'status' => 403,
+                    'status'  => 403,
                     'payload' => [
-                        'message' => 'Ce lien a deja ete utilise sur cet appareil.',
-                        'error_code' => 'REFERRAL_DEVICE_USED',
+                        'message'      => 'Ce lien a deja ete utilise sur cet appareil.',
+                        'error_code'   => 'REFERRAL_DEVICE_USED',
                         'redirect_url' => config('ambassador.referrals.used_url'),
                     ],
                 ];
@@ -158,9 +156,9 @@ class EvaluationFlowService
 
             if ($existingReferralSession && $existingReferralSession->isInProgress()) {
                 return [
-                    'status' => 403,
+                    'status'  => 403,
                     'payload' => [
-                        'message' => 'Cette session est deja en cours. Veuillez la terminer.',
+                        'message'    => 'Cette session est deja en cours. Veuillez la terminer.',
                         'error_code' => 'SESSION_IN_PROGRESS',
                         'session_id' => $existingReferralSession->public_id,
                     ],
@@ -169,10 +167,10 @@ class EvaluationFlowService
 
             if ($existingReferralSession && $existingReferralSession->status === 'completed') {
                 return [
-                    'status' => 403,
+                    'status'  => 403,
                     'payload' => [
-                        'message' => 'Vous avez deja termine une evaluation avec ce lien.',
-                        'error_code' => 'REFERRAL_USED',
+                        'message'      => 'Vous avez deja termine une evaluation avec ce lien.',
+                        'error_code'   => 'REFERRAL_USED',
                         'redirect_url' => config('ambassador.referrals.used_url'),
                     ],
                 ];
@@ -181,16 +179,36 @@ class EvaluationFlowService
 
         if ($type !== 'complete' && ! IdentityEvaluationPolicy::hasCompletedFullEvaluation($identity)) {
             return [
-                'status' => 403,
+                'status'  => 403,
                 'payload' => [
                     'message' => "Merci de completer une evaluation complete avant d'acceder aux evaluations thematiques.",
                 ],
             ];
         }
 
+        // Résoudre les group IDs pour le type thematic
+        $selectedGroupIds = [];
         if ($type === 'thematic') {
+            if (empty($blocKeys)) {
+                return [
+                    'status'  => 422,
+                    'payload' => ['message' => 'Veuillez selectionner au moins un bloc thematique.'],
+                ];
+            }
+
+            $blocs = ThematicBloc::whereIn('key', $blocKeys)->where('is_active', true)->get();
+            if ($blocs->isEmpty() || $blocs->count() !== count($blocKeys)) {
+                return [
+                    'status'  => 422,
+                    'payload' => ['message' => 'Un ou plusieurs blocs thematiques ne sont pas valides ou actifs.'],
+                ];
+            }
+
+            $selectedGroupIds = $blocs->pluck('question_group_id')->filter()->unique()->values()->all();
+
+            // Réutiliser une session thematic identique en cours
             $normalized = $this->normalizeBlocKeys($blocKeys);
-            $existing = $identity->evaluationSessions()
+            $existing   = $identity->evaluationSessions()
                 ->active()
                 ->where('type', 'thematic')
                 ->latest('started_at')
@@ -200,134 +218,65 @@ class EvaluationFlowService
                         $this->expireSession($session);
                         return false;
                     }
-
                     return $this->normalizeBlocKeys($session->target_blocs ?? []) === $normalized;
                 });
 
             if ($existing) {
                 $questionPayload = $this->resolveCurrentQuestionPayload($existing);
-                $report = $existing->report;
+                $report  = $existing->report;
                 $insight = $this->insightService->generate($existing, $report);
 
                 return [
-                    'status' => 200,
-                    'payload' => $this->buildPayload(
-                        $existing,
-                        $insight,
-                        $questionPayload,
-                        $report,
-                        'Session deja en cours.'
-                    ),
-                ];
-            }
-        }
-
-        if ($type === 'complete') {
-            $decisionPath = DecisionPath::where('key', 'dp_full_assessment')->first();
-            if (! $decisionPath) {
-                return [
-                    'status' => 500,
-                    'payload' => [
-                        'message' => "Le parcours d'evaluation complete n'existe pas (cle dp_full_assessment manquante en base).",
-                    ],
-                ];
-            }
-            if (! $decisionPath->is_active) {
-                return [
-                    'status' => 422,
-                    'payload' => [
-                        'message' => "Le parcours d'evaluation complete n'est pas actif.",
-                    ],
-                ];
-            }
-        } else {
-            if (empty($blocKeys)) {
-                return [
-                    'status' => 422,
-                    'payload' => [
-                        'message' => 'Veuillez selectionner au moins un bloc thematique.',
-                    ],
-                ];
-            }
-
-            $paths = DecisionPath::whereIn('key', $blocKeys)->where('is_active', true)->get();
-            if ($paths->isEmpty() || count($paths) !== count($blocKeys)) {
-                return [
-                    'status' => 422,
-                    'payload' => [
-                        'message' => 'Un ou plusieurs DecisionPath ne sont pas valides ou actifs.',
-                    ],
-                ];
-            }
-
-            $decisionPath = $paths->first();
-            if (! $decisionPath) {
-                return [
-                    'status' => 500,
-                    'payload' => [
-                        'message' => 'Aucun parcours thematique actif trouve.',
-                    ],
+                    'status'  => 200,
+                    'payload' => $this->buildPayload($existing, $insight, $questionPayload, $report, 'Session deja en cours.'),
                 ];
             }
         }
 
         $session = $identity->evaluationSessions()->create([
-            'decision_path_id' => $decisionPath->id,
-            'decision_path_key' => $decisionPath->key,
-            'decision_path_version' => $decisionPath->version,
-            'catalog_version' => $this->resolveActiveVersionId('catalog'),
-            'risk_model_version' => $this->resolveActiveVersionId('risk_model'),
-            'type' => $type,
-            'status' => 'in_progress',
-            'started_at' => now(),
-            'expires_at' => $this->resolveSessionExpiry(),
-            'target_blocs' => $blocKeys ?: null,
-            'visited_blocs' => [],
-            'path_trace' => [],
-            'context' => array_filter([
-                'bloc_keys' => $blocKeys,
-                'token_id' => $identity->currentAccessToken()?->id,
-                'client_ip' => $clientIp,
-                'agent_id' => $agentIdentity?->id,
+            'decision_path_id'      => null,
+            'decision_path_key'     => null,
+            'decision_path_version' => null,
+            'catalog_version'       => $this->resolveActiveVersionId('catalog'),
+            'risk_model_version'    => $this->resolveActiveVersionId('risk_model'),
+            'type'                  => $type,
+            'status'                => 'in_progress',
+            'started_at'            => now(),
+            'expires_at'            => $this->resolveSessionExpiry(),
+            'target_blocs'          => $blocKeys ?: null,
+            'visited_blocs'         => [],
+            'path_trace'            => [],
+            'context'               => array_filter([
+                'bloc_keys'           => $blocKeys ?: null,
+                'selected_group_ids'  => $selectedGroupIds ?: null,
+                'token_id'            => $identity->currentAccessToken()?->id,
+                'client_ip'           => $clientIp,
+                'agent_id'            => $agentIdentity?->id,
             ], fn ($v) => $v !== null),
-            'referral_id' => $referral?->id,
+            'referral_id'           => $referral?->id,
         ]);
 
-        $engine = new DecisionPathEngine($decisionPath);
-        $firstNode = $engine->getFirstNode();
+        $firstQuestion = $this->questionSequencer->goToNextQuestion($session, $selectedGroupIds);
 
-        if (! $firstNode) {
+        if (! $firstQuestion) {
             return [
-                'status' => 500,
+                'status'  => 500,
                 'payload' => [
-                    'message' => "Le parcours d'evaluation n'a pas de premiere etape definie.",
+                    'message'    => "Aucune question disponible pour demarrer l'evaluation.",
                     'session_id' => $session->public_id,
-                    'decision_path_id' => $decisionPath->id,
-                    'question' => null,
+                    'question'   => null,
                 ],
             ];
         }
 
-        $questionId = $this->resolveQuestionId($firstNode);
-        if ($questionId) {
-            $session->update([
-                'current_question_id' => $questionId,
-                'current_node_key' => $firstNode->node_key,
-            ]);
-        }
+        $session->update(['current_question_id' => $firstQuestion->id]);
 
-        $questionPayload = $firstNode->getQuestionPayload();
-        $insight = $this->insightService->generate($session);
+        $questionPayload = $this->buildQuestionPayloadFromTemplate($firstQuestion);
+        $insight         = $this->insightService->generate($session);
 
         return [
-            'status' => 201,
-            'payload' => $this->buildPayload(
-                $session,
-                $insight,
-                $questionPayload,
-                null,
-                'Session demarree.'
-            ),
+            'status'  => 201,
+            'payload' => $this->buildPayload($session, $insight, $questionPayload, null, 'Session demarree.'),
         ];
     }
 
@@ -338,33 +287,19 @@ class EvaluationFlowService
     public function advance(EvaluationSession $session, array $answerData): array
     {
         if (! $session->isInProgress()) {
-            $report = $session->report;
+            $report  = $session->report;
             $insight = $this->insightService->generate($session, $report);
 
             return [
-                'status' => 200,
-                'payload' => $this->buildPayload(
-                    $session,
-                    $insight,
-                    null,
-                    $report,
-                    'Session deja terminee.'
-                ),
-            ];
-        }
-
-        if (! $session->decisionPath) {
-            return [
-                'status' => 500,
-                'payload' => [
-                    'message' => 'Aucun parcours decisionnel associe a cette session.',
-                ],
+                'status'  => 200,
+                'payload' => $this->buildPayload($session, $insight, null, $report, 'Session deja terminee.'),
             ];
         }
 
         $answerData['evaluation_session_id'] = $session->id;
         $answer = $this->answerService->saveAnswer($answerData);
         $answer->loadMissing('question');
+
         if (
             $answer->question &&
             in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'], true)
@@ -372,123 +307,55 @@ class EvaluationFlowService
             $this->profileUpdater->syncFromAnswers($session);
         }
 
-        $session->update([
-            'current_question_id' => $answer->dynamic_question_template_id,
-        ]);
+        $session->update(['current_question_id' => $answer->dynamic_question_template_id]);
 
         $routing = null;
         if ($answer->question) {
-            $routing = $this->questionFlow->applyRoutingRules($session, $answer->question, $answer->value);
+            $routing = $this->questionSequencer->applyRoutingRules($session, $answer->question, $answer->value);
         }
 
         $this->recordPathTrace($session, $answer, $routing);
-        $this->markNonApplicableAfterRouting($session, $answer, $routing);
-        $this->reactivateBlocAfterRouting($session, $routing);
+
+        // Refresh : le routing peut avoir changé le statut (end_session → cancelled)
+        $session->refresh();
 
         if (! $session->isInProgress()) {
-            $insight = $this->insightService->generate($session);
-
-            return [
-                'status' => 200,
-                'payload' => $this->buildPayload(
-                    $session,
-                    $insight,
-                    null,
-                    null,
-                    'Evaluation terminee.'
-                ),
-            ];
-        }
-
-        $nextNode = $this->resolveNextNodeFromRouting($session, $routing);
-        if (! $nextNode) {
-            $routedPayload = $this->resolveQuestionPayloadFromRouting($session, $routing);
-            if ($routedPayload) {
-                $session->update([
-                    'current_question_id' => $routedPayload['id'],
-                    'current_node_key' => null,
-                ]);
-
-                $insight = $this->insightService->generate($session);
-
-                return [
-                    'status' => 200,
-                    'payload' => $this->buildPayload(
-                        $session,
-                        $insight,
-                        $routedPayload,
-                        null,
-                        null
-                    ),
-                ];
+            $report = null;
+            if ($session->status === 'completed') {
+                $report = $this->reportService->generate($session);
             }
-
-            $engine = new DecisionPathEngine($session->decisionPath);
-            $nextNode = $engine->getNextNode($session);
-        }
-
-        if (! $nextNode) {
-            $this->markCompleted($session);
-            $report = $this->reportService->generate($session);
             $insight = $this->insightService->generate($session, $report);
 
             return [
-                'status' => 200,
-                'payload' => $this->buildPayload(
-                    $session,
-                    $insight,
-                    null,
-                    $report,
-                    'Evaluation terminee.'
-                ),
+                'status'  => 200,
+                'payload' => $this->buildPayload($session, $insight, null, $report, 'Evaluation terminee.'),
             ];
         }
 
-        $questionPayload = $nextNode->getQuestionPayload();
+        $groupIds      = $session->context['selected_group_ids'] ?? [];
+        $nextQuestion  = $this->questionSequencer->goToNextQuestion($session, $groupIds);
 
-        if (in_array($nextNode->node_type, ['end', 'recommendation'], true)) {
-            $this->markCompleted($session);
-            $report = $this->reportService->generate($session);
+        // goToNextQuestion appelle markCompleted() en interne si plus de questions
+        $session->refresh();
+
+        if (! $nextQuestion || ! $session->isInProgress()) {
+            $report  = $this->reportService->generate($session);
             $insight = $this->insightService->generate($session, $report);
 
             return [
-                'status' => 200,
-                'payload' => $this->buildPayload(
-                    $session,
-                    $insight,
-                    $questionPayload,
-                    $report,
-                    $nextNode->outcome_message ?? 'Fin du parcours.'
-                ),
+                'status'  => 200,
+                'payload' => $this->buildPayload($session, $insight, null, $report, 'Evaluation terminee.'),
             ];
         }
 
-        $questionId = $this->resolveQuestionId($nextNode);
-        if (! $questionId) {
-            return [
-                'status' => 500,
-                'payload' => [
-                    'message' => 'Probleme de configuration: node sans question_id.',
-                ],
-            ];
-        }
+        $session->update(['current_question_id' => $nextQuestion->id]);
 
-        $session->update([
-            'current_question_id' => $questionId,
-            'current_node_key' => $nextNode->node_key,
-        ]);
-
-        $insight = $this->insightService->generate($session);
+        $questionPayload = $this->buildQuestionPayloadFromTemplate($nextQuestion);
+        $insight         = $this->insightService->generate($session);
 
         return [
-            'status' => 200,
-            'payload' => $this->buildPayload(
-                $session,
-                $insight,
-                $questionPayload,
-                null,
-                null
-            ),
+            'status'  => 200,
+            'payload' => $this->buildPayload($session, $insight, $questionPayload, null, null),
         ];
     }
 
@@ -498,18 +365,12 @@ class EvaluationFlowService
     public function state(EvaluationSession $session): array
     {
         $questionPayload = $this->resolveCurrentQuestionPayload($session);
-        $report = $session->report;
+        $report  = $session->report;
         $insight = $this->insightService->generate($session, $report);
 
         return [
-            'status' => 200,
-            'payload' => $this->buildPayload(
-                $session,
-                $insight,
-                $questionPayload,
-                $report,
-                null
-            ),
+            'status'  => 200,
+            'payload' => $this->buildPayload($session, $insight, $questionPayload, $report, null),
         ];
     }
 
@@ -519,34 +380,22 @@ class EvaluationFlowService
     public function complete(EvaluationSession $session): array
     {
         if (! $session->isInProgress()) {
-            $report = $session->report;
+            $report  = $session->report;
             $insight = $this->insightService->generate($session, $report);
 
             return [
-                'status' => 200,
-                'payload' => $this->buildPayload(
-                    $session,
-                    $insight,
-                    null,
-                    $report,
-                    'Cette session est deja completee.'
-                ),
+                'status'  => 200,
+                'payload' => $this->buildPayload($session, $insight, null, $report, 'Cette session est deja completee.'),
             ];
         }
 
         $this->markCompleted($session);
-        $report = $this->reportService->generate($session);
+        $report  = $this->reportService->generate($session);
         $insight = $this->insightService->generate($session, $report);
 
         return [
-            'status' => 201,
-            'payload' => $this->buildPayload(
-                $session,
-                $insight,
-                null,
-                $report,
-                'Session completee avec succes.'
-            ),
+            'status'  => 201,
+            'payload' => $this->buildPayload($session, $insight, null, $report, 'Session completee avec succes.'),
         ];
     }
 
@@ -560,10 +409,10 @@ class EvaluationFlowService
         $this->snapshotService->maybeRecord($session);
 
         $payload = [
-            'session' => $this->mapSession($session),
-            'insight' => $insight ? $this->mapInsight($insight) : null,
+            'session'  => $this->mapSession($session),
+            'insight'  => $insight ? $this->mapInsight($insight) : null,
             'question' => $questionPayload,
-            'report' => $report ? $report->toArray() : null,
+            'report'   => $report ? $report->toArray() : null,
         ];
 
         if ($message !== null) {
@@ -575,294 +424,79 @@ class EvaluationFlowService
 
     protected function recordPathTrace(EvaluationSession $session, EvaluationAnswer $answer, ?array $routing): void
     {
-        $trace = $session->path_trace ?? [];
+        $trace   = $session->path_trace ?? [];
         $trace[] = [
-            'question_id' => $answer->dynamic_question_template_id,
+            'question_id'  => $answer->dynamic_question_template_id,
             'question_key' => $answer->question?->key,
-            'node_key' => $session->current_node_key,
-            'status' => $answer->status instanceof AnswerStatus ? $answer->status->value : $answer->status,
-            'order' => $answer->order,
-            'routing' => $routing,
-            'at' => now()->toISOString(),
+            'status'       => $answer->status instanceof AnswerStatus ? $answer->status->value : $answer->status,
+            'order'        => $answer->order,
+            'routing'      => $routing,
+            'at'           => now()->toISOString(),
         ];
 
         $session->path_trace = $trace;
         $session->save();
     }
 
-    protected function markNonApplicableAfterRouting(
-        EvaluationSession $session,
-        EvaluationAnswer $answer,
-        ?array $routing
-    ): void {
-        if (! $routing || ! isset($routing['action'])) {
-            return;
-        }
-
-        if (! in_array($routing['action'], ['jump_bloc', 'end_session'], true)) {
-            return;
-        }
-
-        $currentBloc = $answer->question?->bloc_key;
-        if (! $currentBloc) {
-            return;
-        }
-
-        $questions = DynamicQuestionTemplate::query()
-            ->where('bloc_key', $currentBloc)
-            ->get(['id', 'key']);
-
-        foreach ($questions as $question) {
-            $existing = EvaluationAnswer::query()->where([
-                'evaluation_session_id' => $session->id,
-                'dynamic_question_template_id' => $question->id,
-            ])->first();
-
-            if ($existing) {
-                continue;
-            }
-
-            EvaluationAnswer::create([
-                'evaluation_session_id' => $session->id,
-                'dynamic_question_template_id' => $question->id,
-                'value' => null,
-                'file_ids' => null,
-                'is_skipped' => true,
-                'status' => AnswerStatus::NonApplicable->value,
-                'order' => null,
-            ]);
-        }
-    }
-
-    protected function reactivateBlocAfterRouting(EvaluationSession $session, ?array $routing): void
+    protected function resolveCurrentQuestionPayload(EvaluationSession $session): ?array
     {
-        if (! $routing || ($routing['action'] ?? null) !== 'jump_bloc') {
-            return;
+        if (! $session->current_question_id) {
+            return null;
         }
 
-        $targetBloc = $routing['bloc_key'] ?? null;
-        if (! $targetBloc) {
-            return;
-        }
+        $question = DynamicQuestionTemplate::find($session->current_question_id);
 
-        $questions = DynamicQuestionTemplate::query()
-            ->where('bloc_key', $targetBloc)
-            ->get(['id']);
-
-        foreach ($questions as $question) {
-            EvaluationAnswer::query()
-                ->where('evaluation_session_id', $session->id)
-                ->where('dynamic_question_template_id', $question->id)
-                ->where('status', AnswerStatus::NonApplicable->value)
-                ->update([
-                    'status' => AnswerStatus::Invalidated->value,
-                    'value' => null,
-                    'file_ids' => null,
-                    'is_skipped' => false,
-                ]);
-        }
+        return $question ? $this->buildQuestionPayloadFromTemplate($question) : null;
     }
 
     protected function mapSession(EvaluationSession $session): array
     {
         return [
-            'id' => $session->public_id,
-            'public_id' => $session->public_id,
-            'status' => $session->status,
-            'type' => $session->type,
-            'score' => $session->score,
-            'risk_level' => $session->risk_level,
-            'started_at' => $session->started_at,
-            'completed_at' => $session->completed_at,
-            'expires_at' => $session->expires_at,
-            'decision_path_id' => $session->decision_path_id,
-            'decision_path_key' => $session->decision_path_key,
+            'id'                    => $session->public_id,
+            'public_id'             => $session->public_id,
+            'status'                => $session->status,
+            'type'                  => $session->type,
+            'score'                 => $session->score,
+            'risk_level'            => $session->risk_level,
+            'started_at'            => $session->started_at,
+            'completed_at'          => $session->completed_at,
+            'expires_at'            => $session->expires_at,
+            'decision_path_id'      => $session->decision_path_id,
+            'decision_path_key'     => $session->decision_path_key,
             'decision_path_version' => $session->decision_path_version,
-            'catalog_version' => $session->catalog_version,
-            'risk_model_version' => $session->risk_model_version,
-            'versions' => [
-                'protocol' => $this->snapshotService->resolveProtocolVersion($session),
-                'catalog_version_id' => $session->catalog_version,
+            'catalog_version'       => $session->catalog_version,
+            'risk_model_version'    => $session->risk_model_version,
+            'versions'              => [
+                'protocol'              => $this->snapshotService->resolveProtocolVersion($session),
+                'catalog_version_id'    => $session->catalog_version,
                 'risk_model_version_id' => $session->risk_model_version,
             ],
-            'current_question_id' => $session->current_question_id,
-            'current_node_key' => $session->current_node_key,
-            'target_blocs' => $session->target_blocs,
-            'visited_blocs' => $session->visited_blocs,
+            'current_question_id'   => $session->current_question_id,
+            'target_blocs'          => $session->target_blocs,
+            'visited_blocs'         => $session->visited_blocs,
         ];
     }
 
     protected function mapInsight(DecisionInsight $insight): array
     {
         return [
-            'id' => $insight->id,
-            'model_version' => $insight->model_version,
-            'calibration_tag' => $insight->calibration_tag,
-            'risk_score' => $insight->risk_score,
-            'risk_level' => $insight->risk_level,
-            'score_total' => $insight->score_total,
-            'confidence_score' => $insight->confidence_score,
-            'confidence_interval_low' => $insight->confidence_interval_low,
+            'id'                       => $insight->id,
+            'model_version'            => $insight->model_version,
+            'calibration_tag'          => $insight->calibration_tag,
+            'risk_score'               => $insight->risk_score,
+            'risk_level'               => $insight->risk_level,
+            'score_total'              => $insight->score_total,
+            'confidence_score'         => $insight->confidence_score,
+            'confidence_interval_low'  => $insight->confidence_interval_low,
             'confidence_interval_high' => $insight->confidence_interval_high,
-            'data_quality' => $insight->data_quality,
-            'explanations' => $insight->explanations,
-            'suggested_action' => $insight->suggested_action,
+            'data_quality'             => $insight->data_quality,
+            'explanations'             => $insight->explanations,
+            'suggested_action'         => $insight->suggested_action,
             'requires_human_validation' => $insight->requires_human_validation,
-            'human_validation_reason' => $insight->human_validation_reason,
-            'final_decision' => $insight->final_decision,
-            'vnext_shadow' => $insight->vnext_shadow,
+            'human_validation_reason'  => $insight->human_validation_reason,
+            'final_decision'           => $insight->final_decision,
+            'vnext_shadow'             => $insight->vnext_shadow,
         ];
-    }
-
-    protected function resolveCurrentQuestionPayload(EvaluationSession $session): ?array
-    {
-        if (! $session->decisionPath || ! $session->current_question_id) {
-            return null;
-        }
-
-        $node = $session->decisionPath->nodes()
-            ->where('question_id', $session->current_question_id)
-            ->first();
-
-        if (! $node) {
-            $node = $session->decisionPath->nodes()
-                ->where('dynamic_question_template_id', $session->current_question_id)
-                ->first();
-        }
-
-        return $node?->getQuestionPayload();
-    }
-
-    protected function resolveQuestionId(DecisionNode $node): ?int
-    {
-        if (! empty($node->question_id)) {
-            return (int) $node->question_id;
-        }
-
-        return isset($node->dynamic_question_template_id)
-            ? (int) $node->dynamic_question_template_id
-            : null;
-    }
-
-    /**
-     * @param array<string, mixed>|null $routing
-     */
-    protected function resolveNextNodeFromRouting(EvaluationSession $session, ?array $routing): ?DecisionNode
-    {
-        if (! $routing || ! $session->decisionPath) {
-            return null;
-        }
-
-        $action = $routing['action'] ?? null;
-        if ($action === 'jump_question') {
-            $questionKey = $routing['question_key'] ?? null;
-            if (is_string($questionKey) && $questionKey !== '') {
-                return $this->resolveNodeForQuestionKey($session->decisionPath, $questionKey);
-            }
-        }
-
-        if ($action === 'jump_bloc') {
-            $blocKey = $routing['bloc_key'] ?? null;
-            if (is_string($blocKey) && $blocKey !== '') {
-                return $this->resolveNodeForBlocKey($session, $blocKey);
-            }
-        }
-
-        return null;
-    }
-
-    protected function resolveNodeForBlocKey(EvaluationSession $session, string $blocKey): ?DecisionNode
-    {
-        $answeredIds = $session->answers()->pluck('dynamic_question_template_id')->all();
-        $question = DynamicQuestionTemplate::query()
-            ->where('bloc_key', $blocKey)
-            ->whereNotIn('id', $answeredIds)
-            ->orderBy('order')
-            ->first();
-
-        if (! $question) {
-            return null;
-        }
-
-        return $this->resolveNodeForQuestionId($session->decisionPath, $question->id);
-    }
-
-    protected function resolveNodeForQuestionKey(DecisionPath $path, string $questionKey): ?DecisionNode
-    {
-        $question = DynamicQuestionTemplate::query()->where('key', $questionKey)->first();
-        if (! $question) {
-            return null;
-        }
-
-        return $this->resolveNodeForQuestionId($path, $question->id);
-    }
-
-    protected function resolveNodeForQuestionId(DecisionPath $path, int $questionId): ?DecisionNode
-    {
-        return $path->nodes()
-            ->where(function ($query) use ($questionId) {
-                $query->where('question_id', $questionId)
-                    ->orWhere('dynamic_question_template_id', $questionId);
-            })
-            ->first();
-    }
-
-    /**
-     * @param array<string, mixed>|null $routing
-     * @return array<string, mixed>|null
-     */
-    protected function resolveQuestionPayloadFromRouting(EvaluationSession $session, ?array $routing): ?array
-    {
-        if (! $routing) {
-            return null;
-        }
-
-        $action = $routing['action'] ?? null;
-        if ($action === 'jump_question') {
-            $questionKey = $routing['question_key'] ?? null;
-            if (! is_string($questionKey) || $questionKey === '') {
-                return null;
-            }
-
-            $question = DynamicQuestionTemplate::query()->where('key', $questionKey)->first();
-            return $question ? $this->buildQuestionPayloadFromTemplate($question) : null;
-        }
-
-        if ($action === 'jump_bloc') {
-            $blocKey = $routing['bloc_key'] ?? null;
-            if (! is_string($blocKey) || $blocKey === '') {
-                return null;
-            }
-
-            $question = $this->resolveFirstVisibleQuestionInBloc($session, $blocKey);
-            return $question ? $this->buildQuestionPayloadFromTemplate($question) : null;
-        }
-
-        return null;
-    }
-
-    protected function resolveFirstVisibleQuestionInBloc(EvaluationSession $session, string $blocKey): ?DynamicQuestionTemplate
-    {
-        $answeredIds = $session->answers()->pluck('dynamic_question_template_id')->all();
-        $context = $this->questionFlow->getSessionContext($session);
-
-        $query = DynamicQuestionTemplate::query()
-            ->where('bloc_key', $blocKey)
-            ->whereNotIn('id', $answeredIds)
-            ->orderBy('order');
-
-        // Exclure les questions de profil dans les sessions non-globales :
-        // le profil a déjà été saisi lors de la session complete initiale.
-        if (! $session->isFullEvaluation()) {
-            $query->whereNotIn('answer_target', ['personal_profile', 'medical_profile']);
-        }
-
-        return $query->get()
-            ->first(fn (DynamicQuestionTemplate $question) => $this->questionFlow->shouldBeVisible(
-                $question,
-                $context['answers'],
-                $context['profile']
-            ));
     }
 
     /**
@@ -871,22 +505,22 @@ class EvaluationFlowService
     protected function buildQuestionPayloadFromTemplate(DynamicQuestionTemplate $question): array
     {
         return [
-            'id' => $question->id,
-            'key' => $question->key,
-            'text' => $question->text,
-            'type' => $question->type,
-            'bloc_key' => $question->bloc_key,
+            'id'            => $question->id,
+            'key'           => $question->key,
+            'text'          => $question->text,
+            'type'          => $question->type,
+            'bloc_key'      => $question->bloc_key,
             'answer_target' => $question->answer_target,
-            'order' => $question->order,
-            'risk_weight' => $question->risk_weight,
-            'min' => $question->min,
-            'max' => $question->max,
-            'media_type' => $question->media_type,
-            'media_url' => $question->media_url,
-            'options' => $question->options,
-            'visible_if' => $question->visible_if,
-            'question_id' => $question->id,
-            'node_id' => null,
+            'order'         => $question->order,
+            'risk_weight'   => $question->risk_weight,
+            'min'           => $question->min,
+            'max'           => $question->max,
+            'media_type'    => $question->media_type,
+            'media_url'     => $question->media_url,
+            'options'       => $question->options,
+            'visible_if'    => $question->visible_if,
+            'question_id'   => $question->id,
+            'node_id'       => null,
         ];
     }
 
@@ -916,7 +550,7 @@ class EvaluationFlowService
      */
     protected function normalizeBlocKeys(array $blocKeys): array
     {
-        $normalized = array_values(array_filter($blocKeys, fn($value) => (string) $value !== ''));
+        $normalized = array_values(array_filter($blocKeys, fn ($value) => (string) $value !== ''));
         sort($normalized);
 
         return $normalized;
@@ -924,8 +558,8 @@ class EvaluationFlowService
 
     protected function sessionTokenMismatch(Identity $identity, EvaluationSession $session): bool
     {
-        $tokenId = $identity->currentAccessToken()?->id;
-        $context = $session->context ?? [];
+        $tokenId       = $identity->currentAccessToken()?->id;
+        $context       = $session->context ?? [];
         $sessionTokenId = is_array($context) ? ($context['token_id'] ?? null) : null;
 
         return $tokenId !== null

@@ -72,7 +72,7 @@ class ImportQuestionnaire extends Command
         $knownQuestionKeys = array_values(array_unique($knownQuestionKeys));
         $knownBlocKeys = array_values(array_unique($knownBlocKeys));
 
-        $validator = app(\App\Domains\Evaluation\Services\RoutingRulesValidator::class);
+        $validator = app(\App\Domains\Evaluation\Services\Catalog\RoutingRulesValidator::class);
         $errors = [];
         foreach ($questions as $index => $question) {
             if (!is_array($question)) {

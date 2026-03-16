@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Scoring;
 
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\EvaluationSnapshot;
 use App\Domains\Evaluation\Models\ModelVersion;
+use App\Domains\Evaluation\Services\Insight\DataQualityService;
 
 class EvaluationSnapshotService
 {

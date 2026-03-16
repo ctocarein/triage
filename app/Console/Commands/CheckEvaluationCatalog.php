@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Domains\Evaluation\Services\CatalogConsistencyChecker;
+use App\Domains\Evaluation\Services\Catalog\CatalogConsistencyChecker;
 use Illuminate\Console\Command;
 
 class CheckEvaluationCatalog extends Command

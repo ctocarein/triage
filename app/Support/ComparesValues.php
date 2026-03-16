@@ -27,6 +27,11 @@ trait ComparesValues
                 return in_array($actual, (array) $expected);
             case 'not_in':
                 return !in_array($actual, (array) $expected);
+            // contains : l'actual (tableau multiselect) contient la valeur expected
+            case 'contains':
+                return in_array($expected, (array) $actual);
+            case 'not_contains':
+                return !in_array($expected, (array) $actual);
             case 'age_gte':
             case 'age_gt':
             case 'age_lte':

@@ -3,7 +3,7 @@
 namespace App\Domains\Evaluation\Controllers\Patient;
 
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Services\QuestionFlowService;
+use App\Domains\Evaluation\Services\Navigation\QuestionSequencer;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,9 +14,9 @@ use Illuminate\Http\Request;
  */
 class QuestionFlowsController extends Controller
 {
-    protected QuestionFlowService $flow;
+    protected QuestionSequencer $flow;
 
-    public function __construct(QuestionFlowService $flow)
+    public function __construct(QuestionSequencer $flow)
     {
         $this->flow = $flow;
     }

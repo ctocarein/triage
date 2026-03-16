@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Scoring;
 
 use App\Domains\Evaluation\Concerns\ResolvesRiskModel;
 use App\Domains\Evaluation\Models\EvaluationSession;

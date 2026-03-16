@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Catalog;
 
 use App\Support\HandlesConditionArrays;
 
@@ -126,6 +126,22 @@ class RoutingRulesValidator
             return [];
         }
 
-        return ["{$path} doit utiliser un prefixe explicite (question:, bloc:, level:) ou end_session pour {$questionKey}."];
+        // queue: — file d'attente de questions prioritaires (une ou plusieurs clés séparées par virgule)
+        // Ex: "queue:breast_pain" ou "queue:age,last_pap_smear"
+        if (str_starts_with($next, 'queue:')) {
+            $keys = array_filter(array_map('trim', explode(',', substr($next, strlen('queue:')))));
+            if (empty($keys)) {
+                return ["{$path} doit contenir au moins une cle question apres 'queue:' pour {$questionKey}."];
+            }
+            if (!empty($knownQuestionKeys)) {
+                $unknown = array_diff($keys, $knownQuestionKeys);
+                if (!empty($unknown)) {
+                    return ["{$path} reference des questions inconnues (" . implode(', ', $unknown) . ") pour {$questionKey}."];
+                }
+            }
+            return [];
+        }
+
+        return ["{$path} doit utiliser un prefixe explicite (question:, bloc:, queue:, level:) ou end_session pour {$questionKey}."];
     }
 }

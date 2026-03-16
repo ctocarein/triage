@@ -27,7 +27,12 @@ class ThematicBlocRequest extends FormRequest
             'is_active'         => ['boolean'],
             'icon'              => ['nullable', 'string', 'max:100'],
             'color'             => ['nullable', 'string', 'max:50'],
-            'question_group_id' => ['nullable', 'integer', 'exists:question_groups,id'],
+            'question_group_id'      => ['nullable', 'integer', 'exists:question_groups,id'],
+            'visible_if'             => ['nullable', 'array'],
+            'visible_if.*.source'    => ['required_with:visible_if', 'string'],
+            'visible_if.*.key'       => ['required_with:visible_if', 'string'],
+            'visible_if.*.operator'  => ['required_with:visible_if', 'string', 'in:=,!=,>,<,>=,<=,in,not_in,empty,not_empty,contains,not_contains'],
+            'visible_if.*.value'     => ['present'],
         ];
     }
 }

@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Insight;
 
-use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Evaluation\Services\AnswerService;
+use App\Domains\Evaluation\Services\Navigation\QuestionSequencer;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -15,7 +16,7 @@ class GoldenPathRunner
 {
     public function __construct(
         private readonly AnswerService $answerService,
-        private readonly QuestionFlowService $flow
+        private readonly QuestionSequencer $flow
     ) {
     }
 
@@ -26,9 +27,9 @@ class GoldenPathRunner
     public function runFixture(array $fixture): array
     {
         return Event::fakeFor(function () use ($fixture): array {
-            $name = (string) ($fixture['name'] ?? 'unnamed');
+            $name  = (string) ($fixture['name'] ?? 'unnamed');
             $steps = $fixture['steps'] ?? [];
-            if (!is_array($steps)) {
+            if (! is_array($steps)) {
                 throw new RuntimeException("Fixture '{$name}' has invalid steps.");
             }
 
@@ -36,59 +37,55 @@ class GoldenPathRunner
 
             try {
                 $identity = Identity::create([
-                    'id' => (string) Str::uuid(),
-                    'kind' => 'person',
+                    'id'     => (string) Str::uuid(),
+                    'kind'   => 'person',
                     'status' => 'active',
                 ]);
-                $path = DecisionPath::query()->where('is_active', true)->first();
-                if (!$path) {
-                    throw new RuntimeException("Fixture '{$name}': no active decision path found.");
-                }
 
                 $session = EvaluationSession::create([
-                    'identity_id' => $identity->id,
-                    'decision_path_id' => $path->id,
-                    'status' => 'in_progress',
-                    'type' => $fixture['type'] ?? 'complete',
-                    'started_at' => now(),
+                    'identity_id'   => $identity->id,
+                    'decision_path_id' => null,
+                    'status'        => 'in_progress',
+                    'type'          => $fixture['type'] ?? 'complete',
+                    'started_at'    => now(),
                     'visited_blocs' => [],
-                    'context' => [],
+                    'context'       => [],
                 ]);
 
                 $results = [];
                 foreach ($steps as $idx => $step) {
-                    if (!is_array($step)) {
+                    if (! is_array($step)) {
                         throw new RuntimeException("Fixture '{$name}', step {$idx} must be an object.");
                     }
 
                     $questionKey = $step['question_key'] ?? null;
-                    if (!is_string($questionKey) || $questionKey === '') {
+                    if (! is_string($questionKey) || $questionKey === '') {
                         throw new RuntimeException("Fixture '{$name}', step {$idx} requires question_key.");
                     }
 
                     $question = DynamicQuestionTemplate::query()->where('key', $questionKey)->first();
-                    if (!$question) {
+                    if (! $question) {
                         throw new RuntimeException("Fixture '{$name}', step {$idx} unknown question '{$questionKey}'.");
                     }
 
-                    $value = $step['value'] ?? null;
+                    $value  = $step['value'] ?? null;
                     $answer = $this->answerService->saveAnswer([
-                        'evaluation_session_id' => $session->id,
+                        'evaluation_session_id'        => $session->id,
                         'dynamic_question_template_id' => $question->id,
-                        'value' => $value,
-                        'is_skipped' => false,
+                        'value'                        => $value,
+                        'is_skipped'                   => false,
                     ]);
 
                     $routing = $this->flow->applyRoutingRules($session, $question, $answer->value);
-                    $next = null;
+                    $next    = null;
                     if (($routing['action'] ?? null) !== 'end_session') {
                         $next = $this->flow->goToNextQuestion($session);
                     }
 
                     $results[] = [
-                        'step' => $idx + 1,
-                        'question_key' => $questionKey,
-                        'routing' => $routing,
+                        'step'              => $idx + 1,
+                        'question_key'      => $questionKey,
+                        'routing'           => $routing,
                         'next_question_key' => $next?->key,
                     ];
 
@@ -101,16 +98,16 @@ class GoldenPathRunner
                 DB::rollBack();
 
                 return [
-                    'name' => $name,
-                    'ok' => true,
+                    'name'  => $name,
+                    'ok'    => true,
                     'steps' => $results,
                 ];
             } catch (\Throwable $e) {
                 DB::rollBack();
 
                 return [
-                    'name' => $name,
-                    'ok' => false,
+                    'name'  => $name,
+                    'ok'    => false,
                     'error' => $e->getMessage(),
                 ];
             }

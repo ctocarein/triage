@@ -5,7 +5,7 @@ namespace Database\Seeders\Evaluation;
 use Illuminate\Database\Seeder;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\QuestionGroup;
-use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
+use App\Domains\Evaluation\Services\Catalog\QuestionTemplateContractValidator;
 
 class SymptomBreastQuestionSeeder extends Seeder
 {

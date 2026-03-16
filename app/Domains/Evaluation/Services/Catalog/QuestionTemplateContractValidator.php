@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Catalog;
 
 use App\Support\HandlesConditionArrays;
 use InvalidArgumentException;

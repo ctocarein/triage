@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Domains\Evaluation\Services\GoldenPathRunner;
+use App\Domains\Evaluation\Services\Insight\GoldenPathRunner;
 use Illuminate\Console\Command;
 
 class ReplayGoldenPaths extends Command

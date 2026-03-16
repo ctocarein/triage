@@ -4,12 +4,13 @@ namespace App\Domains\Evaluation\Controllers\Admin;
 
 use App\Domains\Evaluation\DTOs\Admin\QuestionTemplateRequest;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\CatalogConsistencyChecker;
-use App\Domains\Evaluation\Services\ConditionContractValidator;
-use App\Domains\Evaluation\Services\QuestionTemplateContractValidator;
+use App\Domains\Evaluation\Services\Catalog\CatalogConsistencyChecker;
+use App\Domains\Evaluation\Services\Catalog\ConditionContractValidator;
+use App\Domains\Evaluation\Services\Catalog\QuestionTemplateContractValidator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use OpenApi\Annotations as OA;
 
 class QuestionTemplateController extends Controller
@@ -256,6 +257,90 @@ class QuestionTemplateController extends Controller
         return response()->json([
             'errors' => $checker->check(),
         ]);
+    }
+
+    /**
+     * Toutes les références à une question dans le catalogue.
+     * GET /admin/questions/{question}/references
+     *
+     * Retourne :
+     *   - routing_rules : questions qui ciblent cette clé dans next (question:key ou queue:key)
+     *   - visible_if    : questions dont la visibilité dépend de cette clé
+     */
+    public function references(
+        DynamicQuestionTemplate $question,
+        ConditionContractValidator $conditionValidator
+    ): JsonResponse {
+        $key = $question->key;
+
+        $routingRefs = DynamicQuestionTemplate::where('key', '!=', $key)
+            ->where(fn ($q) =>
+                $q->where('routing_rules', 'like', "%question:{$key}%")
+                  ->orWhere('routing_rules', 'like', "%queue:%{$key}%")
+            )
+            ->pluck('key');
+
+        $visibleIfRefs = $this->findVisibleIfRefs($key, $conditionValidator);
+
+        return response()->json([
+            'key'           => $key,
+            'routing_rules' => $routingRefs,
+            'visible_if'    => $visibleIfRefs,
+            'total'         => $routingRefs->count() + count($visibleIfRefs),
+        ]);
+    }
+
+    /**
+     * Activer / désactiver plusieurs questions en lot.
+     * PATCH /admin/questions/bulk-toggle
+     * Body: { "ids": [1, 2, 3], "active": true }
+     */
+    public function bulkToggle(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'        => ['required', 'array', 'min:1'],
+            'ids.*'      => ['integer', 'exists:dynamic_question_templates,id'],
+            'active'     => ['required', 'boolean'],
+        ]);
+
+        $count = DynamicQuestionTemplate::whereIn('id', $request->input('ids'))
+            ->update(['is_active' => $request->boolean('active')]);
+
+        return response()->json([
+            'updated' => $count,
+            'active'  => $request->boolean('active'),
+        ]);
+    }
+
+    /**
+     * Réordonner les questions d'un bloc (drag & drop).
+     * PATCH /admin/questions/reorder
+     * Body: { "bloc_key": "symptom_breast", "order": [{"id": 5, "order": 1}, ...] }
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $request->validate([
+            'bloc_key'      => ['required', 'string'],
+            'order'         => ['required', 'array', 'min:1'],
+            'order.*.id'    => ['required', 'integer', 'exists:dynamic_question_templates,id'],
+            'order.*.order' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $blocKey = $request->input('bloc_key');
+
+        DB::transaction(function () use ($request, $blocKey) {
+            foreach ($request->input('order') as $item) {
+                DynamicQuestionTemplate::where('id', $item['id'])
+                    ->where('bloc_key', $blocKey)
+                    ->update(['order' => $item['order']]);
+            }
+        });
+
+        return response()->json(
+            DynamicQuestionTemplate::where('bloc_key', $blocKey)
+                ->orderBy('order')
+                ->get(['id', 'key', 'text', 'order', 'is_active'])
+        );
     }
 
     /**

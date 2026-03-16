@@ -32,7 +32,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\RoutingRulesValidator;
+use App\Domains\Evaluation\Services\Catalog\RoutingRulesValidator;
 use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider

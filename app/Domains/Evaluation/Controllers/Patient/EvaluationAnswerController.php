@@ -8,7 +8,7 @@ use App\Domains\Evaluation\Models\EvaluationAnswer;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\AnswerService;
-use App\Domains\Evaluation\Services\QuestionFlowService;
+use App\Domains\Evaluation\Services\Navigation\QuestionSequencer;
 use App\Domains\Evaluation\Http\Concerns\ValidatesEvaluationSession;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -77,7 +77,7 @@ class EvaluationAnswerController extends Controller
     public function store(
         EvaluationAnswerStoreRequest $request,
         AnswerService $answerService,
-        QuestionFlowService $flow
+        QuestionSequencer $flow
     ): JsonResponse {
         $session = $request->get('active_evaluation_session');
         if (! $session) {

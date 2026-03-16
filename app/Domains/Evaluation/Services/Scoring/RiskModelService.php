@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Evaluation\Services;
+namespace App\Domains\Evaluation\Services\Scoring;
 
 use App\Domains\Evaluation\Enums\AnswerStatus;
 use App\Domains\Evaluation\Enums\QuestionType;

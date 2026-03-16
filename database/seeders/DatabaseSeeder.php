@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             CapsuleSeeder::class,
             CommuneSeeder::class,
             Evaluation\QuestionGroupSeeder::class,
+            Evaluation\ThematicBlocSeeder::class,
             Evaluation\DynamicQuestionTemplateSeeder::class,
             Evaluation\ModelVersionsSeeder::class,
             Evaluation\RiskModelsSeeder::class,
@@ -21,9 +22,6 @@ class DatabaseSeeder extends Seeder
             Evaluation\FactMappingsSeeder::class,
             Evaluation\RiskSignalsSeeder::class,
             Evaluation\RiskFlagsSeeder::class,
-            DecisionPathBreastMassSeeder::class,
-            DecisionPathBreastPainSeeder::class,
-            DecisionPathFullAssessmentSeeder::class,
             IdentitySeeder::class,
         ]);
     }

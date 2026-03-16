@@ -3,7 +3,7 @@
 namespace App\Domains\Report\Services;
 
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 use App\Domains\Report\Models\Report;
 use App\Domains\Decision\Services\DecisionInsightService;
 
