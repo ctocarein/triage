@@ -105,7 +105,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                 'is_required'   => true,
                 'placeholder'     => 'Ex: Étudiante, commerçante, sans emploi...',
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:'],
+                    ['if' => true, 'next' => 'question:breast_palpation'],
                 ],
 
             ],
