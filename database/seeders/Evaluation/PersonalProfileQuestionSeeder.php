@@ -31,7 +31,7 @@ class PersonalProfileQuestionSeeder extends Seeder
         $questions = [
             [
                 'key'            => 'first_name',
-                'text'           => 'Quel est votre prénom ?',
+                'text'           => 'Puis-je avoir votre prénom ?',
                 'type'           => 'text',
                 'bloc_key'       => 'profil_identite',
                 'answer_target'  => 'personal_profile',
@@ -40,7 +40,7 @@ class PersonalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key'            => 'birth_date',
-                'text'           => 'Puis-je avoir votre année de naissance ?',
+                'text'           => 'Choisir votre année de naissance',
                 'type'           => 'date',
                 'bloc_key'       => 'profil_identite',
                 'answer_target'  => 'personal_profile',
@@ -50,6 +50,11 @@ class PersonalProfileQuestionSeeder extends Seeder
                 ),
                 'order'          => 2,
                 'is_entry_point' => true,
+                'routing_rules'  => [
+                    ['if' => ['source' => 'answer', 'operator' => '<', 'value' => 18], 'next' => 'queue:consent_declined_whatsapp,consent_declined_commune,consent_declined_end'],
+                    ['if' => ['source' => 'answer', 'operator' => '>=', 'value' => 18], 'next' => 'question:commune'],
+                ],
+
             ],
             [
                 'key'           => 'commune',
@@ -68,7 +73,7 @@ class PersonalProfileQuestionSeeder extends Seeder
                 'answer_target' => 'personal_profile',
                 'order'         => 4,
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true],  'next' => 'question:cmu_number'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true],  'next' => 'queue:cmu_number'],
                     ['if' => ['source' => 'answer', 'operator' => '=', 'value' => false], 'next' => 'question:marital_status'],
                 ],
             ],
@@ -92,11 +97,17 @@ class PersonalProfileQuestionSeeder extends Seeder
             ],
             [
                 'key'           => 'occupation',
-                'text'          => 'Quelle est votre profession ou activité principale ?',
+                'text'          => 'Quelle est votre profession ou activité principale Actuelle ?',
                 'type'          => 'text',
                 'bloc_key'      => 'profil_identite',
                 'answer_target' => 'personal_profile',
                 'order'         => 7,
+                'is_required'   => true,
+                'placeholder'     => 'Ex: Étudiante, commerçante, sans emploi...',
+                'routing_rules' => [
+                    ['if' => true, 'next' => 'queue:'],
+                ],
+
             ],
         ];
 

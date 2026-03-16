@@ -57,7 +57,8 @@ class GreetingSeeder extends Seeder
                     ['value' => 'no',  'label' => 'Non, je ne souhaite pas continuer'],
                 ]),
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 'next' => 'bloc:consent_declined'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 
+                    'next' => 'queue:consent_declined_thank_you'],
                 ],
             ],
 
@@ -75,12 +76,16 @@ class GreetingSeeder extends Seeder
                 'order'         => 4,
                 'is_required'   => true,
                 'options'       => json_encode([
-                    ['value' => 'sein',      'label' => 'J\'ai des symptômes au niveau du sein'],
-                    ['value' => 'cervical',  'label' => 'J\'ai des symptômes gynécologiques'],
                     ['value' => 'depistage', 'label' => 'Je viens pour un dépistage de routine'],
+                    ['value' => 'sein',      'label' => 'je veux comprendre mes symptômes mammaires'],
+                    ['value' => 'cervical',  'label' => 'je veux comprendre mes symptômes gynécologiques'],
                     ['value' => 'autre',     'label' => 'Autre raison'],
                 ]),
                 'routing_rules' => [
+                     [
+                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
+                        'next' => 'queue:profil_identite',
+                    ],
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'sein'],
                         'next' => 'queue:breast_pain',
@@ -89,10 +94,7 @@ class GreetingSeeder extends Seeder
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'cervical'],
                         'next' => 'queue:vaginal_bleeding_abnormal',
                     ],
-                    [
-                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
-                        'next' => 'queue:profil_identite',
-                    ],
+                   
                 ],
             ],
         ];

@@ -20,6 +20,39 @@ class SymptomBreastQuestionSeeder extends Seeder
         $questions = [
 
             // 1️⃣ Douleur au sein (entrée)
+                [
+                    'key' => 'breast_palpation',
+                    'text' => 'Avez-vous pratiquée l\'autopalpation ?',
+                    'type' => 'boolean',
+                    'bloc_key' => 'symptom_breast',
+                    'answer_target' => 'evaluation',
+                    'is_entry_point' => true,
+                    'order' => 1,
+                    'risk_weight' => 2,
+                    'media_type' => 'image',
+                    'media_url' => asset('images/symptoms/breast_pain.jpg'),
+                ],
+
+                [
+                    'key' => 'breast_pain_cycle',
+                    'text' => 'Je vous explique en quelques images. C\'est un examen que vous pouvez faire vous-même pour vérifier si vous avez des masses ou des douleurs dans vos seins. Il est recommandé de le faire une fois par mois, de préférence quelques jours après la fin de vos règles, lorsque vos seins sont moins sensibles...',
+                    'type' => 'select_one',
+                    'options' => json_encode([
+                        ['value' => 'yes', 'label' => 'J\'ai déjà pratiqué l\'autopalpation'],
+                        ['value' => 'partial', 'label' => 'J\'ai partiellement pratiqué l\'autopalpation (de temps en temps, ou pas sûre de le faire correctement)'],
+                        ['value' => 'no', 'label' => 'Je n\'ai jamais pratiqué l\'autopalpation ou je ne suis pas à l\'aise avec cet examen'],
+                    ]),
+                    'bloc_key' => 'symptom_breast',
+                    'answer_target' => 'evaluation',
+                    'order' => 2,
+                    'risk_weight' => 1,
+                    'media_type' => 'image',
+                    'media_url' => asset('images/symptoms/breast_pain_cycle.jpg'),
+                    'visible_if' => json_encode([
+                        ['source' => 'question', 'key' => 'breast_palpation', 'value' => true, 'operator' => '=']
+                    ]),
+                ],
+            // 1.1 Caractère cyclique de la douleur (si douleur)
             [
                 'key' => 'breast_pain',
                 'text' => '😣 Avez-vous des douleurs au sein ?',

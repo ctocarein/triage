@@ -94,6 +94,9 @@ class LifestyleQuestionSeeder extends Seeder
                 'answer_target' => 'medical_profile',
                 'order'         => 5,
                 'risk_weight'   => 0,
+                'options'       => null,
+                'is_required'   => false,
+                'placeholder'   => 'Ex: 70',
             ],
             [
                 'key'           => 'taille_cm',
@@ -103,6 +106,12 @@ class LifestyleQuestionSeeder extends Seeder
                 'answer_target' => 'medical_profile',
                 'order'         => 6,
                 'risk_weight'   => 0,
+                'options'       => null,
+                'is_required'   => false,
+                'placeholder'   => 'Ex: 170',
+                'routing_rules' => [
+                    ['if' => true, 'next' => 'queue:'], // pas de question suivante, mais permet de calculer l'IMC côté front
+                ],
             ],
 
             // ----------------------------------------------------------------
