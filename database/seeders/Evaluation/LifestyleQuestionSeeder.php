@@ -84,7 +84,22 @@ class LifestyleQuestionSeeder extends Seeder
             ],
 
             // ----------------------------------------------------------------
+            // Stress chronique (avant IMC pour terminer lifestyle avant le saut vers symptom_breast)
+            // ----------------------------------------------------------------
+            [
+                'key'           => 'stress_chronique',
+                'text'          => 'Vous sentez-vous souvent stressée ou anxieuse de manière prolongée ?',
+                'type'          => 'boolean',
+                'bloc_key'      => 'lifestyle',
+                'answer_target' => 'medical_profile',
+                'order'         => 5,
+                'risk_weight'   => 0,
+            ],
+
+            // ----------------------------------------------------------------
             // IMC (taille + poids → calculé côté front, ou saisi directement)
+            // Placés en fin de bloc pour que lifestyle soit complet avant le
+            // routing queue:breast_palpation sur taille_cm.
             // ----------------------------------------------------------------
             [
                 'key'           => 'poids_kg',
@@ -92,7 +107,7 @@ class LifestyleQuestionSeeder extends Seeder
                 'type'          => 'number',
                 'bloc_key'      => 'lifestyle',
                 'answer_target' => 'medical_profile',
-                'order'         => 5,
+                'order'         => 6,
                 'risk_weight'   => 0,
                 'options'       => null,
                 'is_required'   => false,
@@ -104,27 +119,14 @@ class LifestyleQuestionSeeder extends Seeder
                 'type'          => 'number',
                 'bloc_key'      => 'lifestyle',
                 'answer_target' => 'medical_profile',
-                'order'         => 6,
+                'order'         => 7,
                 'risk_weight'   => 0,
                 'options'       => null,
                 'is_required'   => false,
                 'placeholder'   => 'Ex: 170',
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:breast_palpation'], // pas de question suivante, mais permet de calculer l'IMC côté front
+                    ['if' => true, 'next' => 'queue:breast_palpation'],
                 ],
-            ],
-
-            // ----------------------------------------------------------------
-            // Stress chronique
-            // ----------------------------------------------------------------
-            [
-                'key'           => 'stress_chronique',
-                'text'          => 'Vous sentez-vous souvent stressée ou anxieuse de manière prolongée ?',
-                'type'          => 'boolean',
-                'bloc_key'      => 'lifestyle',
-                'answer_target' => 'medical_profile',
-                'order'         => 7,
-                'risk_weight'   => 0,
             ],
         ];
 

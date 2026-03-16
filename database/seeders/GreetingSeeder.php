@@ -57,8 +57,15 @@ class GreetingSeeder extends Seeder
                     ['value' => 'no',  'label' => 'Non, je ne souhaite pas continuer'],
                 ]),
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 
-                    'next' => 'queue:consent_declined_thank_you'],
+
+                    [
+                    'if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 
+                    'next' => 'queue:consent_declined_thank_you'
+                    ],
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => 'yes'], 
+                        'next' => 'question:raison_visite'
+                    ],
                 ],
             ],
 
@@ -82,10 +89,6 @@ class GreetingSeeder extends Seeder
                     ['value' => 'autre',     'label' => 'Autre raison'],
                 ]),
                 'routing_rules' => [
-                     [
-                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
-                        'next' => 'queue:profil_identite',
-                    ],
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'sein'],
                         'next' => 'queue:breast_pain',
@@ -94,7 +97,6 @@ class GreetingSeeder extends Seeder
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'cervical'],
                         'next' => 'queue:vaginal_bleeding_abnormal',
                     ],
-                   
                 ],
             ],
         ];
