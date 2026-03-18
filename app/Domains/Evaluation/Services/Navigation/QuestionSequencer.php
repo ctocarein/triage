@@ -66,6 +66,17 @@ class QuestionSequencer
             }
         }
 
+        if (! array_key_exists('age', $answersByKey)) {
+            $birthDate = $answersByKey['birth_date'] ?? ($profile['personal']['birth_date'] ?? null);
+            if (is_string($birthDate) && trim($birthDate) !== '') {
+                try {
+                    $answersByKey['age'] = \Illuminate\Support\Carbon::parse($birthDate)->age;
+                } catch (\Throwable) {
+                    // Birth date invalide dans le contexte -> ne pas bloquer le flux.
+                }
+            }
+        }
+
         return [
             'answers'       => $answersByKey,
             'answers_by_id' => $answersById,

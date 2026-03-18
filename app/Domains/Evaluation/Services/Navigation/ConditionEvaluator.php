@@ -6,6 +6,7 @@ use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Support\ComparesValues;
 use App\Support\HandlesConditionArrays;
+use Carbon\Carbon;
 
 /**
  * Évalue les conditions du moteur de règles.
@@ -145,6 +146,8 @@ class ConditionEvaluator
         ?EvaluationSession $session = null,
         ?DynamicQuestionTemplate $question = null,
     ): array {
+        $answers = $this->enrichAnswersWithDerivedValues($answers, $profile);
+        $profile = $this->enrichProfileWithDerivedValues($profile, $answers);
         $normalized     = $this->normalize($answerValue);
         $comparable     = $this->extractComparable($normalized);
         $sessionContext = $session ? ($session->context ?? []) : [];
@@ -260,5 +263,47 @@ class ConditionEvaluator
         }
 
         return data_get($scope['answer'], $key);
+    }
+
+    private function enrichAnswersWithDerivedValues(array $answers, array $profile): array
+    {
+        if (! array_key_exists('age', $answers)) {
+            $age = $this->computeAge($answers['birth_date'] ?? data_get($profile, 'personal.birth_date'));
+
+            if ($age !== null) {
+                $answers['age'] = $age;
+            }
+        }
+
+        return $answers;
+    }
+
+    private function enrichProfileWithDerivedValues(array $profile, array $answers): array
+    {
+        $profile['medical'] = is_array($profile['medical'] ?? null) ? $profile['medical'] : [];
+        $profile['personal'] = is_array($profile['personal'] ?? null) ? $profile['personal'] : [];
+
+        if (! array_key_exists('age', $profile['personal'])) {
+            $age = $this->computeAge($profile['personal']['birth_date'] ?? $answers['birth_date'] ?? null);
+
+            if ($age !== null) {
+                $profile['personal']['age'] = $age;
+            }
+        }
+
+        return $profile;
+    }
+
+    private function computeAge(mixed $birthDate): ?int
+    {
+        if (! is_string($birthDate) || trim($birthDate) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($birthDate)->age;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

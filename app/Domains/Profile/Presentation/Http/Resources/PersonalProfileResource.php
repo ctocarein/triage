@@ -21,6 +21,7 @@ class PersonalProfileResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'birth_date' => $this->birth_date,
+            'age' => $this->age,
             'language' => $this->language,
             'education_level' => $this->education_level,
             'gender' => $this->gender,

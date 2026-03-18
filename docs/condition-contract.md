@@ -122,8 +122,13 @@ During seeding, legacy list conditions are normalized automatically to:
 Allowed `next`:
 - `bloc:<bloc_key>`
 - `question:<question_key>`
+- `queue:<question_key[,question_key...]>`
 - `level:<level_key>`
 - `end_session`
+
+Routing semantics:
+- `question:<question_key>`: immediate jump to a single target question.
+- `queue:<question_key[,question_key...]>`: enqueue one or more prerequisite questions; they are consumed in order before normal sequencing resumes.
 
 ## 6. Seeder enforcement
 

@@ -1,0 +1,816 @@
+{
+  "_meta": {
+    "scenario": "raison_visite = [\"depistage\"]",
+    "description": "Flow complet pour une patiente qui sélectionne uniquement « dépistage de routine ». Aucune règle de routage ne matche : le parcours suit donc le séquencement naturel bloc par bloc (ordre 1 à 7). Les dérivations urgentes (end_session) interrompent le parcours.",
+    "generated": "2026-03-17",
+    "bloc_order": [
+      "greeting (1)",
+      "profil_identite (2)",
+      "lifestyle (3)",
+      "medical_profile (4)",
+      "family_history (5)",
+      "symptom_breast (6)",
+      "symptom_cervix (7)"
+    ],
+    "legend": {
+      "-> next": "séquencement naturel (question suivante dans le bloc, ou bloc suivant)",
+      "-> question:key": "saut direct vers une question spécifique",
+      "-> queue:key": "mise en file prioritaire d'une ou plusieurs questions",
+      "-> bloc:key": "saut vers un bloc (revisite ou avance)",
+      "-> end_session:suffix": "fin de session avec motif urgent",
+      "[visible_if]": "question conditionnelle, posée uniquement si la condition est vraie",
+      "[forced]": "question injectée dans la file prioritaire par un routage précédent"
+    }
+  },
+  "blocs": [
+    {
+      "bloc": "greeting",
+      "label": "Accueil",
+      "order": 1,
+      "questions": [
+        {
+          "step": 1,
+          "key": "greeting_welcome",
+          "text": "Bienvenue sur CHEREH…",
+          "type": "custom",
+          "answer_target": null,
+          "routing": "-> next"
+        },
+        {
+          "step": 2,
+          "key": "greeting_confidential",
+          "text": "Information importante. CHEREH ne pose pas de diagnostic…",
+          "type": "custom",
+          "answer_target": null,
+          "routing": "-> next"
+        },
+        {
+          "step": 3,
+          "key": "explicit_consent",
+          "text": "Acceptez-vous de répondre à ces questions ?",
+          "type": "boolean",
+          "answer_target": "consent",
+          "routing_rules": [
+            {
+              "if": "answer = false",
+              "next": "queue:consent_declined_thank_you -> [BLOC consent_declined - end_session]"
+            },
+            {
+              "if": "answer = true",
+              "next": "question:raison_visite"
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "key": "raison_visite",
+          "text": "Qu'est-ce qui vous amène aujourd'hui ?",
+          "type": "select_multiple",
+          "answer_target": "evaluation",
+          "value_in_scenario": [
+            "depistage"
+          ],
+          "routing_rules": [
+            {
+              "if": "contains 'sein'",
+              "next": "queue:breast_pain (non activé ici)"
+            },
+            {
+              "if": "contains 'cervical'",
+              "next": "queue:vaginal_bleeding_abnormal (non activé ici)"
+            }
+          ],
+          "routing_note": "Aucune règle ne matche « depistage » : séquencement naturel vers profil_identite."
+        }
+      ]
+    },
+    {
+      "bloc": "profil_identite",
+      "label": "Votre profil",
+      "order": 2,
+      "questions": [
+        {
+          "step": 5,
+          "key": "first_name",
+          "text": "Puis-je avoir votre prénom ?",
+          "type": "text",
+          "answer_target": "personal_profile",
+          "is_entry_point": true,
+          "routing": "-> next"
+        },
+        {
+          "step": 6,
+          "key": "birth_date",
+          "text": "Quelle est votre date de naissance ?",
+          "type": "date",
+          "answer_target": "personal_profile",
+          "routing_rules": [
+            {
+              "if": "age_computed < 18",
+              "next": "queue:consent_declined_whatsapp, consent_declined_commune, consent_declined_end -> [BLOC consent_declined - end_session]"
+            },
+            {
+              "if": "age_computed >= 18",
+              "next": "question:commune"
+            }
+          ]
+        },
+        {
+          "step": 7,
+          "key": "commune",
+          "text": "Dans quelle commune habitez-vous ?",
+          "type": "select_one",
+          "answer_target": "personal_profile",
+          "routing": "-> next"
+        },
+        {
+          "step": 8,
+          "key": "cmu",
+          "text": "Bénéficiez-vous de la CMU ?",
+          "type": "boolean",
+          "answer_target": "personal_profile",
+          "routing_rules": [
+            {
+              "if": "answer = true",
+              "next": "queue:cmu_number (sera posé dans medical_profile)"
+            },
+            {
+              "if": "answer = false",
+              "next": "question:marital_status"
+            }
+          ]
+        },
+        {
+          "step": 9,
+          "key": "marital_status",
+          "text": "Quel est votre statut matrimonial ?",
+          "type": "select_one",
+          "answer_target": "personal_profile",
+          "routing": "-> next"
+        },
+        {
+          "step": 10,
+          "key": "education_level",
+          "text": "Quel est votre niveau d'éducation ?",
+          "type": "select_one",
+          "answer_target": "personal_profile",
+          "routing": "-> next"
+        },
+        {
+          "step": 11,
+          "key": "occupation",
+          "text": "Quelle est votre profession ou activité principale ?",
+          "type": "text",
+          "answer_target": "personal_profile",
+          "routing_rules": [
+            {
+              "if": "true",
+              "next": "queue:poids_kg, taille_cm -> (injectées en file prioritaire dans lifestyle)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "bloc": "lifestyle",
+      "label": "Mode de vie",
+      "order": 3,
+      "note": "poids_kg et taille_cm sont déjà en file prioritaire via occupation. Leur position naturelle (order 6-7) coïncide avec la fin du bloc ; la file prioritaire garantit qu'elles sont bien posées même si le séquencement adaptatif compresse le bloc.",
+      "questions": [
+        {
+          "step": 12,
+          "key": "tabac",
+          "text": "Fumez-vous, ou avez-vous déjà fumé ?",
+          "type": "boolean",
+          "answer_target": "medical_profile",
+          "order": 1,
+          "routing": "-> next"
+        },
+        {
+          "step": "12b",
+          "key": "tabac_paquets_annee",
+          "text": "Combien de paquets-années estimez-vous avoir fumés ?",
+          "type": "number",
+          "answer_target": "medical_profile",
+          "order": 2,
+          "visible_if": "tabac = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 13,
+          "key": "alcool",
+          "text": "Consommez-vous de l'alcool ?",
+          "type": "select_one",
+          "answer_target": "medical_profile",
+          "order": 3,
+          "routing": "-> next"
+        },
+        {
+          "step": 14,
+          "key": "activite_physique",
+          "text": "Quel est votre niveau d'activité physique habituel ?",
+          "type": "select_one",
+          "answer_target": "medical_profile",
+          "order": 4,
+          "routing": "-> next"
+        },
+        {
+          "step": 15,
+          "key": "stress_chronique",
+          "text": "Vous sentez-vous souvent stressée ou anxieuse ?",
+          "type": "boolean",
+          "answer_target": "medical_profile",
+          "order": 5,
+          "routing": "-> next"
+        },
+        {
+          "step": 16,
+          "key": "poids_kg",
+          "text": "Quel est votre poids actuel (en kg) ?",
+          "type": "number",
+          "answer_target": "medical_profile",
+          "order": 6,
+          "forced": true,
+          "routing": "-> next"
+        },
+        {
+          "step": 17,
+          "key": "taille_cm",
+          "text": "Quelle est votre taille (en cm) ?",
+          "type": "number",
+          "answer_target": "medical_profile",
+          "order": 7,
+          "forced": true,
+          "routing_rules": [
+            {
+              "if": "true",
+              "next": "queue:breast_palpation -> (injectée en tête du bloc symptom_breast)"
+            }
+          ],
+          "routing_note": "Le bloc lifestyle se termine ici. Le séquencement passe à medical_profile (order 4). breast_palpation sera consommée en priorité à l'entrée de symptom_breast (order 6)."
+        }
+      ]
+    },
+    {
+      "bloc": "medical_profile",
+      "label": "Antécédents médicaux",
+      "order": 4,
+      "note": "cmu_number est posée ici si cmu=true (question forcée depuis profil_identite).",
+      "questions": [
+        {
+          "step": 18,
+          "key": "is_pregnant",
+          "text": "Êtes-vous actuellement enceinte ?",
+          "type": "boolean",
+          "routing": "-> next"
+        },
+        {
+          "step": "18b",
+          "key": "breastfeeding",
+          "text": "Allaitez-vous en ce moment ?",
+          "type": "boolean",
+          "visible_if": "is_pregnant = false",
+          "routing": "-> next"
+        },
+        {
+          "step": "18c",
+          "key": "menopause_status",
+          "text": "Êtes-vous ménopausée ?",
+          "type": "select_one",
+          "visible_if": "is_pregnant = false",
+          "routing": "-> next"
+        },
+        {
+          "step": 19,
+          "key": "last_screening_date",
+          "text": "À quand remonte votre dernier dépistage ?",
+          "type": "select_one",
+          "routing": "-> next"
+        },
+        {
+          "step": "19b",
+          "key": "screening_type",
+          "text": "Quel type de dépistage avez-vous fait ?",
+          "type": "select_one",
+          "visible_if": "last_screening_date != 'never'",
+          "routing": "-> next"
+        },
+        {
+          "step": "19c",
+          "key": "last_screening_result",
+          "text": "Quel était le résultat de votre dernier dépistage ?",
+          "type": "select_one",
+          "visible_if": "last_screening_date != 'never'",
+          "routing": "-> next"
+        },
+        {
+          "step": 20,
+          "key": "other_diseases",
+          "text": "Avez-vous des maladies chroniques ou d'autres conditions importantes ?",
+          "type": "text",
+          "routing": "-> next"
+        },
+        {
+          "step": 21,
+          "key": "current_medications",
+          "text": "Prenez-vous actuellement des médicaments sur ordonnance ?",
+          "type": "text",
+          "routing": "-> next"
+        },
+        {
+          "step": 22,
+          "key": "first_sexual_intercourse_age",
+          "text": "Quel âge aviez-vous lors de votre premier rapport sexuel ?",
+          "type": "number",
+          "routing": "-> next"
+        },
+        {
+          "step": "22b",
+          "key": "number_of_partners",
+          "text": "Combien de partenaires sexuels avez-vous eus au cours de votre vie ?",
+          "type": "number",
+          "visible_if": "first_sexual_intercourse_age < 16",
+          "routing": "-> next"
+        },
+        {
+          "step": 23,
+          "key": "number_of_pregnancies",
+          "text": "Combien de grossesses avez-vous eues ?",
+          "type": "number",
+          "visible_if": "is_pregnant = false",
+          "routing": "-> next"
+        },
+        {
+          "step": "23b",
+          "key": "number_of_abortions",
+          "text": "Combien d'avortements ou de fausses couches avez-vous eus ?",
+          "type": "number",
+          "visible_if": "number_of_pregnancies > 0",
+          "routing": "-> next"
+        },
+        {
+          "step": "23c",
+          "key": "number_of_children",
+          "text": "Combien d'enfants avez-vous eus ?",
+          "type": "number",
+          "visible_if": "number_of_pregnancies > 0",
+          "routing": "-> next"
+        },
+        {
+          "step": "24*",
+          "key": "cmu_number",
+          "text": "Quel est votre numéro de CMU ?",
+          "type": "text",
+          "forced": true,
+          "visible_if": "cmu = true",
+          "note": "Posée uniquement si cmu=true (forcée depuis profil_identite).",
+          "routing": "-> next"
+        },
+        {
+          "step": 25,
+          "key": "blood_type",
+          "text": "Quel est votre groupe sanguin ?",
+          "type": "select_one",
+          "routing": "-> next"
+        },
+        {
+          "step": 26,
+          "key": "allergies",
+          "text": "Avez-vous des allergies connues ?",
+          "type": "text",
+          "routing": "-> next"
+        },
+        {
+          "step": 27,
+          "key": "exposed_to_smoke",
+          "text": "Êtes-vous exposée à la fumée de tabac ?",
+          "type": "boolean",
+          "routing": "-> next"
+        },
+        {
+          "step": "27b",
+          "key": "exposure_type",
+          "text": "Quel type d'exposition ?",
+          "type": "text",
+          "visible_if": "exposed_to_smoke = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 28,
+          "key": "has_cancer",
+          "text": "Avez-vous déjà eu un cancer ?",
+          "type": "boolean",
+          "routing": "-> next"
+        },
+        {
+          "step": "28b",
+          "key": "cancer_details",
+          "text": "Quel type de cancer ?",
+          "type": "text",
+          "visible_if": "has_cancer = true",
+          "routing": "-> next"
+        }
+      ]
+    },
+    {
+      "bloc": "family_history",
+      "label": "Antécédents familiaux",
+      "order": 5,
+      "questions": [
+        {
+          "step": 29,
+          "key": "family_cancer_history",
+          "text": "Avez-vous des antécédents familiaux de cancer ?",
+          "type": "boolean",
+          "routing": "-> next"
+        },
+        {
+          "step": "29b",
+          "key": "family_cancer_breast",
+          "text": "Un proche a-t-il eu un cancer du sein ?",
+          "type": "boolean",
+          "visible_if": "family_cancer_history = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "29c",
+          "key": "family_cancer_cervix",
+          "text": "Un proche a-t-il eu un cancer du col de l'utérus ?",
+          "type": "boolean",
+          "visible_if": "family_cancer_history = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "29d",
+          "key": "family_cancer_ovary",
+          "text": "Un proche a-t-il eu un cancer de l'ovaire ?",
+          "type": "boolean",
+          "visible_if": "family_cancer_history = true",
+          "routing": "-> next"
+        }
+      ]
+    },
+    {
+      "bloc": "symptom_breast",
+      "label": "Évaluation sein",
+      "order": 6,
+      "note": "breast_palpation est forcée en tête de bloc via queue (depuis taille_cm). Sans ce forced, le séquencement naturel commencerait aussi par breast_palpation ; le comportement resterait identique.",
+      "questions": [
+        {
+          "step": 30,
+          "key": "breast_palpation",
+          "text": "Avez-vous déjà pratiqué l'autopalpation ?",
+          "type": "boolean",
+          "is_entry_point": true,
+          "forced": true,
+          "order": 1,
+          "routing": "-> next"
+        },
+        {
+          "step": "30b",
+          "key": "breast_palpation_experience",
+          "text": "Je vous explique en quelques images comment pratiquer l'autopalpation.",
+          "type": "custom",
+          "order": 2,
+          "visible_if": "breast_palpation = false",
+          "routing": "-> next"
+        },
+        {
+          "step": 31,
+          "key": "breast_pain",
+          "text": "Avez-vous des douleurs au sein ?",
+          "type": "boolean",
+          "is_entry_point": true,
+          "order": 3,
+          "routing": "-> next"
+        },
+        {
+          "step": "31b",
+          "key": "breast_pain_cycle",
+          "text": "Cette douleur est-elle liée à votre cycle menstruel ?",
+          "type": "select_one",
+          "order": 4,
+          "visible_if": "breast_pain = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "31c",
+          "key": "breast_pain_location",
+          "text": "Où ressentez-vous cette douleur ?",
+          "type": "select_one",
+          "order": 5,
+          "visible_if": "breast_pain = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "31d",
+          "key": "breast_pain_severity",
+          "text": "Quelle est l'intensité de la douleur (0-10) ?",
+          "type": "slider",
+          "order": 6,
+          "visible_if": "breast_pain = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "31e",
+          "key": "breast_pain_wakes_up",
+          "text": "La douleur du sein vous réveille-t-elle la nuit ?",
+          "type": "boolean",
+          "order": 7,
+          "visible_if": "breast_pain = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 32,
+          "key": "breast_mass",
+          "text": "Avez-vous remarqué une boule ou une masse dans le sein ?",
+          "type": "boolean",
+          "order": 8,
+          "routing_rules": [
+            {
+              "if": "answer = true",
+              "next": "bloc:medical_profile (revisite du bloc medical_profile)"
+            }
+          ],
+          "routing_note": "Si true, retour sur medical_profile pour compléter les antécédents. Le séquencement reprend ensuite la suite de symptom_breast."
+        },
+        {
+          "step": "32b",
+          "key": "breast_mass_change",
+          "text": "La boule a-t-elle changé rapidement de taille ou d'aspect ?",
+          "type": "boolean",
+          "order": 9,
+          "visible_if": "breast_mass = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "32c",
+          "key": "breast_mass_duration",
+          "text": "Depuis combien de temps avez-vous remarqué cette masse ?",
+          "type": "select_one",
+          "order": 10,
+          "visible_if": "breast_mass = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 33,
+          "key": "breast_nipple_discharge",
+          "text": "Avez-vous remarqué un écoulement du mamelon ?",
+          "type": "boolean",
+          "order": 11,
+          "routing": "-> next"
+        },
+        {
+          "step": "33b",
+          "key": "breast_nipple_bleeding",
+          "text": "L'écoulement du mamelon est-il sanglant ?",
+          "type": "boolean",
+          "order": 12,
+          "visible_if": "breast_nipple_discharge = true",
+          "routing_rules": [
+            {
+              "if": "answer = true",
+              "next": "end_session:urgent_breast_nipple_bleeding"
+            }
+          ]
+        },
+        {
+          "step": 34,
+          "key": "breast_nipple_retraction",
+          "text": "Le mamelon est-il rétracté ou a-t-il changé récemment ?",
+          "type": "boolean",
+          "order": 13,
+          "routing": "-> next"
+        },
+        {
+          "step": 35,
+          "key": "breast_nipple_eczema",
+          "text": "Le mamelon présente-t-il des lésions eczémateuses ?",
+          "type": "boolean",
+          "order": 14,
+          "routing": "-> next"
+        },
+        {
+          "step": 36,
+          "key": "breast_skin_orange",
+          "text": "La peau du sein présente-t-elle un aspect \"peau d'orange\" ?",
+          "type": "boolean",
+          "order": 15,
+          "routing_rules": [
+            {
+              "if": "answer = true",
+              "next": "end_session:urgent_breast_skin_orange"
+            }
+          ]
+        },
+        {
+          "step": 37,
+          "key": "breast_skin_change",
+          "text": "Avez-vous remarqué une modification de la peau du sein (rougeur, texture, creusement) ?",
+          "type": "boolean",
+          "order": 16,
+          "routing": "-> next"
+        },
+        {
+          "step": 38,
+          "key": "breast_ulceration",
+          "text": "Avez-vous une plaie sur le sein qui ne cicatrise pas ?",
+          "type": "boolean",
+          "order": 17,
+          "routing": "-> next"
+        },
+        {
+          "step": 39,
+          "key": "breast_asymmetry",
+          "text": "Avez-vous remarqué une différence récente de taille ou de forme entre les deux seins ?",
+          "type": "boolean",
+          "order": 18,
+          "routing": "-> next"
+        },
+        {
+          "step": 40,
+          "key": "axillary_ganglion",
+          "text": "Avez-vous remarqué une boule, douloureuse ou non, sous l'aisselle ?",
+          "type": "boolean",
+          "order": 19,
+          "routing": "-> next bloc (symptom_cervix)"
+        }
+      ]
+    },
+    {
+      "bloc": "symptom_cervix",
+      "label": "Évaluation col utérin",
+      "order": 7,
+      "questions": [
+        {
+          "step": 41,
+          "key": "vaginal_bleeding_abnormal",
+          "text": "Avez-vous des saignements vaginaux anormaux ?",
+          "type": "boolean",
+          "is_entry_point": true,
+          "order": 1,
+          "routing": "-> next"
+        },
+        {
+          "step": "41b",
+          "key": "bleeding_when",
+          "text": "Quand surviennent ces saignements ?",
+          "type": "select_multiple",
+          "order": 2,
+          "visible_if": "vaginal_bleeding_abnormal = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "41c",
+          "key": "bleeding_amount",
+          "text": "Ces saignements sont-ils abondants (caillots, anémie, etc.) ?",
+          "type": "boolean",
+          "order": 3,
+          "visible_if": "vaginal_bleeding_abnormal = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "41d",
+          "key": "bleeding_duration",
+          "text": "Depuis combien de temps ces saignements durent-ils ?",
+          "type": "select_one",
+          "order": 4,
+          "visible_if": "vaginal_bleeding_abnormal = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "41e",
+          "key": "bleeding_pain",
+          "text": "Avez-vous des douleurs pelviennes associées ?",
+          "type": "boolean",
+          "order": 5,
+          "visible_if": "vaginal_bleeding_abnormal = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 42,
+          "key": "pelvic_pain",
+          "text": "Avez-vous des douleurs pelviennes (bas-ventre) ?",
+          "type": "boolean",
+          "order": 6,
+          "routing": "-> next"
+        },
+        {
+          "step": "42b",
+          "key": "pelvic_pain_since",
+          "text": "Depuis combien de temps ?",
+          "type": "select_one",
+          "order": 7,
+          "visible_if": "pelvic_pain = true",
+          "routing": "-> next"
+        },
+        {
+          "step": "42c",
+          "key": "pelvic_pain_nature",
+          "text": "Quel est le caractère de cette douleur : permanente, cyclique ou brutale ?",
+          "type": "select_one",
+          "order": 8,
+          "visible_if": "pelvic_pain = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 43,
+          "key": "vaginal_discharge",
+          "text": "Avez-vous des pertes vaginales inhabituelles ?",
+          "type": "boolean",
+          "order": 9,
+          "routing": "-> next"
+        },
+        {
+          "step": "43b",
+          "key": "discharge_aspect",
+          "text": "Quel est l'aspect de ces pertes ?",
+          "type": "select_one",
+          "order": 10,
+          "visible_if": "vaginal_discharge = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 44,
+          "key": "pelvic_mass",
+          "text": "Ressentez-vous une boule ou un gonflement dans le bas-ventre ?",
+          "type": "boolean",
+          "order": 11,
+          "routing_rules": [
+            {
+              "if": "answer = true",
+              "next": "end_session:urgent_pelvic_mass"
+            }
+          ]
+        },
+        {
+          "step": "44b",
+          "key": "pelvic_mass_since",
+          "text": "Depuis combien de temps ressentez-vous cette masse ?",
+          "type": "select_one",
+          "order": 12,
+          "visible_if": "pelvic_mass = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 45,
+          "key": "associated_troubles",
+          "text": "Avez-vous des troubles urinaires ou digestifs associés ?",
+          "type": "boolean",
+          "order": 13,
+          "routing": "-> next"
+        },
+        {
+          "step": "45b",
+          "key": "trouble_type",
+          "text": "Quel type de trouble ?",
+          "type": "select_multiple",
+          "order": 14,
+          "visible_if": "associated_troubles = true",
+          "routing": "-> next"
+        },
+        {
+          "step": 46,
+          "key": "general_fatigue",
+          "text": "Ressentez-vous une fatigue importante ?",
+          "type": "boolean",
+          "order": 15,
+          "routing": "-> next"
+        },
+        {
+          "step": 47,
+          "key": "general_weightloss",
+          "text": "Avez-vous perdu du poids de façon inexpliquée ces derniers mois ?",
+          "type": "boolean",
+          "order": 16,
+          "routing": "-> fin parcours (décision/score)"
+        }
+      ]
+    }
+  ],
+  "exit_paths": {
+    "normal": "Fin naturelle après symptom_cervix -> calcul du score -> décision d'orientation.",
+    "urgent": [
+      {
+        "trigger": "explicit_consent = false",
+        "exit": "end_session via consent_declined (queue:consent_declined_thank_you)"
+      },
+      {
+        "trigger": "birth_date -> age < 18",
+        "exit": "end_session via consent_declined (queue:consent_declined_whatsapp, consent_declined_commune, consent_declined_end)"
+      },
+      {
+        "trigger": "breast_nipple_bleeding = true",
+        "exit": "end_session:urgent_breast_nipple_bleeding"
+      },
+      {
+        "trigger": "breast_skin_orange = true",
+        "exit": "end_session:urgent_breast_skin_orange"
+      },
+      {
+        "trigger": "pelvic_mass = true",
+        "exit": "end_session:urgent_pelvic_mass"
+      }
+    ]
+  }
+}

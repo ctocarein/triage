@@ -1,0 +1,349 @@
+{
+  "_meta": {
+    "source": "docs/flow-depistage.json",
+    "generated_at": "2026-03-18",
+    "description": "Arbre de decision normalise du parcours depistage. Les noeuds repetes sont factorises via des references de noeuds.",
+    "conventions": {
+      "root": "Identifiant du noeud racine",
+      "nodes.question": "Noeud de branchement par condition ou question",
+      "nodes.question.branches": "Map valeur -> ref de noeud ou noeud terminal inline",
+      "nodes.question.shows": "Questions supplementaires affichees sur cette branche",
+      "nodes.question.revisit": "Bloc revisite avant de reprendre le flux",
+      "terminal.type": "end ou end_session"
+    }
+  },
+  "root": "explicit_consent",
+  "nodes": {
+    "explicit_consent": {
+      "type": "question",
+      "key": "explicit_consent",
+      "label": "Consentement explicite",
+      "branches": {
+        "false": {
+          "type": "end_session",
+          "reason": "consent_declined"
+        },
+        "true": {
+          "ref": "adult_gate"
+        }
+      }
+    },
+    "adult_gate": {
+      "type": "question",
+      "key": "birth_date_age_gte_18",
+      "label": "Age >= 18",
+      "branches": {
+        "false": {
+          "type": "end_session",
+          "reason": "minor_declined"
+        },
+        "true": {
+          "ref": "cmu"
+        }
+      }
+    },
+    "cmu": {
+      "type": "question",
+      "key": "cmu",
+      "branches": {
+        "false": {
+          "ref": "tabac"
+        },
+        "true": {
+          "shows": [
+            "cmu_number"
+          ],
+          "ref": "tabac"
+        }
+      }
+    },
+    "tabac": {
+      "type": "question",
+      "key": "tabac",
+      "branches": {
+        "false": {
+          "ref": "pregnancy_branch"
+        },
+        "true": {
+          "shows": [
+            "tabac_paquets_annee"
+          ],
+          "ref": "pregnancy_branch"
+        }
+      }
+    },
+    "pregnancy_branch": {
+      "type": "question",
+      "key": "pregnancy_branch",
+      "label": "Synthese is_pregnant / pregnancies",
+      "branches": {
+        "pregnant": {
+          "ref": "screening_branch"
+        },
+        "not_pregnant_no_pregnancies": {
+          "shows": [
+            "breastfeeding",
+            "menopause_status"
+          ],
+          "ref": "screening_branch"
+        },
+        "not_pregnant_with_pregnancies": {
+          "shows": [
+            "breastfeeding",
+            "menopause_status",
+            "number_of_abortions",
+            "number_of_children"
+          ],
+          "ref": "screening_branch"
+        }
+      }
+    },
+    "screening_branch": {
+      "type": "question",
+      "key": "last_screening_date_never",
+      "label": "Dernier depistage = never",
+      "branches": {
+        "true": {
+          "ref": "sexual_history_branch"
+        },
+        "false": {
+          "shows": [
+            "screening_type",
+            "last_screening_result"
+          ],
+          "ref": "sexual_history_branch"
+        }
+      }
+    },
+    "sexual_history_branch": {
+      "type": "question",
+      "key": "first_sexual_intercourse_age_lt_16",
+      "label": "Premier rapport < 16 ans",
+      "branches": {
+        "false": {
+          "ref": "smoke_exposure"
+        },
+        "true": {
+          "shows": [
+            "number_of_partners"
+          ],
+          "ref": "smoke_exposure"
+        }
+      }
+    },
+    "smoke_exposure": {
+      "type": "question",
+      "key": "exposed_to_smoke",
+      "branches": {
+        "false": {
+          "ref": "has_cancer"
+        },
+        "true": {
+          "shows": [
+            "exposure_type"
+          ],
+          "ref": "has_cancer"
+        }
+      }
+    },
+    "has_cancer": {
+      "type": "question",
+      "key": "has_cancer",
+      "branches": {
+        "false": {
+          "ref": "family_cancer_history"
+        },
+        "true": {
+          "shows": [
+            "cancer_details"
+          ],
+          "ref": "family_cancer_history"
+        }
+      }
+    },
+    "family_cancer_history": {
+      "type": "question",
+      "key": "family_cancer_history",
+      "branches": {
+        "false": {
+          "ref": "breast_palpation"
+        },
+        "true": {
+          "shows": [
+            "family_cancer_breast",
+            "family_cancer_cervix",
+            "family_cancer_ovary"
+          ],
+          "ref": "breast_palpation"
+        }
+      }
+    },
+    "breast_palpation": {
+      "type": "question",
+      "key": "breast_palpation",
+      "branches": {
+        "true": {
+          "ref": "breast_pain"
+        },
+        "false": {
+          "shows": [
+            "breast_palpation_experience"
+          ],
+          "ref": "breast_pain"
+        }
+      }
+    },
+    "breast_pain": {
+      "type": "question",
+      "key": "breast_pain",
+      "branches": {
+        "false": {
+          "ref": "breast_mass"
+        },
+        "true": {
+          "shows": [
+            "breast_pain_cycle",
+            "breast_pain_location",
+            "breast_pain_severity",
+            "breast_pain_wakes_up"
+          ],
+          "ref": "breast_mass"
+        }
+      }
+    },
+    "breast_mass": {
+      "type": "question",
+      "key": "breast_mass",
+      "branches": {
+        "false": {
+          "ref": "breast_nipple_discharge"
+        },
+        "true": {
+          "shows": [
+            "breast_mass_change",
+            "breast_mass_duration"
+          ],
+          "revisit": "medical_profile",
+          "ref": "breast_nipple_discharge"
+        }
+      }
+    },
+    "breast_nipple_discharge": {
+      "type": "question",
+      "key": "breast_nipple_discharge",
+      "branches": {
+        "false": {
+          "ref": "breast_skin_orange"
+        },
+        "true": {
+          "ref": "breast_nipple_bleeding"
+        }
+      }
+    },
+    "breast_nipple_bleeding": {
+      "type": "question",
+      "key": "breast_nipple_bleeding",
+      "branches": {
+        "true": {
+          "type": "end_session",
+          "reason": "urgent_breast_nipple_bleeding"
+        },
+        "false": {
+          "ref": "breast_skin_orange"
+        }
+      }
+    },
+    "breast_skin_orange": {
+      "type": "question",
+      "key": "breast_skin_orange",
+      "branches": {
+        "true": {
+          "type": "end_session",
+          "reason": "urgent_breast_skin_orange"
+        },
+        "false": {
+          "ref": "vaginal_bleeding_abnormal"
+        }
+      }
+    },
+    "vaginal_bleeding_abnormal": {
+      "type": "question",
+      "key": "vaginal_bleeding_abnormal",
+      "branches": {
+        "false": {
+          "ref": "pelvic_pain"
+        },
+        "true": {
+          "shows": [
+            "bleeding_when",
+            "bleeding_amount",
+            "bleeding_duration",
+            "bleeding_pain"
+          ],
+          "ref": "pelvic_pain"
+        }
+      }
+    },
+    "pelvic_pain": {
+      "type": "question",
+      "key": "pelvic_pain",
+      "branches": {
+        "false": {
+          "ref": "vaginal_discharge"
+        },
+        "true": {
+          "shows": [
+            "pelvic_pain_since",
+            "pelvic_pain_nature"
+          ],
+          "ref": "vaginal_discharge"
+        }
+      }
+    },
+    "vaginal_discharge": {
+      "type": "question",
+      "key": "vaginal_discharge",
+      "branches": {
+        "false": {
+          "ref": "pelvic_mass"
+        },
+        "true": {
+          "shows": [
+            "discharge_aspect"
+          ],
+          "ref": "pelvic_mass"
+        }
+      }
+    },
+    "pelvic_mass": {
+      "type": "question",
+      "key": "pelvic_mass",
+      "branches": {
+        "true": {
+          "type": "end_session",
+          "reason": "urgent_pelvic_mass"
+        },
+        "false": {
+          "ref": "associated_troubles"
+        }
+      }
+    },
+    "associated_troubles": {
+      "type": "question",
+      "key": "associated_troubles",
+      "branches": {
+        "false": {
+          "type": "end",
+          "reason": "natural_end_score_orientation"
+        },
+        "true": {
+          "shows": [
+            "trouble_type"
+          ],
+          "type": "end",
+          "reason": "natural_end_score_orientation"
+        }
+      }
+    }
+  }
+}

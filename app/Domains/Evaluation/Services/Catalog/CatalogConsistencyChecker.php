@@ -114,6 +114,20 @@ class CatalogConsistencyChecker
                 continue;
             }
 
+            if (str_starts_with($next, 'queue:')) {
+                $targetKeys = array_values(array_filter(array_map('trim', explode(',', substr($next, strlen('queue:'))))));
+                if ($targetKeys === []) {
+                    $errors[] = "routing_rules[{$index}] of '{$questionKey}' has an empty queue target.";
+                    continue;
+                }
+
+                $unknownTargets = array_diff($targetKeys, $questionKeys);
+                if ($unknownTargets !== []) {
+                    $errors[] = "routing_rules[{$index}] of '{$questionKey}' targets unknown queue question(s) '" . implode(', ', $unknownTargets) . "'.";
+                }
+                continue;
+            }
+
             $errors[] = "routing_rules[{$index}] of '{$questionKey}' has unsupported next '{$next}'.";
         }
 

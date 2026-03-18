@@ -37,6 +37,10 @@ class PersonalProfile extends Model
         'deleted_at',
     ];
 
+    protected $appends = [
+        'age',
+    ];
+
     /**
      * Accesseur dynamique pour calculer l'âge à partir de birth_date.
      */
