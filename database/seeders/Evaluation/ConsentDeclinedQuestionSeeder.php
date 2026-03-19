@@ -33,7 +33,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                     ['value' => 'continue', 'label' => 'Je vous en prie'],
                 ],
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'continue'], 'next' => 'queue:consent_declined_whatsapp'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'continue'], 'next' => 'question:consent_declined_whatsapp'],
                 ],
                 'is_required' => true,
                 'is_entry_point' => true,
@@ -48,7 +48,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'is_required' => false,
                 'placeholder' => 'Ex: +225 0700000000',
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:consent_declined_end'],
+                    ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],
                 'order' => 2,
             ],
@@ -61,7 +61,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'answer_target' => 'custom',
                 'is_required' => false,
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:consent_declined_end'],
+                    ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],
                 'order' => 3,
             ],
@@ -74,7 +74,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'options' => $communeOptions,
                 'is_required' => false,
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:consent_declined_end'],
+                    ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],
                 'order' => 4,
             ],
