@@ -10,8 +10,8 @@
       },
       "expect": {
         "routing": {
-          "action": "jump_bloc",
-          "bloc_key": "consent_declined"
+          "action": "jump_question",
+          "question_key": "consent_declined_thank_you"
         },
         "next_question_key": "consent_declined_thank_you"
       }
@@ -21,6 +21,34 @@
       "value": {
         "value": "continue",
         "label": "Continuer"
+      },
+      "expect": {
+        "routing": {
+          "action": "jump_question",
+          "question_key": "consent_declined_year"
+        },
+        "next_question_key": "consent_declined_year"
+      }
+    },
+    {
+      "question_key": "consent_declined_year",
+      "value": {
+        "value": "1995",
+        "label": "1995"
+      },
+      "expect": {
+        "routing": {
+          "action": "jump_question",
+          "question_key": "consent_declined_commune"
+        },
+        "next_question_key": "consent_declined_commune"
+      }
+    },
+    {
+      "question_key": "consent_declined_commune",
+      "value": {
+        "value": "Abobo",
+        "label": "Abobo"
       },
       "expect": {
         "routing": {
