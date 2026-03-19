@@ -188,8 +188,6 @@ class MedicalProfileQuestionSeeder extends Seeder
                     ['source' => 'question', 'key' => 'number_of_pregnancies', 'operator' => '>', 'value' => 0],
                 ]),
             ],
-
-            // Numéro CMU (lié à la question cmu du bloc profil_identite)
             [
                 'key'           => 'cmu_number',
                 'text'          => 'Quel est votre numéro de CMU ?',

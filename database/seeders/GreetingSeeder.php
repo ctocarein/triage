@@ -41,13 +41,13 @@ class GreetingSeeder extends Seeder
 
             // ----------------------------------------------------------------
             // 3 — Consentement explicite
-            // Refus → bloc consent_declined (end_session)
-            // Accepte → profil_identite (suite naturelle du parcours)
+            // Refus → bloc consent_declined
+            // Accepte → question suivante du parcours
             // ----------------------------------------------------------------
             [
                 'key'           => 'explicit_consent',
                 'text'          => 'Acceptez-vous de répondre à ces questions afin de recevoir une orientation médicale personnalisée ?',
-                'type'          => 'checkbox',
+                'type'          => 'select_one',
                 'bloc_key'      => 'greeting',
                 'answer_target' => 'consent',
                 'order'         => 3,
@@ -60,7 +60,7 @@ class GreetingSeeder extends Seeder
 
                     [
                     'if' => ['source' => 'answer', 'operator' => '=', 'value' => 'no'], 
-                    'next' => 'queue:consent_declined_thank_you'
+                    'next' => 'question:consent_declined_thank_you'
                     ],
                     [
                         'if' => ['source' => 'answer', 'operator' => '=', 'value' => 'yes'], 
@@ -71,8 +71,8 @@ class GreetingSeeder extends Seeder
 
             // ----------------------------------------------------------------
             // 4 — Raison de la visite (multiselect)
-            // Pré-queue les questions d'entrée des blocs concernés pour qu'elles
-            // soient posées en priorité dans leur bloc respectif.
+            // On capture l'intention, puis on envoie vers le profil avant
+            // d'activer les blocs symptomatiques dépendants de l'âge.
             // ----------------------------------------------------------------
             [
                 'key'           => 'raison_visite',
@@ -91,11 +91,15 @@ class GreetingSeeder extends Seeder
                 'routing_rules' => [
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'sein'],
-                        'next' => 'queue:breast_pain',
+                        'next' => 'bloc:profil_identite',
                     ],
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'cervical'],
-                        'next' => 'queue:vaginal_bleeding_abnormal',
+                        'next' => 'bloc:profil_identite',
+                    ],
+                    [
+                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
+                        'next' => 'bloc:profil_identite',
                     ],
                 ],
             ],

@@ -49,7 +49,7 @@ class SymptomBreastQuestionSeeder extends Seeder
                     'media_type' => 'image',
                     'media_url' => asset('images/symptoms/breast_pain_cycle.jpg'),
                     'visible_if' => json_encode([
-                        ['source' => 'question', 'key' => 'breast_palpation', 'value' => true, 'operator' => '=']
+                        ['source' => 'question', 'key' => 'breast_palpation', 'value' => false, 'operator' => '=']
                     ]),
                 ],
             // 1.1 Caractère cyclique de la douleur (si douleur)
@@ -108,7 +108,28 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'visible_if' => json_encode([
                     ['source' => 'question', 'key' => 'breast_pain', 'value' => true, 'operator' => '=']
                 ]),
+                'routing_rules' => [
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => 'other'],
+                        'next' => 'question:breast_pain_location_other',
+                    ],
+                ],
             ],
+
+                [
+                    'key' => 'breast_pain_location_other',
+                    'text' => '📍 Veuillez préciser où vous ressentez la douleur :',
+                    'type' => 'text',
+                    'bloc_key' => 'symptom_breast',
+                    'answer_target' => 'evaluation',
+                    'order' => 5.1,
+                    'risk_weight' => 0,
+                    'media_type' => 'image',
+                    'media_url' => asset('images/symptoms/breast_pain_location.jpg'),
+                    'visible_if' => json_encode([
+                        ['source' => 'question', 'key' => 'breast_pain_location', 'value' => 'other', 'operator' => '=']
+                    ]),
+                ],
 
             // 1.3 Intensité de la douleur (si douleur)
             [
@@ -153,12 +174,6 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'answer_target' => 'evaluation',
                 'order' => 8,
                 'risk_weight' => 5,
-                'routing_rules' => [
-                    [
-                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
-                        'next' => 'bloc:medical_profile',
-                    ],
-                ],
                 'media_type' => 'image',
                 'media_url' => asset('images/symptoms/breast_mass.jpg'),
             ],
@@ -177,6 +192,12 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'visible_if' => json_encode([
                     ['source' => 'question', 'key' => 'breast_mass', 'value' => true, 'operator' => '=']
                 ]),
+                'routing_rules' => [
+                    [
+                        'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
+                        'next' => 'question:breast_mass_duration',
+                    ],
+                ],
             ],
 
             // 2.2 Ancienneté masse (si masse)

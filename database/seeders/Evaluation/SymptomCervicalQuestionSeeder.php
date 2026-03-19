@@ -184,7 +184,7 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'routing_rules' => [
                     [
                         'if' => ['source' => 'answer', 'operator' => '=', 'value' => true],
-                        'next' => 'end_session:urgent_pelvic_mass',
+                        'next' => 'question:pelvic_mass_since',
                     ],
                 ],
                 'media_type' => 'image',
@@ -207,6 +207,12 @@ class SymptomCervicalQuestionSeeder extends Seeder
                 'visible_if' => json_encode([
                     ['source' => 'question', 'key' => 'pelvic_mass', 'value' => true, 'operator' => '=']
                 ]),
+                'routing_rules' => [
+                    [
+                        'if' => true,
+                        'next' => 'end_session:urgent_pelvic_mass',
+                    ],
+                ],
             ],
 
             // 5️⃣ Troubles urinaires ou digestifs associés

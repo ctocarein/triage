@@ -127,10 +127,8 @@ class ThematicBlocSeeder extends Seeder
             ],
 
             // ----------------------------------------------------------------
-            // 7 — Évaluation col utérin (visible si birth_date connue)
+            // 7 — Évaluation col utérin (visible si birth_date connue et âge >= 21)
             // Application 100% féminine — genre F par défaut.
-            // La condition birth_date garantit qu'on peut calculer l'âge
-            // (le routing de vaginal_bleeding_abnormal gère le cas âge < 21).
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_cervix',
@@ -141,6 +139,7 @@ class ThematicBlocSeeder extends Seeder
                 'order'       => 7,
                 'visible_if'  => [
                     ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => '!=', 'value' => null],
+                    ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => 'age_gte', 'value' => 21],
                 ],
                 'group_key'   => 'symptom_cervix',
             ],

@@ -232,7 +232,7 @@ class EvaluationSession extends Model
         }
 
         $context = is_array($this->context) ? $this->context : [];
-        $context['termination_type'] = 'abandon';
+        $context['termination_type'] = $this->resolveTerminationType($reason);
         if ($reason !== null && $reason !== '') {
             $context['termination_reason'] = $reason;
         }
@@ -245,9 +245,24 @@ class EvaluationSession extends Model
             'current_node_key' => null,
             'context' => $context,
         ]);
-    
-}
+    }
 
+    protected function resolveTerminationType(?string $reason): string
+    {
+        if (! $reason) {
+            return 'abandon';
+        }
+
+        if ($reason === 'consent_declined') {
+            return 'consent_declined';
+        }
+
+        if (str_starts_with($reason, 'urgent_')) {
+            return 'urgent_referral';
+        }
+
+        return 'abandon';
+    }
 
 
 }

@@ -97,7 +97,7 @@ class RoutingEngine
 
             $question = DynamicQuestionTemplate::where('key', $forcedKey)->first();
             if ($question
-                && ! array_key_exists($question->id, $answers)
+                && ! array_key_exists($forcedKey, $answers)
                 && $this->conditions->shouldBeVisible($question, $answers, $profile)
             ) {
                 return $question;
@@ -114,7 +114,7 @@ class RoutingEngine
             if (! $question) {
                 continue; // clé introuvable → skip silencieux
             }
-            if (array_key_exists($question->id, $answers)) {
+            if (array_key_exists($question->key, $answers)) {
                 continue; // déjà répondu → skip
             }
             if (! $this->conditions->shouldBeVisible($question, $answers, $profile)) {
@@ -198,7 +198,6 @@ class RoutingEngine
                 $reason = $reason === '' ? null : $reason;
             }
             $session->markCancelled($reason ?? 'routing_end');
-            $this->writeContext($session, $context);
             return ['action' => 'end_session', 'status' => 'cancelled', 'reason' => $reason];
         }
 

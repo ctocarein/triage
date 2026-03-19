@@ -325,10 +325,11 @@ class EvaluationFlowService
                 $report = $this->reportService->generate($session);
             }
             $insight = $this->insightService->generate($session, $report);
+            $message = $session->status === 'completed' ? 'Evaluation terminee.' : null;
 
             return [
                 'status'  => 200,
-                'payload' => $this->buildPayload($session, $insight, null, $report, 'Evaluation terminee.'),
+                'payload' => $this->buildPayload($session, $insight, null, $report, $message),
             ];
         }
 
@@ -341,10 +342,11 @@ class EvaluationFlowService
         if (! $nextQuestion || ! $session->isInProgress()) {
             $report  = $this->reportService->generate($session);
             $insight = $this->insightService->generate($session, $report);
+            $message = $session->status === 'completed' ? 'Evaluation terminee.' : null;
 
             return [
                 'status'  => 200,
-                'payload' => $this->buildPayload($session, $insight, null, $report, 'Evaluation terminee.'),
+                'payload' => $this->buildPayload($session, $insight, null, $report, $message),
             ];
         }
 
@@ -417,6 +419,8 @@ class EvaluationFlowService
 
         if ($message !== null) {
             $payload['message'] = $message;
+        } elseif ($session->status === 'cancelled') {
+            $payload['message'] = $this->resolveTerminationMessage($session);
         }
 
         return $payload;
@@ -451,6 +455,8 @@ class EvaluationFlowService
 
     protected function mapSession(EvaluationSession $session): array
     {
+        $context = is_array($session->context) ? $session->context : [];
+
         return [
             'id'                    => $session->public_id,
             'public_id'             => $session->public_id,
@@ -474,6 +480,8 @@ class EvaluationFlowService
             'current_question_id'   => $session->current_question_id,
             'target_blocs'          => $session->target_blocs,
             'visited_blocs'         => $session->visited_blocs,
+            'termination_type'      => $context['termination_type'] ?? null,
+            'termination_reason'    => $context['termination_reason'] ?? null,
         ];
     }
 
@@ -589,5 +597,28 @@ class EvaluationFlowService
 
             event(new ReferralUsed($session->referral_id, 'completed'));
         }
+    }
+
+    protected function resolveTerminationMessage(EvaluationSession $session): string
+    {
+        $context = is_array($session->context) ? $session->context : [];
+        $type = $context['termination_type'] ?? null;
+        $reason = $context['termination_reason'] ?? null;
+
+        return match ($type) {
+            'consent_declined' => 'Vous avez choisi de ne pas poursuivre l\'évaluation.',
+            'urgent_referral' => $this->resolveUrgentTerminationMessage($reason),
+            default => 'L\'évaluation a été interrompue avant son terme.',
+        };
+    }
+
+    protected function resolveUrgentTerminationMessage(?string $reason): string
+    {
+        return match ($reason) {
+            'urgent_breast_nipple_bleeding' => 'Un écoulement sanglant du mamelon nécessite une évaluation médicale rapide.',
+            'urgent_breast_skin_orange' => 'Une modification cutanée de type peau d\'orange nécessite une évaluation médicale rapide.',
+            'urgent_pelvic_mass' => 'Une masse ou un gonflement pelvien nécessite une évaluation médicale rapide.',
+            default => 'Des signes d\'alerte ont été détectés. Une évaluation médicale rapide est recommandée.',
+        };
     }
 }

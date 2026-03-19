@@ -39,10 +39,10 @@ class EvaluationAnswerStoreRequest extends FormRequest
                         return;
                     }
 
-                    $year = is_int($value) ? (string) $value : (is_string($value) ? trim($value) : '');
+                    $birthDate = is_int($value) ? (string) $value : (is_string($value) ? trim($value) : '');
 
-                    if (! preg_match('/^\d{4}$/', $year)) {
-                        $fail("Le champ birth_date doit etre au format YYYY (ex: 1998). Les formats ambigus sont refuses.");
+                    if (! preg_match('/^\d{4}$/', $birthDate) && ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthDate)) {
+                        $fail("Le champ birth_date doit etre au format YYYY ou YYYY-MM-DD. Les formats ambigus sont refuses.");
                     }
                 },
             ],
