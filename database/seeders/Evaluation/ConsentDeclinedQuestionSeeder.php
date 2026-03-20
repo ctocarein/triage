@@ -20,7 +20,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
             ->toArray();
 
         $startYear = (int) date('Y') - 90;
-        $endYear = (int) date('Y') - 18;
+        $endYear = (int) date('Y');
 
         $questions = [
             [
