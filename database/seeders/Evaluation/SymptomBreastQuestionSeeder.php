@@ -49,7 +49,7 @@ class SymptomBreastQuestionSeeder extends Seeder
                     'media_type' => 'image',
                     'media_url' => asset('images/symptoms/breast_pain_cycle.jpg'),
                     'visible_if' => json_encode([
-                        ['source' => 'question', 'key' => 'breast_palpation', 'value' => false, 'operator' => '=']
+                        ['source' => 'question', 'key' => 'breast_palpation', 'value' => true, 'operator' => '=']
                     ]),
                 ],
             // 1.1 Caractère cyclique de la douleur (si douleur)
@@ -59,7 +59,6 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'type' => 'boolean',
                 'bloc_key' => 'symptom_breast',
                 'answer_target' => 'evaluation',
-                'is_entry_point' => true,
                 'order' => 3,
                 'risk_weight' => 2,
                 'media_type' => 'image',
@@ -344,6 +343,9 @@ class SymptomBreastQuestionSeeder extends Seeder
                 'risk_weight' => 3,
                 'media_type' => 'image',
                 'media_url' => asset('images/symptoms/axillary_ganglion.jpg'),
+                'routing_rules' => [
+                    ['if' => true, 'next' => 'bloc:symptom_cervix'],
+                ],
             ],
 
         ];

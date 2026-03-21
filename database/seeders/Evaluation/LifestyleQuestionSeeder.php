@@ -125,7 +125,7 @@ class LifestyleQuestionSeeder extends Seeder
                 'is_required'   => false,
                 'placeholder'   => 'Ex: 170',
                 'routing_rules' => [
-                    ['if' => true, 'next' => 'queue:breast_palpation'],
+                    ['if' => true, 'next' => 'bloc:medical_background'],
                 ],
             ],
         ];

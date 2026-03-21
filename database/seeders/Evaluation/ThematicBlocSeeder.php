@@ -10,14 +10,16 @@ use App\Domains\Evaluation\Models\QuestionGroup;
  * Parcours "Premier Rendez-vous" — ordre des blocs thématiques.
  *
  * Ordre du parcours :
- *   1. greeting       — Accueil, consentement, raison de la visite
- *   2. profil_identite — Identité personnelle (prénom, date naissance, genre…)
- *   3. lifestyle       — Mode de vie (tabac, alcool, activité physique, IMC)
- *   4. medical_profile — Antécédents médicaux (grossesse, ménopause, VIH…)
- *   5. family_history  — Antécédents familiaux (cancer famille)
- *   6. symptom_breast      — Évaluation sein (toujours visible)
- *   7. symptom_breast_lump — Masse palpable (toujours visible, questions filtrées par visible_if)
- *   8. symptom_cervix  — Évaluation col (visible si genre=F ET age≥21)
+ *   1. greeting            — Accueil, consentement, raison de la visite
+ *   2. profil_identite     — Identité personnelle (prénom, date naissance, genre…)
+ *   3. lifestyle           — Mode de vie (tabac, alcool, activité physique, IMC)
+ *   4. medical_profile     — Antécédents médicaux (grossesse, ménopause, VIH…)
+ *   5. family_history      — Antécédents familiaux (cancer famille)
+ *   6. dispatch_intention      — Pivot de routage vers le bon bloc symptomatique
+ *   7. symptom_breast          — Évaluation sein        (masqué si raison=dépistage)
+ *   8. symptom_cervix          — Évaluation col         (masqué si raison=dépistage, âge ≥ 21)
+ *   9. symptom_breast_light    — Dépistage sein allégé  (visible si raison=dépistage)
+ *  10. symptom_cervical_light  — Dépistage col allégé   (visible si raison=dépistage, âge ≥ 21)
  */
 class ThematicBlocSeeder extends Seeder
 {
@@ -60,7 +62,7 @@ class ThematicBlocSeeder extends Seeder
             // 2 — Profil personnel
             // ----------------------------------------------------------------
             [
-                'key'         => 'profil_identite',
+                'key'         => 'profile_identity',
                 'label'       => 'Votre profil',
                 'color'       => '#F8A734',
                 'icon'        => 'user',
@@ -88,7 +90,7 @@ class ThematicBlocSeeder extends Seeder
             // 4 — Antécédents médicaux
             // ----------------------------------------------------------------
             [
-                'key'         => 'medical_profile',
+                'key'         => 'medical_background',
                 'label'       => 'Antécédents médicaux',
                 'color'       => '#4DB6AC',
                 'icon'        => 'clipboard',
@@ -113,7 +115,24 @@ class ThematicBlocSeeder extends Seeder
             ],
 
             // ----------------------------------------------------------------
-            // 6 — Évaluation sein (toujours visible)
+            // 6 — Pivot de routage (dispatch selon raison_visite)
+            // Bloc intermédiaire entre la collecte du profil et les symptômes.
+            // La question dispatch_intention évalue raison_visite et force le
+            // bon bloc symptomatique via forced_bloc dans session.context.
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'dispatch_intention',
+                'label'       => 'Orientation',
+                'color'       => '#78909C',
+                'icon'        => 'git-branch',
+                'description' => 'Routage vers le parcours symptomatique adapté à la raison de la visite.',
+                'order'       => 6,
+                'visible_if'  => null,
+                'group_key'   => 'profile_personal',
+            ],
+
+            // ----------------------------------------------------------------
+            // 7 — Évaluation sein (exclu pour dépistage → symptom_breast_light)
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_breast',
@@ -121,14 +140,15 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#E91E8C',
                 'icon'        => 'heart',
                 'description' => 'Questions sur les symptômes mammaires.',
-                'order'       => 6,
-                'visible_if'  => null,
+                'order'       => 7,
+                'visible_if'  => [
+                    ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'contains', 'value' => 'sein'],
+                ],
                 'group_key'   => 'symptom_breast',
             ],
 
             // ----------------------------------------------------------------
-            // 7 — Évaluation col utérin (visible si birth_date connue et âge >= 21)
-            // Application 100% féminine — genre F par défaut.
+            // 8 — Évaluation col utérin (exclu pour dépistage, visible si âge >= 21)
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_cervix',
@@ -136,8 +156,43 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#AB47BC',
                 'icon'        => 'shield',
                 'description' => 'Dépistage du cancer du col de l\'utérus.',
-                'order'       => 7,
+                'order'       => 8,
                 'visible_if'  => [
+                    ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'not_contains', 'value' => 'depistage'],
+                    ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => '!=', 'value' => null],
+                    ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => 'age_gte', 'value' => 21],
+                ],
+                'group_key'   => 'symptom_cervix',
+            ],
+
+            // ----------------------------------------------------------------
+            // 9 — Dépistage sein allégé (visible uniquement si raison_visite = depistage)
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'symptom_breast_light',
+                'label'       => 'Dépistage sein',
+                'color'       => '#F48FB1',
+                'icon'        => 'search',
+                'description' => 'Questions de dépistage mammaire allégées pour un bilan de routine.',
+                'order'       => 9,
+                'visible_if'  => [
+                    ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'contains', 'value' => 'depistage'],
+                ],
+                'group_key'   => 'symptom_breast',
+            ],
+
+            // ----------------------------------------------------------------
+            // 10 — Dépistage col allégé (visible si raison_visite = depistage ET âge >= 21)
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'symptom_cervical_light',
+                'label'       => 'Dépistage col utérin',
+                'color'       => '#CE93D8',
+                'icon'        => 'search',
+                'description' => 'Questions de dépistage cervical allégées pour un bilan de routine.',
+                'order'       => 10,
+                'visible_if'  => [
+                    ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'contains', 'value' => 'depistage'],
                     ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => '!=', 'value' => null],
                     ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => 'age_gte', 'value' => 21],
                 ],

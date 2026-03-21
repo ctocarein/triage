@@ -17,7 +17,8 @@
       "Bash(ls -la \"c:/dev/Chereh-Projets/chereh-dash/app/\\(admin-dash\\)/admin\")",
       "Bash(npm run:*)",
       "Bash(taskkill /f /im node.exe)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(flutter test:*)"
     ],
     "additionalDirectories": [
       "c:\\dev\\Chereh-Projets\\chereh-dash\\types",

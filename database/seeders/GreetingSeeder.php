@@ -86,20 +86,19 @@ class GreetingSeeder extends Seeder
                     ['value' => 'depistage', 'label' => 'Je viens pour un dépistage de routine'],
                     ['value' => 'sein',      'label' => 'je veux comprendre mes symptômes mammaires'],
                     ['value' => 'cervical',  'label' => 'je veux comprendre mes symptômes gynécologiques'],
-                    ['value' => 'autre',     'label' => 'Autre raison'],
                 ]),
                 'routing_rules' => [
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'sein'],
-                        'next' => 'bloc:profil_identite',
+                        'next' => 'bloc:profile_identity',
                     ],
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'cervical'],
-                        'next' => 'bloc:profil_identite',
+                        'next' => 'bloc:profile_identity',
                     ],
                     [
                         'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
-                        'next' => 'bloc:profil_identite',
+                        'next' => 'bloc:profile_identity',
                     ],
                 ],
             ],

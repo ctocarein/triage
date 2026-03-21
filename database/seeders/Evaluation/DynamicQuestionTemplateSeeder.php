@@ -25,10 +25,13 @@ class DynamicQuestionTemplateSeeder extends Seeder
             GreetingSeeder::class,
             ConsentDeclinedQuestionSeeder::class,
             LifestyleQuestionSeeder::class,
+            DispatchIntentionSeeder::class,
             MedicalProfileQuestionSeeder::class,
             PersonalProfileQuestionSeeder::class,
             SymptomBreastQuestionSeeder::class,
             SymptomCervicalQuestionSeeder::class,
+            SymptomBreastLightQuestionSeeder::class,
+            SymptomCervicalLightQuestionSeeder::class,
         ]);
     }
 }
