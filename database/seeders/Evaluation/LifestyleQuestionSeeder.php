@@ -124,9 +124,7 @@ class LifestyleQuestionSeeder extends Seeder
                 'options'       => null,
                 'is_required'   => false,
                 'placeholder'   => 'Ex: 170',
-                'routing_rules' => [
-                    ['if' => true, 'next' => 'bloc:medical_background'],
-                ],
+                // Pas de routing forcé : le flux naturel continue vers screening_history (13).
             ],
         ];
 

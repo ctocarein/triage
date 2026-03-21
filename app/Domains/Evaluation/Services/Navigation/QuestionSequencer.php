@@ -115,20 +115,40 @@ class QuestionSequencer
         if ($forcedBloc) {
             $blocs = collect([$forcedBloc])->merge($blocs->reject(fn($bloc) => $bloc === $forcedBloc))->values();
         } elseif ($this->isAdaptiveEnabled()) {
-            $unvisited = $blocs->reject(fn($bloc) => $session->hasVisitedBloc($bloc));
-            $sorted    = $this->adaptive->prioritizeBlocs(
-                $unvisited,
-                $allTemplates,
-                $context['answeredIds'],
-                $context['answers'],
-                $context['profile'],
-                $this,
-            );
+            $unvisited   = $blocs->reject(fn($bloc) => $session->hasVisitedBloc($bloc));
+            $currentBloc = $session->current_bloc;
+
+            // Si le bloc courant est encore actif (questions non répondues), il reste en tête
+            // pour éviter que l'adaptatif ne l'évince au profit d'un bloc à potentiel plus élevé.
+            if ($currentBloc
+                && $unvisited->contains($currentBloc)
+                && $this->blocHasRemainingQuestionsFrom($currentBloc, $context['answeredIds'], $allTemplates)
+            ) {
+                $sorted = collect([$currentBloc])->merge(
+                    $this->adaptive->prioritizeBlocs(
+                        $unvisited->reject(fn($b) => $b === $currentBloc),
+                        $allTemplates,
+                        $context['answeredIds'],
+                        $context['answers'],
+                        $context['profile'],
+                        $this,
+                    )
+                );
+            } else {
+                $sorted = $this->adaptive->prioritizeBlocs(
+                    $unvisited,
+                    $allTemplates,
+                    $context['answeredIds'],
+                    $context['answers'],
+                    $context['profile'],
+                    $this,
+                );
+            }
             $blocs = $sorted->merge($blocs->filter(fn($bloc) => $session->hasVisitedBloc($bloc)))->values();
         }
 
         foreach ($blocs as $blocKey) {
-            if ($session->hasVisitedBloc($blocKey)) continue;
+            if ($session->hasVisitedBloc($blocKey)) { continue; }
             $skip = $this->shouldSkipBloc($blocKey, $context['answers'], $context['profile']);
             if ($skip) {
                 $session->addVisitedBloc($blocKey);

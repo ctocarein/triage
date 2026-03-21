@@ -87,20 +87,7 @@ class GreetingSeeder extends Seeder
                     ['value' => 'sein',      'label' => 'je veux comprendre mes symptômes mammaires'],
                     ['value' => 'cervical',  'label' => 'je veux comprendre mes symptômes gynécologiques'],
                 ]),
-                'routing_rules' => [
-                    [
-                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'sein'],
-                        'next' => 'bloc:profile_identity',
-                    ],
-                    [
-                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'cervical'],
-                        'next' => 'bloc:profile_identity',
-                    ],
-                    [
-                        'if'   => ['source' => 'answer', 'operator' => 'contains', 'value' => 'depistage'],
-                        'next' => 'bloc:profile_identity',
-                    ],
-                ],
+                // Pas de routing explicite : le flux naturel passe au bloc patient_context (order 2).
             ],
         ];
 

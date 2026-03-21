@@ -9,17 +9,22 @@ use App\Domains\Evaluation\Models\QuestionGroup;
 /**
  * Parcours "Premier Rendez-vous" — ordre des blocs thématiques.
  *
- * Ordre du parcours :
- *   1. greeting            — Accueil, consentement, raison de la visite
- *   2. profil_identite     — Identité personnelle (prénom, date naissance, genre…)
- *   3. lifestyle           — Mode de vie (tabac, alcool, activité physique, IMC)
- *   4. medical_profile     — Antécédents médicaux (grossesse, ménopause, VIH…)
- *   5. family_history      — Antécédents familiaux (cancer famille)
- *   6. dispatch_intention      — Pivot de routage vers le bon bloc symptomatique
- *   7. symptom_breast          — Évaluation sein        (masqué si raison=dépistage)
- *   8. symptom_cervix          — Évaluation col         (masqué si raison=dépistage, âge ≥ 21)
- *   9. symptom_breast_light    — Dépistage sein allégé  (visible si raison=dépistage)
- *  10. symptom_cervical_light  — Dépistage col allégé   (visible si raison=dépistage, âge ≥ 21)
+ * Ordre optimisé :
+ *   1.  greeting              — Accueil, confidentialité, consentement, motif de visite
+ *   2.  patient_context       — Âge et commune (filtrage précoce, sortie mineure)
+ *   3.  emergency_screen      — Signaux d'alarme immédiats (orientation urgente si positif)
+ *   4.  dispatch_intention    — Pivot de routage vers le bon bloc symptomatique
+ *   5.  symptom_breast        — Évaluation sein        (masqué si raison=dépistage)
+ *   6.  symptom_cervix        — Évaluation col         (masqué si raison=dépistage, âge ≥ 21)
+ *   7.  symptom_breast_light  — Dépistage sein allégé  (visible si raison=dépistage)
+ *   8.  symptom_cervical_light— Dépistage col allégé   (visible si raison=dépistage, âge ≥ 21)
+ *   9.  medical_background    — Antécédents médicaux généraux
+ *  10.  gynecologic_background — Antécédents gynécologiques et obstétricaux
+ *  11.  family_history        — Antécédents familiaux de cancer
+ *  12.  lifestyle             — Habitudes de vie (tabac, alcool, activité physique, IMC)
+ *  13.  screening_history     — Historique de dépistage
+ *  14.  patient_demographics  — Données démographiques complètes (prénom, CMU…)
+ *  99.  consent_declined      — Bloc de sortie : consentement refusé / mineur
  */
 class ThematicBlocSeeder extends Seeder
 {
@@ -27,16 +32,14 @@ class ThematicBlocSeeder extends Seeder
     {
         $blocs = [
             // ----------------------------------------------------------------
-            // 0 — Bloc de sortie : consentement refusé (hors parcours principal)
+            // 99 — Bloc de sortie : consentement refusé ou mineur (hors parcours)
             // ----------------------------------------------------------------
             [
                 'key'         => 'consent_declined',
                 'label'       => 'Consentement refusé',
                 'color'       => '#9E9E9E',
                 'icon'        => 'x-circle',
-                'description' => 'Bloc affiché quand la patiente refuse le consentement.',
-                // Hors parcours principal — order=99 pour ne jamais remonter dans le flux normal.
-                // Ce bloc n'est atteint que par routing (forced_bloc) quand le consentement est refusé.
+                'description' => 'Bloc affiché quand la patiente refuse le consentement ou est mineure.',
                 'order'       => 99,
                 'visible_if'  => [
                     ['source' => 'question', 'key' => 'explicit_consent', 'operator' => '=', 'value' => 'no'],
@@ -52,73 +55,47 @@ class ThematicBlocSeeder extends Seeder
                 'label'       => 'Accueil',
                 'color'       => '#7E57C2',
                 'icon'        => 'home',
-                'description' => 'Message de bienvenue, confidentialité et consentement.',
+                'description' => 'Message de bienvenue, confidentialité, consentement et motif de visite.',
                 'order'       => 1,
                 'visible_if'  => null,
                 'group_key'   => 'profile_personal',
             ],
 
             // ----------------------------------------------------------------
-            // 2 — Profil personnel
+            // 2 — Contexte patient (âge + commune)
+            // Collecte l'âge en priorité pour détecter les mineurs et filtrer
+            // les blocs symptomatiques dépendants de l'âge dès que possible.
             // ----------------------------------------------------------------
             [
-                'key'         => 'profile_identity',
-                'label'       => 'Votre profil',
+                'key'         => 'patient_context',
+                'label'       => 'Votre situation',
                 'color'       => '#F8A734',
                 'icon'        => 'user',
-                'description' => 'Informations sur votre identité et situation personnelle.',
+                'description' => 'Date de naissance et commune pour filtrer le parcours.',
                 'order'       => 2,
                 'visible_if'  => null,
                 'group_key'   => 'profil_identite',
             ],
 
             // ----------------------------------------------------------------
-            // 3 — Mode de vie
+            // 3 — Écran d'urgence
+            // Détecte les signaux d'alarme immédiats avant d'entrer dans le
+            // parcours symptomatique. Une réponse positive déclenche une
+            // orientation urgente et termine la session.
             // ----------------------------------------------------------------
             [
-                'key'         => 'lifestyle',
-                'label'       => 'Mode de vie',
-                'color'       => '#4CAF50',
-                'icon'        => 'activity',
-                'description' => 'Habitudes de vie pouvant influencer votre santé.',
+                'key'         => 'emergency_screen',
+                'label'       => 'Signaux d\'alarme',
+                'color'       => '#F44336',
+                'icon'        => 'alert-triangle',
+                'description' => 'Détection rapide des signes nécessitant une consultation urgente.',
                 'order'       => 3,
                 'visible_if'  => null,
-                'group_key'   => 'profil_socio',
+                'group_key'   => 'profile_personal',
             ],
 
             // ----------------------------------------------------------------
-            // 4 — Antécédents médicaux
-            // ----------------------------------------------------------------
-            [
-                'key'         => 'medical_background',
-                'label'       => 'Antécédents médicaux',
-                'color'       => '#4DB6AC',
-                'icon'        => 'clipboard',
-                'description' => 'Facteurs de risque médicaux et antécédents personnels.',
-                'order'       => 4,
-                'visible_if'  => null,
-                'group_key'   => 'medical_profile',
-            ],
-
-            // ----------------------------------------------------------------
-            // 5 — Antécédents familiaux
-            // ----------------------------------------------------------------
-            [
-                'key'         => 'family_history',
-                'label'       => 'Antécédents familiaux',
-                'color'       => '#90CAF9',
-                'icon'        => 'users',
-                'description' => 'Antécédents médicaux dans votre famille proche.',
-                'order'       => 5,
-                'visible_if'  => null,
-                'group_key'   => 'profil_familial',
-            ],
-
-            // ----------------------------------------------------------------
-            // 6 — Pivot de routage (dispatch selon raison_visite)
-            // Bloc intermédiaire entre la collecte du profil et les symptômes.
-            // La question dispatch_intention évalue raison_visite et force le
-            // bon bloc symptomatique via forced_bloc dans session.context.
+            // 4 — Pivot de routage symptomatique
             // ----------------------------------------------------------------
             [
                 'key'         => 'dispatch_intention',
@@ -126,13 +103,13 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#78909C',
                 'icon'        => 'git-branch',
                 'description' => 'Routage vers le parcours symptomatique adapté à la raison de la visite.',
-                'order'       => 6,
+                'order'       => 4,
                 'visible_if'  => null,
                 'group_key'   => 'profile_personal',
             ],
 
             // ----------------------------------------------------------------
-            // 7 — Évaluation sein (exclu pour dépistage → symptom_breast_light)
+            // 5 — Évaluation sein (symptômes déclarés)
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_breast',
@@ -140,7 +117,7 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#E91E8C',
                 'icon'        => 'heart',
                 'description' => 'Questions sur les symptômes mammaires.',
-                'order'       => 7,
+                'order'       => 5,
                 'visible_if'  => [
                     ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'contains', 'value' => 'sein'],
                 ],
@@ -148,7 +125,7 @@ class ThematicBlocSeeder extends Seeder
             ],
 
             // ----------------------------------------------------------------
-            // 8 — Évaluation col utérin (exclu pour dépistage, visible si âge >= 21)
+            // 6 — Évaluation col utérin (symptômes déclarés, âge ≥ 21)
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_cervix',
@@ -156,7 +133,7 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#AB47BC',
                 'icon'        => 'shield',
                 'description' => 'Dépistage du cancer du col de l\'utérus.',
-                'order'       => 8,
+                'order'       => 6,
                 'visible_if'  => [
                     ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'not_contains', 'value' => 'depistage'],
                     ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => '!=', 'value' => null],
@@ -166,7 +143,7 @@ class ThematicBlocSeeder extends Seeder
             ],
 
             // ----------------------------------------------------------------
-            // 9 — Dépistage sein allégé (visible uniquement si raison_visite = depistage)
+            // 7 — Dépistage sein allégé
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_breast_light',
@@ -174,7 +151,7 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#F48FB1',
                 'icon'        => 'search',
                 'description' => 'Questions de dépistage mammaire allégées pour un bilan de routine.',
-                'order'       => 9,
+                'order'       => 7,
                 'visible_if'  => [
                     ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'contains', 'value' => 'depistage'],
                 ],
@@ -182,7 +159,7 @@ class ThematicBlocSeeder extends Seeder
             ],
 
             // ----------------------------------------------------------------
-            // 10 — Dépistage col allégé (visible si raison_visite = depistage ET âge >= 21)
+            // 8 — Dépistage col allégé (âge ≥ 21)
             // ----------------------------------------------------------------
             [
                 'key'         => 'symptom_cervical_light',
@@ -190,13 +167,98 @@ class ThematicBlocSeeder extends Seeder
                 'color'       => '#CE93D8',
                 'icon'        => 'search',
                 'description' => 'Questions de dépistage cervical allégées pour un bilan de routine.',
-                'order'       => 10,
+                'order'       => 8,
                 'visible_if'  => [
                     ['source' => 'question', 'key' => 'raison_visite', 'operator' => 'contains', 'value' => 'depistage'],
                     ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => '!=', 'value' => null],
                     ['source' => 'profile.personal', 'key' => 'birth_date', 'operator' => 'age_gte', 'value' => 21],
                 ],
                 'group_key'   => 'symptom_cervix',
+            ],
+
+            // ----------------------------------------------------------------
+            // 9 — Antécédents médicaux généraux
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'medical_background',
+                'label'       => 'Antécédents médicaux',
+                'color'       => '#4DB6AC',
+                'icon'        => 'clipboard',
+                'description' => 'Maladies chroniques, traitements, groupe sanguin, allergies, cancer.',
+                'order'       => 9,
+                'visible_if'  => null,
+                'group_key'   => 'medical_profile',
+            ],
+
+            // ----------------------------------------------------------------
+            // 10 — Antécédents gynécologiques et obstétricaux
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'gynecologic_background',
+                'label'       => 'Antécédents gynécologiques',
+                'color'       => '#F06292',
+                'icon'        => 'heart',
+                'description' => 'Grossesse, allaitement, ménopause, nombre de grossesses et enfants.',
+                'order'       => 10,
+                'visible_if'  => null,
+                'group_key'   => 'profil_repro',
+            ],
+
+            // ----------------------------------------------------------------
+            // 11 — Antécédents familiaux
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'family_history',
+                'label'       => 'Antécédents familiaux',
+                'color'       => '#90CAF9',
+                'icon'        => 'users',
+                'description' => 'Antécédents médicaux dans votre famille proche.',
+                'order'       => 11,
+                'visible_if'  => null,
+                'group_key'   => 'profil_familial',
+            ],
+
+            // ----------------------------------------------------------------
+            // 12 — Habitudes de vie
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'lifestyle',
+                'label'       => 'Mode de vie',
+                'color'       => '#4CAF50',
+                'icon'        => 'activity',
+                'description' => 'Tabac, alcool, activité physique, poids et taille.',
+                'order'       => 12,
+                'visible_if'  => null,
+                'group_key'   => 'profil_socio',
+            ],
+
+            // ----------------------------------------------------------------
+            // 13 — Historique de dépistage
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'screening_history',
+                'label'       => 'Historique de dépistage',
+                'color'       => '#29B6F6',
+                'icon'        => 'calendar',
+                'description' => 'Date et résultat du dernier dépistage (frottis, mammographie…).',
+                'order'       => 13,
+                'visible_if'  => null,
+                'group_key'   => 'profil_sante',
+            ],
+
+            // ----------------------------------------------------------------
+            // 14 — Données démographiques complètes
+            // Placées en fin de parcours car moins critiques pour le scoring.
+            // ----------------------------------------------------------------
+            [
+                'key'         => 'patient_demographics',
+                'label'       => 'Votre profil complet',
+                'color'       => '#FF8A65',
+                'icon'        => 'user-check',
+                'description' => 'Prénom, couverture maladie et informations complémentaires.',
+                'order'       => 14,
+                'visible_if'  => null,
+                'group_key'   => 'profil_identite',
             ],
         ];
 
@@ -217,5 +279,8 @@ class ThematicBlocSeeder extends Seeder
                 ]
             );
         }
+
+        // Désactiver les anciens blocs qui n'existent plus dans le nouveau parcours.
+        ThematicBloc::whereIn('key', ['profile_identity'])->update(['is_active' => false]);
     }
 }
