@@ -2,6 +2,7 @@
 
 namespace App\Domains\Evaluation\DTOs\Admin;
 
+use App\Domains\Evaluation\Enums\ThematicBlocIntention;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,7 +28,16 @@ class ThematicBlocRequest extends FormRequest
             'is_active'         => ['boolean'],
             'icon'              => ['nullable', 'string', 'max:100'],
             'color'             => ['nullable', 'string', 'max:50'],
-            'question_group_id'      => ['nullable', 'integer', 'exists:question_groups,id'],
+            'question_group_id'               => ['nullable', 'integer', 'exists:question_groups,id'],
+            'intention'                       => ['nullable', Rule::enum(ThematicBlocIntention::class)],
+            'priority'                        => ['nullable', 'integer', 'min:0'],
+            'recurrence_policy'               => ['nullable', 'string', 'in:once,periodic,conditional'],
+            'trigger_conditions'              => ['nullable', 'array'],
+            'trigger_conditions.operator'     => ['required_with:trigger_conditions', 'string', 'in:AND,OR'],
+            'trigger_conditions.conditions'   => ['required_with:trigger_conditions', 'array', 'min:1'],
+            'trigger_conditions.conditions.*.source'   => ['required', 'string', 'in:answer,score,profile'],
+            'trigger_conditions.conditions.*.operator' => ['required', 'string', 'in:=,!=,>,<,>=,<=,in,not_in'],
+            'trigger_conditions.conditions.*.value'    => ['present'],
             'visible_if'             => ['nullable', 'array'],
             'visible_if.*.source'    => ['required_with:visible_if', 'string'],
             'visible_if.*.key'       => ['required_with:visible_if', 'string'],

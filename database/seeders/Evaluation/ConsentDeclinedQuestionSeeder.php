@@ -36,8 +36,10 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'answer_target' => 'custom',
                 'is_required' => false,
                 'placeholder' => 'Ex: +225 0700000000',
+                'meta' => ['allow_skip' => true, 'skip_label' => 'Passer'],
                 'order' => 2,
                 'routing_rules' => [
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => null], 'next' => 'question:consent_declined_end'],
                     ['if' => true, 'next' => 'question:consent_declined_end'],
                 ],
             ],
@@ -51,7 +53,7 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                     ['value' => 'done', 'label' => 'Terminer'],
                 ],
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'done'], 'next' => 'end_session:consent_declined'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'done'], 'next' => 'question:consent_declined_thank_you'],
                 ],
                 'is_required' => true,
                 'order' => 3,

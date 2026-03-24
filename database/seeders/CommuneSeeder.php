@@ -12,7 +12,7 @@ class CommuneSeeder extends Seeder
      */
     public function run()
     {
-            DB::table('communes')->insert([
+            DB::table('communes')->insertOrIgnore([
               ['name' => 'Abengourou'],
     ['name' => 'Abidjan'],
     ['name' => 'Abobo'],

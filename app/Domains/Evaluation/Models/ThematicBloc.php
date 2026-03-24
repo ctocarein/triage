@@ -4,6 +4,7 @@ namespace App\Domains\Evaluation\Models;
 
 
 use Illuminate\Database\Eloquent\Model;
+use App\Domains\Evaluation\Enums\ThematicBlocIntention;
 use App\Domains\Evaluation\Models\QuestionGroup;
 
 class ThematicBloc extends Model
@@ -16,6 +17,10 @@ class ThematicBloc extends Model
         'color',
         'icon',
         'description',
+        'intention',
+        'priority',
+        'trigger_conditions',
+        'recurrence_policy',
         'visible_if',
         'is_active',
         'order',
@@ -23,8 +28,11 @@ class ThematicBloc extends Model
     ];
 
     protected $casts = [
-        'visible_if' => 'array',
-        'is_active'  => 'boolean',
+        'visible_if'         => 'array',
+        'trigger_conditions' => 'array',
+        'is_active'          => 'boolean',
+        'intention'          => ThematicBlocIntention::class,
+        'priority'           => 'integer',
     ];
 
     public function questionGroup()

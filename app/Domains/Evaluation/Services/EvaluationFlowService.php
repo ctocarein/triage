@@ -112,21 +112,24 @@ class EvaluationFlowService
             ];
         }
 
-        $completedSession = $identity->evaluationSessions()
-            ->completed()
-            ->latest('completed_at')
-            ->first();
+        if ($type === 'complete') {
+            $completedSession = $identity->evaluationSessions()
+                ->completed()
+                ->fullEvaluation()
+                ->latest('completed_at')
+                ->first();
 
-        if ($completedSession) {
-            return [
-                'status'  => 403,
-                'payload' => [
-                    'message'      => 'Vous avez deja complete une evaluation.',
-                    'error_code'   => 'ALREADY_COMPLETED',
-                    'redirect_url' => config('ambassador.referrals.used_url'),
-                    'session_id'   => $completedSession->public_id,
-                ],
-            ];
+            if ($completedSession) {
+                return [
+                    'status'  => 403,
+                    'payload' => [
+                        'message'      => 'Vous avez deja complete une evaluation.',
+                        'error_code'   => 'ALREADY_COMPLETED',
+                        'redirect_url' => config('ambassador.referrals.used_url'),
+                        'session_id'   => $completedSession->public_id,
+                    ],
+                ];
+            }
         }
 
         if ($referral && $clientIp) {
@@ -529,6 +532,9 @@ class EvaluationFlowService
             'visible_if'    => $question->visible_if,
             'question_id'   => $question->id,
             'node_id'       => null,
+            'required'      => $question->is_required,
+            'placeholder'   => $question->placeholder,
+            'meta'          => $question->meta,
         ];
     }
 
