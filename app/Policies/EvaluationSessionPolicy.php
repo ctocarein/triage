@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 
@@ -13,12 +14,19 @@ class EvaluationSessionPolicy
             return true;
         }
 
-        // Un FieldAgent peut accéder à la session d'un bénéficiaire qu'il a créée
+        // Un evaluateur accede a la session d'un beneficiaire qu'il a lui-meme demarree.
+        // Le agent_id du contexte est declaratif : il ne suffit pas. On revalide que
+        // l'acteur porte toujours un role d'evaluateur dans une organisation partagee
+        // avec le sujet, sinon une session obtenue par un subject_id arbitraire
+        // continuerait a ouvrir l'acces a ses donnees.
         $agentId = $session->context['agent_id'] ?? null;
-        if ($agentId && (string) $agentId === (string) $actor->id) {
-            return $actor->hasMembershipRole('FieldAgent');
+        if (! $agentId || (string) $agentId !== (string) $actor->id) {
+            return false;
         }
 
-        return false;
+        $subject = $session->identity;
+
+        return $subject !== null
+            && IdentityEvaluationPolicy::canConductAssistedEvaluation($actor, $subject);
     }
 }

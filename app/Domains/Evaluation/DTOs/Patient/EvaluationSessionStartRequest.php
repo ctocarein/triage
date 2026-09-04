@@ -41,7 +41,7 @@ class EvaluationSessionStartRequest extends FormRequest
             'bloc_keys.*' => ['string'],
             'referral_code' => ['nullable', 'string'],
             'client_ip' => ['nullable', 'ip'],
-            'subject_id' => ['nullable', 'string'],
+            'subject_id' => ['nullable', 'uuid', 'exists:identities,id'],
         ];
     }
 }

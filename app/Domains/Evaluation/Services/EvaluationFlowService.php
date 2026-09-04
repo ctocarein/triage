@@ -46,27 +46,45 @@ class EvaluationFlowService
         $referral     = null;
         $agentIdentity = null;
 
-        // Si subject_id fourni, l'acteur doit être FieldAgent et on crée la session pour le bénéficiaire
+        // Si subject_id est fourni, l'acteur conduit l'evaluation pour le beneficiaire.
+        // Trois refus distincts, du moins au plus informatif, pour ne pas renseigner
+        // un acteur non habilite sur l'existence d'une identite.
         if ($subjectId !== null) {
-            if (! $identity->hasMembershipRole('FieldAgent')) {
+            if (! IdentityEvaluationPolicy::isEvaluator($identity)) {
                 return [
                     'status'  => 403,
                     'payload' => [
-                        'message'    => 'Seul un agent de terrain peut démarrer une évaluation pour un bénéficiaire.',
-                        'error_code' => 'AGENT_REQUIRED',
+                        'message'    => "Seul un agent de terrain ou un ambassadeur peut demarrer une evaluation pour un beneficiaire.",
+                        'error_code' => 'EVALUATOR_REQUIRED',
                     ],
                 ];
             }
+
             $subject = Identity::find($subjectId);
             if (! $subject) {
                 return [
                     'status'  => 404,
-                    'payload' => ['message' => 'Bénéficiaire introuvable.'],
+                    'payload' => ['message' => 'Beneficiaire introuvable.'],
                 ];
             }
+
+            if (! IdentityEvaluationPolicy::canConductAssistedEvaluation($identity, $subject)) {
+                return [
+                    'status'  => 403,
+                    'payload' => [
+                        'message'    => "Ce beneficiaire ne fait pas partie de votre organisation.",
+                        'error_code' => 'SUBJECT_OUT_OF_SCOPE',
+                    ],
+                ];
+            }
+
             $agentIdentity = $identity;
             $identity      = $subject;
         }
+
+        // L'acteur reste celui qui est authentifie : en evaluation assistee, le sujet
+        // n'a pas de token, c'est celui de l'evaluateur qui lie la session.
+        $actor = $agentIdentity ?? $identity;
 
         if ($referralCode !== null) {
             $referral = Referral::query()->where('code', $referralCode)->first();
@@ -96,7 +114,7 @@ class EvaluationFlowService
             ->latest('started_at')
             ->first();
 
-        if ($existingInProgress && $this->sessionTokenMismatch($identity, $existingInProgress)) {
+        if ($existingInProgress && $this->sessionTokenMismatch($actor, $existingInProgress)) {
             $this->expireSession($existingInProgress);
             $existingInProgress = null;
         }
@@ -216,8 +234,8 @@ class EvaluationFlowService
                 ->where('type', 'thematic')
                 ->latest('started_at')
                 ->get()
-                ->first(function (EvaluationSession $session) use ($normalized, $identity): bool {
-                    if ($this->sessionTokenMismatch($identity, $session)) {
+                ->first(function (EvaluationSession $session) use ($normalized, $actor): bool {
+                    if ($this->sessionTokenMismatch($actor, $session)) {
                         $this->expireSession($session);
                         return false;
                     }
@@ -252,7 +270,7 @@ class EvaluationFlowService
             'context'               => array_filter([
                 'bloc_keys'           => $blocKeys ?: null,
                 'selected_group_ids'  => $selectedGroupIds ?: null,
-                'token_id'            => $identity->currentAccessToken()?->id,
+                'token_id'            => $actor->currentAccessToken()?->id,
                 'client_ip'           => $clientIp,
                 'agent_id'            => $agentIdentity?->id,
             ], fn ($v) => $v !== null),
