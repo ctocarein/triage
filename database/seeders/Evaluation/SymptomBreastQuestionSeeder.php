@@ -19,20 +19,14 @@ class SymptomBreastQuestionSeeder extends Seeder
 
         $questions = [
 
-            // 1️⃣ Douleur au sein (entrée)
-                [
-                    'key' => 'breast_palpation',
-                    'text' => 'Avez-vous pratiquée l\'autopalpation ?',
-                    'type' => 'boolean',
-                    'bloc_key' => 'symptom_breast',
-                    'answer_target' => 'evaluation',
-                    'is_entry_point' => true,
-                    'order' => 1,
-                    'risk_weight' => 0,
-                    'media_type' => 'image',
-                    'media_url' => asset('images/symptoms/breast_pain.jpg'),
-                ],
-
+            // 1 - Autopalpation : entree du bloc
+                //
+                // La question booleenne 'breast_palpation' a ete retiree : elle
+                // faisait double emploi avec celle-ci, qui pose la meme chose en
+                // trois niveaux et distingue « pas sure de le faire correctement »,
+                // nuance qu'un oui/non ecrase. Celle-ci est desormais montree a
+                // toutes : sous condition, une de ses options etait toujours
+                // incoherente avec le public qui la recevait.
                 [
                     'key' => 'breast_palpation_experience',
                     'text' => 'Je vous explique en quelques images. C\'est un examen que vous pouvez faire vous-même, une fois par mois',
@@ -44,13 +38,11 @@ class SymptomBreastQuestionSeeder extends Seeder
                     ]),
                     'bloc_key' => 'symptom_breast',
                     'answer_target' => 'evaluation',
-                    'order' => 2,
+                    'is_entry_point' => true,
+                    'order' => 1,
                     'risk_weight' => 0,
                     'media_type' => 'image',
                     'media_url' => asset('images/symptoms/breast_pain_cycle.jpg'),
-                    'visible_if' => json_encode([
-                        ['source' => 'question', 'key' => 'breast_palpation', 'value' => true, 'operator' => '=']
-                    ]),
                 ],
             // 1.1 Caractère cyclique de la douleur (si douleur)
             [

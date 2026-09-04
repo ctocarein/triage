@@ -99,7 +99,9 @@ class LifestyleQuestionSeeder extends Seeder
             // ----------------------------------------------------------------
             // IMC (taille + poids → calculé côté front, ou saisi directement)
             // Placés en fin de bloc pour que lifestyle soit complet avant le
-            // routing queue:breast_palpation sur taille_cm.
+            // passage au bloc suivant. (L'ancien commentaire evoquait un routage
+            // queue:breast_palpation sur taille_cm : il n'a jamais existe, et la
+            // question visee a ete retiree du catalogue.)
             // ----------------------------------------------------------------
             [
                 'key'           => 'poids_kg',

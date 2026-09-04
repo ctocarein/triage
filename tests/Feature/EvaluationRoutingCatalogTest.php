@@ -201,14 +201,21 @@ class EvaluationRoutingCatalogTest extends TestCase
         $this->assertSame('urgent_pelvic_mass', data_get($session->context, 'termination_reason'));
     }
 
-    public function test_breast_palpation_experience_is_shown_only_when_autopalpation_is_not_practiced(): void
+    public function test_breast_palpation_experience_is_shown_to_everyone(): void
     {
         $question = DynamicQuestionTemplate::where('key', 'breast_palpation_experience')->firstOrFail();
         $profile = ['personal' => [], 'medical' => []];
         $evaluator = app(\App\Domains\Evaluation\Services\Navigation\ConditionEvaluator::class);
 
-        $this->assertTrue($evaluator->shouldBeVisible($question, ['breast_palpation' => false], $profile));
-        $this->assertFalse($evaluator->shouldBeVisible($question, ['breast_palpation' => true], $profile));
+        // L'explicatif n'est plus conditionne : la question booleenne qui le
+        // filtrait a ete retiree, et ses trois niveaux couvrent les deux publics.
+        $this->assertNull($question->visible_if);
+        $this->assertTrue($evaluator->shouldBeVisible($question, [], $profile));
+
+        $this->assertFalse(
+            DynamicQuestionTemplate::where('key', 'breast_palpation')->where('is_active', true)->exists(),
+            'La question booleenne breast_palpation ne doit plus etre active.'
+        );
     }
 
     public function test_screening_follow_ups_are_hidden_when_last_screening_is_never(): void

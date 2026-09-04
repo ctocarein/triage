@@ -167,12 +167,12 @@ class FourBeneficiarySimulationTest extends TestCase
 
         $q = $this->skip($identity, $sessionId, $q);
         $this->assertKey(
-            'breast_palpation', $q,
-            'B3 : parcours sein doit démarrer par breast_palpation.'
+            'breast_palpation_experience', $q,
+            'B3 : parcours sein doit démarrer par l\'autopalpation.'
         );
 
-        // Autopalpation négative → masque breast_palpation_experience
-        $q = $this->answer($identity, $sessionId, $q, false);
+        // Autopalpation jamais pratiquée
+        $q = $this->answer($identity, $sessionId, $q, 'no');
         $this->assertKey('breast_pain', $q, 'B3');
 
         // Pas de douleur → masque toutes les questions breast_pain_*
