@@ -10,6 +10,7 @@ use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Models\ThematicBloc;
 use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
+use App\Domains\Identity\Application\Services\BeneficiaryEnrollmentService;
 use App\Domains\Report\Models\Report;
 use App\Domains\Report\Services\ReportGenerationService;
 use App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral;
@@ -28,7 +29,8 @@ class EvaluationFlowService
         protected ReportGenerationService $reportService,
         protected ProfileUpdaterService $profileUpdater,
         protected QuestionSequencer $questionSequencer,
-        protected EvaluationSnapshotService $snapshotService
+        protected EvaluationSnapshotService $snapshotService,
+        protected BeneficiaryEnrollmentService $enrollment
     ) {
     }
 
@@ -43,13 +45,16 @@ class EvaluationFlowService
         $referralCode = $validated['referral_code'] ?? null;
         $clientIp     = $validated['client_ip'] ?? null;
         $subjectId    = $validated['subject_id'] ?? null;
+        $subjectPhone = $validated['subject_phone'] ?? null;
         $referral     = null;
         $agentIdentity = null;
+        $subjectPayload = null;
 
-        // Si subject_id est fourni, l'acteur conduit l'evaluation pour le beneficiaire.
-        // Trois refus distincts, du moins au plus informatif, pour ne pas renseigner
-        // un acteur non habilite sur l'existence d'une identite.
-        if ($subjectId !== null) {
+        // Le beneficiaire est designe soit par son identifiant s'il est deja enrole,
+        // soit par son telephone, auquel cas il est enrole ici meme. Trois refus
+        // distincts, du moins au plus informatif, pour ne pas renseigner un acteur
+        // non habilite sur l'existence d'une identite.
+        if ($subjectId !== null || $subjectPhone !== null) {
             if (! IdentityEvaluationPolicy::isEvaluator($identity)) {
                 return [
                     'status'  => 403,
@@ -60,12 +65,26 @@ class EvaluationFlowService
                 ];
             }
 
-            $subject = Identity::find($subjectId);
-            if (! $subject) {
-                return [
-                    'status'  => 404,
-                    'payload' => ['message' => 'Beneficiaire introuvable.'],
+            if ($subjectPhone !== null) {
+                // Enrolement implicite : identite, credential telephone verifiee et
+                // membership Beneficiary, en reutilisant l'identite si le numero est
+                // deja connu pour que les visites de suivi retombent sur la meme personne.
+                $enrolled = $this->enrollment->enroll($identity, $subjectPhone);
+                $subject  = $enrolled['identity'];
+                $subjectPayload = [
+                    'identity_id' => (string) $subject->id,
+                    'phone'       => $subjectPhone,
+                    'is_new'      => $enrolled['is_new'],
                 ];
+            } else {
+                $subject = Identity::find($subjectId);
+                if (! $subject) {
+                    return [
+                        'status'  => 404,
+                        'payload' => ['message' => 'Beneficiaire introuvable.'],
+                    ];
+                }
+                $subjectPayload = ['identity_id' => (string) $subject->id, 'is_new' => false];
             }
 
             if (! IdentityEvaluationPolicy::canConductAssistedEvaluation($identity, $subject)) {
@@ -249,7 +268,10 @@ class EvaluationFlowService
 
                 return [
                     'status'  => 200,
-                    'payload' => $this->buildPayload($existing, $insight, $questionPayload, $report, 'Session deja en cours.'),
+                    'payload' => $this->withSubject(
+                        $this->buildPayload($existing, $insight, $questionPayload, $report, 'Session deja en cours.'),
+                        $subjectPayload
+                    ),
                 ];
             }
         }
@@ -297,7 +319,10 @@ class EvaluationFlowService
 
         return [
             'status'  => 201,
-            'payload' => $this->buildPayload($session, $insight, $questionPayload, null, 'Session demarree.'),
+            'payload' => $this->withSubject(
+                $this->buildPayload($session, $insight, $questionPayload, null, 'Session demarree.'),
+                $subjectPayload
+            ),
         ];
     }
 
@@ -442,6 +467,24 @@ class EvaluationFlowService
             $payload['message'] = $message;
         } elseif ($session->status === 'cancelled') {
             $payload['message'] = $this->resolveTerminationMessage($session);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Expose le beneficiaire dans la reponse de demarrage : en enrolement implicite,
+     * c'est la seule occasion pour le client de recuperer l'identifiant de la personne
+     * qu'il vient de creer.
+     *
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed>|null $subject
+     * @return array<string, mixed>
+     */
+    protected function withSubject(array $payload, ?array $subject): array
+    {
+        if ($subject !== null) {
+            $payload['subject'] = $subject;
         }
 
         return $payload;

@@ -3,6 +3,8 @@
 namespace App\Domains\Identity\Presentation\Http\Controllers;
 
 use App\Domains\Access\Models\Membership;
+use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
+use App\Domains\Identity\Application\Services\BeneficiaryEnrollmentService;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Credential;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Http\Controllers\Controller;
@@ -12,11 +14,6 @@ use Illuminate\Support\Facades\DB;
 
 class FieldAgentController extends Controller
 {
-    /**
-     * POST /agent/beneficiaries
-     * Permet à un FieldAgent de créer ou retrouver un Bénéficiaire via son numéro de téléphone.
-     * Retourne les données d'identité du bénéficiaire (sans token).
-     */
     /**
      * POST /agent/qr-scan
      * Permet à un FieldAgent de scanner le QR d'un bénéficiaire (chereh://identity/{id}).
@@ -88,88 +85,33 @@ class FieldAgentController extends Controller
 
     /**
      * POST /agent/beneficiaries
-     * Permet à un FieldAgent de créer ou retrouver un Bénéficiaire via son numéro de téléphone.
-     * Retourne les données d'identité du bénéficiaire (sans token).
+     * Permet a un evaluateur (agent de terrain ou ambassadeur) de creer ou retrouver
+     * un Beneficiaire via son numero de telephone.
+     * Retourne les donnees d'identite du beneficiaire (sans token).
      */
-    public function createBeneficiary(Request $request): JsonResponse
-    {
+    public function createBeneficiary(
+        Request $request,
+        BeneficiaryEnrollmentService $enrollment
+    ): JsonResponse {
         $actor = $request->user();
 
-        if (! $actor instanceof Identity || ! $actor->hasMembershipRole('FieldAgent')) {
-            abort(403, 'Accès réservé aux agents de terrain.');
-        }
-
-        $orgId = $actor->memberships()
-            ->where('role', 'FieldAgent')
-            ->where('status', 'active')
-            ->value('organization_id');
-
-        if (! $orgId) {
-            abort(403, 'Aucune organisation active trouvée pour cet agent.');
+        if (! $actor instanceof Identity || ! IdentityEvaluationPolicy::isEvaluator($actor)) {
+            abort(403, "Acces reserve aux agents de terrain et aux ambassadeurs.");
         }
 
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:30'],
         ]);
 
-        $phone = $data['phone'];
-
-        // Chercher une identité existante avec ce numéro
-        $existing = Credential::where('type', 'phone')
-            ->where('identifier', $phone)
-            ->first();
-
-        if ($existing) {
-            $identity = $existing->identity;
-
-            // S'assurer qu'elle a un membership Beneficiary dans l'organisation de l'agent
-            $hasMembership = $identity->memberships()
-                ->where('role', 'Beneficiary')
-                ->where('organization_id', $orgId)
-                ->exists();
-
-            if (! $hasMembership) {
-                Membership::create([
-                    'identity_id'     => $identity->id,
-                    'organization_id' => $orgId,
-                    'role'            => 'Beneficiary',
-                    'status'          => 'active',
-                ]);
-            }
-
-            return response()->json([
-                'identity_id' => (string) $identity->id,
-                'phone'       => $phone,
-                'is_new'      => false,
-            ]);
-        }
-
-        // Créer une nouvelle identité Bénéficiaire
-        $identity = DB::transaction(function () use ($phone, $orgId) {
-            $identity = Identity::create(['kind' => 'person', 'status' => 'active']);
-
-            Credential::create([
-                'identity_id' => $identity->id,
-                'type'        => 'phone',
-                'identifier'  => $phone,
-                'secret_hash' => null,
-                'verified_at' => now(),
-            ]);
-
-            Membership::create([
-                'identity_id'     => $identity->id,
-                'organization_id' => $orgId,
-                'role'            => 'Beneficiary',
-                'status'          => 'active',
-            ]);
-
-            return $identity;
-        });
+        // L'evaluateur sans organisation n'est plus refuse : son beneficiaire est
+        // rattache a l'organisation par defaut, et lui-meme y est rattache pour
+        // pouvoir ensuite l'evaluer.
+        $result = $enrollment->enroll($actor, $data['phone']);
 
         return response()->json([
-            'identity_id' => (string) $identity->id,
-            'phone'       => $phone,
-            'is_new'      => true,
-        ], 201);
+            'identity_id' => (string) $result['identity']->id,
+            'phone'       => $data['phone'],
+            'is_new'      => $result['is_new'],
+        ], $result['is_new'] ? 201 : 200);
     }
 }

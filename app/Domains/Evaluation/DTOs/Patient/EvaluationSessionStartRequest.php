@@ -41,7 +41,11 @@ class EvaluationSessionStartRequest extends FormRequest
             'bloc_keys.*' => ['string'],
             'referral_code' => ['nullable', 'string'],
             'client_ip' => ['nullable', 'ip'],
-            'subject_id' => ['nullable', 'uuid', 'exists:identities,id'],
+            // Deux facons de designer le beneficiaire, mutuellement exclusives :
+            // par son identifiant s'il est deja enrole, par son telephone sinon,
+            // auquel cas l'identite est creee ou retrouvee au demarrage.
+            'subject_id' => ['nullable', 'uuid', 'exists:identities,id', 'prohibits:subject_phone'],
+            'subject_phone' => ['nullable', 'string', 'max:30', 'prohibits:subject_id'],
         ];
     }
 }
