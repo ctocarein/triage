@@ -5,10 +5,12 @@ namespace Tests\Unit;
 use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Services\AdaptiveSequencingService;
-use App\Domains\Evaluation\Services\BlocRulesService;
-use App\Domains\Evaluation\Services\QuestionFlowService;
-use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\Navigation\AdaptiveSequencer;
+use App\Domains\Evaluation\Services\Navigation\BlocRulesService;
+use App\Domains\Evaluation\Services\Navigation\ConditionEvaluator;
+use App\Domains\Evaluation\Services\Navigation\QuestionSequencer;
+use App\Domains\Evaluation\Services\Navigation\RoutingEngine;
+use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 use App\Domains\Profile\Infrastructure\Persistence\Models\PersonalProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -20,26 +22,29 @@ class QuestionFlowServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
-
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private function makeService(): QuestionFlowService
+    private function makeService(): QuestionSequencer
     {
         $blocRules = Mockery::mock(BlocRulesService::class);
         $blocRules->shouldReceive('shouldSkip')->andReturn(false)->byDefault();
 
-        $adaptive = Mockery::mock(AdaptiveSequencingService::class);
+        $adaptive = Mockery::mock(AdaptiveSequencer::class);
 
         $riskModel = Mockery::mock(RiskModelService::class);
 
-        return new QuestionFlowService($blocRules, $adaptive, $riskModel);
+        // Ces deux dépendances ont été extraites de QuestionSequencer lors du
+        // découpage Navigation/ : on utilise les implémentations réelles, elles
+        // sont pures et n'accèdent pas à la base.
+        return new QuestionSequencer(
+            $blocRules,
+            $adaptive,
+            $riskModel,
+            app(ConditionEvaluator::class),
+            app(RoutingEngine::class),
+        );
     }
 
     private function makeIdentity(): string

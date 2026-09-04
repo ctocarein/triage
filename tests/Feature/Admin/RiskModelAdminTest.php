@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Domains\Evaluation\Models\Fact;
+use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Models\RiskModel;
 use App\Domains\Evaluation\Models\RiskSignal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,13 +45,15 @@ class RiskModelAdminTest extends TestCase
 
     public function test_destroy_blocked_if_signals_exist(): void
     {
-        $model  = RiskModel::factory()->create();
-        $fact   = Fact::factory()->create();
+        $model   = RiskModel::factory()->create();
+        $fact    = Fact::factory()->create();
+        $version = ModelVersion::factory()->forRiskModel()->active()->create();
         RiskSignal::create([
-            'risk_model_id' => $model->id,
-            'fact_key'      => $fact->key,
-            'weight'        => 10,
-            'is_active'     => true,
+            'risk_model_id'    => $model->id,
+            'model_version_id' => $version->id,
+            'fact_key'         => $fact->key,
+            'weight'           => 10,
+            'is_active'        => true,
         ]);
 
         $this->actingAsAdmin()
@@ -75,6 +78,7 @@ class RiskModelAdminTest extends TestCase
     {
         $model = RiskModel::factory()->create();
         $fact  = Fact::factory()->create();
+        ModelVersion::factory()->forRiskModel()->active()->create();
 
         $this->actingAsAdmin()
             ->postJson("/api/admin/risk-models/{$model->id}/signals", [
@@ -87,13 +91,15 @@ class RiskModelAdminTest extends TestCase
 
     public function test_destroy_signal(): void
     {
-        $model  = RiskModel::factory()->create();
-        $fact   = Fact::factory()->create();
-        $signal = RiskSignal::create([
-            'risk_model_id' => $model->id,
-            'fact_key'      => $fact->key,
-            'weight'        => 5,
-            'is_active'     => true,
+        $model   = RiskModel::factory()->create();
+        $fact    = Fact::factory()->create();
+        $version = ModelVersion::factory()->forRiskModel()->active()->create();
+        $signal  = RiskSignal::create([
+            'risk_model_id'    => $model->id,
+            'model_version_id' => $version->id,
+            'fact_key'         => $fact->key,
+            'weight'           => 5,
+            'is_active'        => true,
         ]);
 
         $this->actingAsAdmin()

@@ -25,12 +25,14 @@ use App\Policies\EvaluationSessionPolicy;
 use App\Policies\IdentityPolicy;
 use App\Policies\MembershipPolicy;
 use App\Policies\OrganizationPolicy;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Services\Catalog\RoutingRulesValidator;
 use Illuminate\Support\Facades\Log;
@@ -50,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->bootFactoryResolution();
+
         Gate::policy(Identity::class, IdentityPolicy::class);
         Gate::policy(Organization::class, OrganizationPolicy::class);
         Gate::policy(Membership::class, MembershipPolicy::class);
@@ -68,6 +72,26 @@ class AppServiceProvider extends ServiceProvider
 
         $this->bootAmbassadorRecompute();
         $this->bootRoutingRulesValidation();
+    }
+
+    /**
+     * Les modèles vivent dans app/Domains/... alors que les factories sont
+     * regroupées à plat dans le namespace Database\Factories. Sans ce résolveur,
+     * Laravel déduit Database\Factories\Domains\Evaluation\Models\FactFactory
+     * depuis App\Domains\Evaluation\Models\Fact et échoue sur « Class not found ».
+     */
+    private function bootFactoryResolution(): void
+    {
+        Factory::guessFactoryNamesUsing(function (string $modelName): string {
+            $flat = 'Database\\Factories\\'.class_basename($modelName).'Factory';
+
+            if (class_exists($flat)) {
+                return $flat;
+            }
+
+            // Repli sur la convention Laravel par défaut.
+            return 'Database\\Factories\\'.Str::after($modelName, 'App\\').'Factory';
+        });
     }
 
     private function bootAmbassadorRecompute(): void

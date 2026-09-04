@@ -202,7 +202,7 @@ class QuestionTemplateAdminTest extends TestCase
     public function test_catalog_check_returns_errors_array(): void
     {
         $this->actingAsAdmin()
-            ->getJson('/api/admin/questions/catalog/check')
+            ->getJson('/api/admin/catalog/check')
             ->assertOk()
             ->assertJsonStructure(['errors']);
     }

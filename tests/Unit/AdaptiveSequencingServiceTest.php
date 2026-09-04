@@ -3,20 +3,14 @@
 namespace Tests\Unit;
 
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
-use App\Domains\Evaluation\Services\AdaptiveSequencingService;
-use App\Domains\Evaluation\Services\QuestionFlowService;
+use App\Domains\Evaluation\Services\Navigation\AdaptiveSequencer;
+use App\Domains\Evaluation\Services\Navigation\QuestionSequencer;
 use Illuminate\Support\Collection;
 use Mockery;
 use Tests\TestCase;
 
 class AdaptiveSequencingServiceTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
-
     /**
      * P5 — canChangeRiskLevel() doit inclure les questions conditionnellement masquées
      * dans son calcul de potentiel (mode conservatif).
@@ -35,7 +29,7 @@ class AdaptiveSequencingServiceTest extends TestCase
             ],
         ]);
 
-        $service = new AdaptiveSequencingService();
+        $service = new AdaptiveSequencer();
 
         // Question à fort poids, non répondue, conditionnellement masquée
         $hiddenHighWeight = $this->makeQuestion(id: 1, blocKey: 'bloc_a', weight: 15, visible: false);
@@ -45,7 +39,7 @@ class AdaptiveSequencingServiceTest extends TestCase
         $answers      = [];
         $profile      = [];
 
-        $flow = Mockery::mock(QuestionFlowService::class);
+        $flow = Mockery::mock(QuestionSequencer::class);
         // shouldBeVisible retourne false → la question est masquée
         $flow->shouldReceive('shouldBeVisible')->andReturn(false);
 
@@ -74,10 +68,10 @@ class AdaptiveSequencingServiceTest extends TestCase
             ],
         ]);
 
-        $service = new AdaptiveSequencingService();
+        $service = new AdaptiveSequencer();
 
         // Aucune question dans les blocs restants
-        $flow = Mockery::mock(QuestionFlowService::class);
+        $flow = Mockery::mock(QuestionSequencer::class);
 
         $result = $service->canChangeRiskLevel(
             currentScore: 5.0,
@@ -101,19 +95,24 @@ class AdaptiveSequencingServiceTest extends TestCase
             ],
         ]);
 
-        $service = new AdaptiveSequencingService();
+        $service = new AdaptiveSequencer();
 
+        // bloc_y ne contient qu'une question masquée : son potentiel doit être nul
+        // en mode non-conservatif. Le poids (1) est volontairement plus faible que
+        // ceux des blocs visibles, sinon les deux comportements possibles
+        // (compter ou ignorer les questions masquées) donneraient le même ordre.
         $visibleLowWeight  = $this->makeQuestion(id: 1, blocKey: 'bloc_x', weight: 2, visible: true);
-        $hiddenHighWeight  = $this->makeQuestion(id: 2, blocKey: 'bloc_y', weight: 20, visible: false);
+        $hiddenLowWeight   = $this->makeQuestion(id: 2, blocKey: 'bloc_y', weight: 1, visible: false);
+        $visibleHighWeight = $this->makeQuestion(id: 3, blocKey: 'bloc_z', weight: 5, visible: true);
 
-        $allTemplates = collect([$visibleLowWeight, $hiddenHighWeight]);
+        $allTemplates = collect([$visibleLowWeight, $hiddenLowWeight, $visibleHighWeight]);
 
-        $flow = Mockery::mock(QuestionFlowService::class);
+        $flow = Mockery::mock(QuestionSequencer::class);
         $flow->shouldReceive('shouldBeVisible')
-            ->andReturnUsing(fn ($q) => $q->id === 1);
+            ->andReturnUsing(fn ($q) => $q->id !== 2);
 
         $sorted = $service->prioritizeBlocs(
-            blocs: collect(['bloc_x', 'bloc_y']),
+            blocs: collect(['bloc_x', 'bloc_y', 'bloc_z']),
             allTemplates: $allTemplates,
             answeredIds: [],
             answers: [],
@@ -121,9 +120,11 @@ class AdaptiveSequencingServiceTest extends TestCase
             flow: $flow,
         );
 
-        // En mode non-conservatif (prioritizeBlocs), bloc_y (poids caché) a potentiel 0
-        // → bloc_x (poids visible=2) passe en premier
-        $this->assertSame('bloc_x', $sorted->first());
+        // La question masquée de bloc_y est ignorée → potentiel 0. Les blocs sans
+        // potentiel (accueil, profil…) conservent leur ordre d'origine et passent
+        // avant les blocs à risque, eux triés par potentiel décroissant.
+        // Si les questions masquées étaient comptées, l'ordre serait z, x, y.
+        $this->assertSame(['bloc_y', 'bloc_z', 'bloc_x'], $sorted->all());
     }
 
     private function makeQuestion(int $id, string $blocKey, float $weight, bool $visible): DynamicQuestionTemplate

@@ -6,8 +6,8 @@ use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Decision\Services\DecisionInsightService;
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Services\DataQualityService;
-use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\Insight\DataQualityService;
+use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -24,12 +24,6 @@ class DecisionInsightServiceTest extends TestCase
         // Shadow mode désactivé par défaut pour isoler les tests qui ne déclarent
         // pas evaluateDirectWeights() dans leur mock.
         config(['vnext.shadow_mode' => false]);
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
     }
 
     public function test_it_flags_review_when_critical_missing(): void
@@ -150,8 +144,9 @@ class DecisionInsightServiceTest extends TestCase
         $service = new DecisionInsightService($riskModel, $qualityService);
         $service->generate($session);
 
-        // Mockery vérifiera que assess() a bien été appelé twice() lors du tearDown
-        $this->expectNotToPerformAssertions();
+        // La vérification du twice() par Mockery au tearDown compte déjà comme une
+        // assertion : déclarer expectNotToPerformAssertions() rendrait le test « risky ».
+        $this->addToAssertionCount(1);
     }
 
     // -------------------------------------------------------------------------

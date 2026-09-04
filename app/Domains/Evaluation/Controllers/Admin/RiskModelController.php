@@ -5,6 +5,7 @@ namespace App\Domains\Evaluation\Controllers\Admin;
 use App\Domains\Evaluation\DTOs\Admin\RiskFlagRequest;
 use App\Domains\Evaluation\DTOs\Admin\RiskModelRequest;
 use App\Domains\Evaluation\DTOs\Admin\RiskSignalRequest;
+use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Models\RiskFlag;
 use App\Domains\Evaluation\Models\RiskModel;
 use App\Domains\Evaluation\Models\RiskSignal;
@@ -202,7 +203,29 @@ class RiskModelController extends Controller
      */
     public function storeSignal(RiskSignalRequest $request, RiskModel $risk_model): JsonResponse
     {
-        $signal = $risk_model->signals()->create($request->validated());
+        $data = $request->validated();
+
+        // `model_version_id` est optionnel cote API mais NOT NULL en base : sans
+        // valeur explicite on rattache le signal a la version risk_model active,
+        // celle que RiskEngine et FlagEngine interrogent au runtime.
+        if (empty($data['model_version_id'])) {
+            $version = ModelVersion::query()
+                ->where('name', 'risk_model')
+                ->where('is_active', true)
+                ->orderByDesc('released_at')
+                ->first();
+
+            if (! $version) {
+                return response()->json([
+                    'message' => "Aucune version 'risk_model' active : impossible de rattacher le signal.",
+                    'errors'  => ['model_version_id' => ["Aucune version 'risk_model' active."]],
+                ], 422);
+            }
+
+            $data['model_version_id'] = $version->id;
+        }
+
+        $signal = $risk_model->signals()->create($data);
         $signal->load('fact:key,label');
 
         return response()->json($signal, 201);

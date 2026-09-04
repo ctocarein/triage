@@ -10,13 +10,13 @@ use App\Domains\Evaluation\Models\RiskSignal;
 
 class CheckRiskSignals extends Command
 {
-    protected $signature = 'vnext:check-risk-signals {--model=breast_v1} {--version=} {--csv=}';
+    protected $signature = 'vnext:check-risk-signals {--model=breast_v1} {--model-version=} {--csv=}';
     protected $description = 'Compare risk_weight (questions) vs risk_signals (vNext).';
 
     public function handle(): int
     {
         $modelKey = (string) $this->option('model');
-        $versionOpt = $this->option('version');
+        $versionOpt = $this->option('model-version');
         $csvPath = $this->option('csv');
 
         $riskModel = RiskModel::query()->where('key', $modelKey)->first();

@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Models\Fact;
 use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Models\RiskModel;
 use App\Domains\Evaluation\Models\RiskSignal;
@@ -36,6 +37,14 @@ class CheckRiskSignalsTest extends TestCase
         ]);
 
         $version = ModelVersion::query()->where('name', 'risk_model')->first();
+
+        // risk_signals.fact_key est une FK vers facts.key : le fait doit exister
+        // avant le signal, même s'il porte la même clé que la question.
+        Fact::create([
+            'key'       => $question->key,
+            'label'     => 'Masse mammaire',
+            'is_active' => true,
+        ]);
 
         RiskSignal::create([
             'risk_model_id' => $riskModel->id,

@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\Fact;
 use App\Domains\Evaluation\Models\FactMapping;
+use App\Domains\Evaluation\Models\ModelVersion;
 use App\Domains\Evaluation\Models\RiskSignal;
 use App\Domains\Evaluation\Models\RiskModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,13 +45,15 @@ class FactAdminTest extends TestCase
 
     public function test_destroy_blocked_if_risk_signals_exist(): void
     {
-        $model = RiskModel::factory()->create();
-        $fact  = Fact::factory()->create();
+        $model   = RiskModel::factory()->create();
+        $fact    = Fact::factory()->create();
+        $version = ModelVersion::factory()->forRiskModel()->active()->create();
         RiskSignal::create([
-            'risk_model_id' => $model->id,
-            'fact_key'      => $fact->key,
-            'weight'        => 5,
-            'is_active'     => true,
+            'risk_model_id'    => $model->id,
+            'model_version_id' => $version->id,
+            'fact_key'         => $fact->key,
+            'weight'           => 5,
+            'is_active'        => true,
         ]);
 
         $this->actingAsAdmin()

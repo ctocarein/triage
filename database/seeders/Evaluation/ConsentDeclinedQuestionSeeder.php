@@ -52,8 +52,13 @@ class ConsentDeclinedQuestionSeeder extends Seeder
                 'options' => [
                     ['value' => 'done', 'label' => 'Terminer'],
                 ],
+                // Étape terminale : « Terminer » doit clore la session. L'ancien
+                // renvoi vers consent_declined_thank_you rebouclait sur une question
+                // déjà répondue, et le moteur enchaînait sur la suite du
+                // questionnaire — une bénéficiaire ayant refusé le consentement
+                // continuait donc à être interrogée.
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'done'], 'next' => 'question:consent_declined_thank_you'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => 'done'], 'next' => 'end_session:consent_declined'],
                 ],
                 'is_required' => true,
                 'order' => 3,

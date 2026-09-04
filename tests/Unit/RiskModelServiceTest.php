@@ -5,9 +5,9 @@ namespace Tests\Unit;
 use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
-use App\Domains\Evaluation\Services\FactsEngine;
-use App\Domains\Evaluation\Services\RiskEngine;
-use App\Domains\Evaluation\Services\RiskModelService;
+use App\Domains\Evaluation\Services\Scoring\FactsEngine;
+use App\Domains\Evaluation\Services\Scoring\RiskEngine;
+use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,12 +17,6 @@ use Tests\TestCase;
 class RiskModelServiceTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
 
     /**
      * P2 — Le fallback max_score doit utiliser le catalogue actif complet,

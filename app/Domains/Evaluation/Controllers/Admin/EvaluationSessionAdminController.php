@@ -80,7 +80,10 @@ class EvaluationSessionAdminController extends Controller
             'identity:id,kind,status',
             'answers.question:id,key,text,bloc_key',
             'report:id,evaluation_session_id,risk_level,score',
-            'latestDecisionInsight:id,evaluation_session_id,risk_score,risk_level,confidence_score',
+            // Colonnes qualifiées : latestOfMany() ajoute une auto-jointure sur une
+            // sous-requête qui expose aussi evaluation_session_id — sans préfixe,
+            // le SGBD rejette la requête (« ambiguous column name »).
+            'latestDecisionInsight:decision_insights.id,decision_insights.evaluation_session_id,risk_score,risk_level,confidence_score',
         ]);
 
         return response()->json($session->makeVisible(['id', 'identity_id']));

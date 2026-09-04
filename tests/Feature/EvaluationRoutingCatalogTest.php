@@ -5,14 +5,12 @@ namespace Tests\Feature;
 use App\Domains\Decision\Models\DecisionPath;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Evaluation\Models\ThematicBloc;
 use App\Domains\Evaluation\Services\Navigation\RoutingEngine;
 use Database\Seeders\CommuneSeeder;
-use Database\Seeders\Evaluation\LifestyleQuestionSeeder;
-use Database\Seeders\Evaluation\MedicalProfileQuestionSeeder;
-use Database\Seeders\Evaluation\PersonalProfileQuestionSeeder;
+use Database\Seeders\Evaluation\DynamicQuestionTemplateSeeder;
 use Database\Seeders\Evaluation\QuestionGroupSeeder;
-use Database\Seeders\Evaluation\SymptomBreastQuestionSeeder;
-use Database\Seeders\Evaluation\SymptomCervicalQuestionSeeder;
+use Database\Seeders\Evaluation\ThematicBlocSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -26,14 +24,15 @@ class EvaluationRoutingCatalogTest extends TestCase
     {
         parent::setUp();
 
+        // On passe par l'orchestrateur canonique : le catalogue a été redécoupé
+        // (PatientContext, PatientDemographics, GynecologicBackground, …) et la
+        // liste figée précédemment ici ne produisait plus la moitié des clés
+        // attendues — PersonalProfileQuestionSeeder est même devenu un no-op.
         $this->seed([
             CommuneSeeder::class,
             QuestionGroupSeeder::class,
-            LifestyleQuestionSeeder::class,
-            MedicalProfileQuestionSeeder::class,
-            PersonalProfileQuestionSeeder::class,
-            SymptomBreastQuestionSeeder::class,
-            SymptomCervicalQuestionSeeder::class,
+            ThematicBlocSeeder::class,
+            DynamicQuestionTemplateSeeder::class,
         ]);
     }
 
@@ -83,25 +82,24 @@ class EvaluationRoutingCatalogTest extends TestCase
         $this->assertSame('cmu_number', $routing['question_key']);
     }
 
-    public function test_occupation_queues_lifestyle_questions_in_logical_order(): void
+    /**
+     * Remplace test_occupation_queues_lifestyle_questions_in_logical_order().
+     *
+     * La question `occupation` a été retirée du catalogue, et avec elle le seul
+     * usage du routage `queue:` : les questions de mode de vie ne sont plus
+     * empilées dynamiquement mais séquencées par leur `order` dans le bloc
+     * `lifestyle`. On vérifie donc désormais cet ordre structurel.
+     */
+    public function test_lifestyle_questions_are_ordered_logically_within_their_bloc(): void
     {
-        $session = $this->makeSession();
-        $question = DynamicQuestionTemplate::where('key', 'occupation')->firstOrFail();
+        $keys = DynamicQuestionTemplate::where('bloc_key', 'lifestyle')
+            ->orderBy('order')
+            ->pluck('key')
+            ->all();
 
-        $routing = app(RoutingEngine::class)->applyRoutingRules(
-            $session,
-            $question,
-            'Commerçante',
-            [
-                'answers' => [],
-                'profile' => ['personal' => [], 'medical' => []],
-            ],
-        );
-
-        $this->assertSame('queue_questions', $routing['action']);
         $this->assertSame(
-            ['tabac', 'alcool', 'activite_physique', 'stress_chronique', 'poids_kg', 'taille_cm'],
-            $routing['keys'],
+            ['tabac', 'tabac_paquets_annee', 'alcool', 'activite_physique', 'stress_chronique', 'poids_kg', 'taille_cm'],
+            $keys,
         );
     }
 
@@ -142,12 +140,23 @@ class EvaluationRoutingCatalogTest extends TestCase
         );
     }
 
-    public function test_cmu_number_stays_in_profile_bloc_but_persists_to_medical_profile(): void
+    /**
+     * `profil_identite` n'est plus un bloc mais un *groupe* : le découpage
+     * thématique a introduit le bloc `patient_demographics`, rattaché à ce
+     * groupe. Le numéro de CMU reste donc bien dans la section « profil », et il
+     * est persisté dans le profil personnel (donnée administrative, pas médicale)
+     * — cohérent avec la question `cmu` qui le précède.
+     */
+    public function test_cmu_number_stays_in_the_identity_group_and_persists_to_personal_profile(): void
     {
         $question = DynamicQuestionTemplate::where('key', 'cmu_number')->firstOrFail();
 
-        $this->assertSame('profil_identite', $question->bloc_key);
-        $this->assertSame('medical_profile', $question->answer_target);
+        $this->assertSame('patient_demographics', $question->bloc_key);
+        $this->assertSame('personal_profile', $question->answer_target);
+
+        $bloc = ThematicBloc::with('questionGroup')->where('key', $question->bloc_key)->firstOrFail();
+
+        $this->assertSame('profil_identite', $bloc->questionGroup?->key);
     }
 
     public function test_pelvic_mass_yes_routes_to_follow_up_question_before_urgent_end(): void
