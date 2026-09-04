@@ -98,6 +98,9 @@ class FourBeneficiarySimulationTest extends TestCase
         $this->assertKey('commune', $q, 'B2');
 
         $q = $this->skip($identity, $sessionId, $q);
+        $this->assertKey('phone', $q, 'B2');
+
+        $q = $this->answer($identity, $sessionId, $q, $this->phoneFor($identity));
         $this->assertKey('emergency_breast_bleeding', $q, 'B2');
 
         // emergency_screen : tout négatif → dispatch_intention
@@ -333,7 +336,7 @@ class FourBeneficiarySimulationTest extends TestCase
     }
 
     /**
-     * Répond à birth_date puis skipe commune.
+     * Répond à birth_date, skipe commune, puis renseigne le téléphone.
      * Retourne la première question d'emergency_screen.
      */
     private function doPatientContext(
@@ -346,9 +349,20 @@ class FourBeneficiarySimulationTest extends TestCase
         $this->assertKey('commune', $q);
 
         $q = $this->skip($identity, $sessionId, $q);
+        $this->assertKey('phone', $q);
+
+        // Le numéro est requis et sert de clé de dédoublonnage : un numéro par
+        // bénéficiaire, sinon la session basculerait sur l'identité précédente.
+        $q = $this->answer($identity, $sessionId, $q, $this->phoneFor($identity));
         $this->assertKey('emergency_breast_bleeding', $q);
 
         return $q;
+    }
+
+    /** Numéro déterministe et distinct pour chaque bénéficiaire simulé. */
+    private function phoneFor(Identity $identity): string
+    {
+        return '07'.substr(str_replace('-', '', (string) $identity->id), 0, 8);
     }
 
     /**
