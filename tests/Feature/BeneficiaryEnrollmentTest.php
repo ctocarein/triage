@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Domains\Access\Models\Membership;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Credential;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Organization\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class BeneficiaryEnrollmentTest extends TestCase
@@ -37,15 +39,16 @@ class BeneficiaryEnrollmentTest extends TestCase
         return $identity;
     }
 
-    private function seedFirstQuestion(): void
+    /** Seule question du parcours : le numero, pour qu'elle soit servie en premier. */
+    private function seedPhoneQuestion(): DynamicQuestionTemplate
     {
-        DynamicQuestionTemplate::create([
-            'key'           => 'enrollment_first_question',
-            'text'          => 'Premiere question',
-            'type'          => 'boolean',
-            'answer_target' => 'evaluation',
+        return DynamicQuestionTemplate::create([
+            'key'           => 'phone',
+            'text'          => 'Quel est votre numero ?',
+            'type'          => 'text',
+            'bloc_key'      => 'patient_context',
+            'answer_target' => 'credential',
             'order'         => 1,
-            'bloc_key'      => 'enrollment_bloc',
             'is_active'     => true,
         ]);
     }
@@ -55,119 +58,140 @@ class BeneficiaryEnrollmentTest extends TestCase
         return config('identity.default_organization.id');
     }
 
-    public function test_starting_a_session_by_phone_enrolls_the_beneficiary(): void
+    /** @return array{session: string, question: int} */
+    private function startForNewSubject(Identity $evaluator): array
     {
-        $this->seedFirstQuestion();
+        $response = $this->actingAs($evaluator, 'sanctum')
+            ->postJson('/api/evaluations/start', [
+                'type'        => 'complete',
+                'new_subject' => true,
+            ])
+            ->assertStatus(201);
+
+        return [
+            'session'  => $response->json('session.public_id'),
+            'question' => $response->json('question.id'),
+            'subject'  => $response->json('subject.identity_id'),
+        ];
+    }
+
+    public function test_starting_for_a_new_subject_creates_a_beneficiary_without_credentials(): void
+    {
+        $this->seedPhoneQuestion();
 
         $organization = $this->organization('Org A');
         $agent        = $this->evaluator($organization);
 
-        $response = $this->actingAs($agent, 'sanctum')
-            ->postJson('/api/evaluations/start', [
-                'type'          => 'complete',
-                'subject_phone' => '+22501020304',
-            ])
-            ->assertStatus(201)
-            ->assertJsonPath('subject.is_new', true);
-
-        $subjectId = $response->json('subject.identity_id');
-
-        $this->assertDatabaseHas('credentials', [
-            'identity_id' => $subjectId,
-            'type'        => 'phone',
-            'identifier'  => '+22501020304',
-        ]);
+        $started = $this->startForNewSubject($agent);
 
         $this->assertDatabaseHas('memberships', [
-            'identity_id'     => $subjectId,
+            'identity_id'     => $started['subject'],
             'organization_id' => $organization->id,
             'role'            => 'Beneficiary',
             'status'          => 'active',
         ]);
 
-        $this->assertDatabaseHas('evaluation_sessions', ['identity_id' => $subjectId]);
+        // Le numero n'est pas demande au demarrage : aucune credential encore.
+        $this->assertDatabaseMissing('credentials', ['identity_id' => $started['subject']]);
+        $this->assertDatabaseHas('evaluation_sessions', ['identity_id' => $started['subject']]);
     }
 
-    public function test_a_known_phone_is_reused_instead_of_creating_a_duplicate(): void
+    public function test_answering_the_phone_question_issues_the_default_pin(): void
     {
-        $this->seedFirstQuestion();
+        $this->seedPhoneQuestion();
+
+        $organization = $this->organization('Org A');
+        $agent        = $this->evaluator($organization);
+        $started      = $this->startForNewSubject($agent);
+
+        $this->actingAs($agent, 'sanctum')
+            ->postJson("/api/evaluations/{$started['session']}/advance", [
+                'dynamic_question_template_id' => $started['question'],
+                'value'                        => '0701020304',
+            ])
+            ->assertStatus(200);
+
+        $credential = Credential::where('identity_id', $started['subject'])
+            ->where('type', 'phone')
+            ->firstOrFail();
+
+        $this->assertSame('0701020304', $credential->identifier);
+        $this->assertTrue($credential->must_change_password);
+        $this->assertTrue(
+            Hash::check(config('identity.default_pin'), $credential->secret_hash),
+            'Le PIN par defaut doit ouvrir le compte.'
+        );
+    }
+
+    public function test_the_credentials_are_returned_once_the_evaluation_is_complete(): void
+    {
+        $this->seedPhoneQuestion();
+
+        $organization = $this->organization('Org A');
+        $agent        = $this->evaluator($organization);
+        $started      = $this->startForNewSubject($agent);
+
+        // Seule question du parcours : y repondre termine la session.
+        $this->actingAs($agent, 'sanctum')
+            ->postJson("/api/evaluations/{$started['session']}/advance", [
+                'dynamic_question_template_id' => $started['question'],
+                'value'                        => '0701020304',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('account.phone', '0701020304')
+            ->assertJsonPath('account.pin', config('identity.default_pin'))
+            ->assertJsonPath('account.must_change_password', true);
+    }
+
+    public function test_a_known_phone_reconciles_the_session_onto_the_existing_person(): void
+    {
+        $this->seedPhoneQuestion();
 
         $organization = $this->organization('Org A');
         $agent        = $this->evaluator($organization);
 
-        $first = $this->actingAs($agent, 'sanctum')
-            ->postJson('/api/evaluations/start', [
-                'type'          => 'complete',
-                'subject_phone' => '+22501020304',
-            ])
-            ->assertStatus(201);
+        // Beneficiaire deja enrolee lors d'une visite precedente.
+        $known = $this->evaluator($organization, 'Beneficiary');
+        Credential::create([
+            'identity_id' => $known->id,
+            'type'        => 'phone',
+            'identifier'  => '0701020304',
+            'verified_at' => now(),
+        ]);
 
-        $subjectId     = $first->json('subject.identity_id');
-        $identityCount = Identity::count();
+        $started   = $this->startForNewSubject($agent);
+        $duplicate = $started['subject'];
 
-        // Meme numero : l enrolement doit retomber sur la meme personne. Ici la
-        // session precedente est encore ouverte, donc le demarrage est refuse --
-        // ce qui compte est qu aucune identite en double n ait ete creee au passage.
+        $this->assertNotSame($known->id, $duplicate);
+
         $this->actingAs($agent, 'sanctum')
-            ->postJson('/api/evaluations/start', [
-                'type'          => 'complete',
-                'subject_phone' => '+22501020304',
+            ->postJson("/api/evaluations/{$started['session']}/advance", [
+                'dynamic_question_template_id' => $started['question'],
+                'value'                        => '0701020304',
             ])
-            ->assertStatus(403)
-            ->assertJsonPath('error_code', 'SESSION_IN_PROGRESS');
+            ->assertStatus(200);
+
+        $session = EvaluationSession::where('public_id', $started['session'])->firstOrFail();
 
         $this->assertSame(
-            1,
-            Credential::where('identifier', '+22501020304')->count(),
-            'Le numero ne doit exister qu une seule fois.'
+            (string) $known->id,
+            (string) $session->identity_id,
+            'La session doit basculer sur la personne deja connue.'
         );
 
-        $this->assertSame(
-            $identityCount,
-            Identity::count(),
-            'Un numero deja connu ne doit pas creer une seconde identite.'
-        );
+        $this->assertSame($duplicate, $session->context['reconciled_from']);
 
-        $this->assertSame(
-            1,
-            \App\Domains\Evaluation\Models\EvaluationSession::where('identity_id', $subjectId)->count()
-        );
-    }
-
-    public function test_an_evaluator_without_an_organization_falls_back_to_the_default_one(): void
-    {
-        $this->seedFirstQuestion();
-
-        $ambassador = $this->evaluator(null, 'Ambassador');
-
-        $response = $this->actingAs($ambassador, 'sanctum')
-            ->postJson('/api/evaluations/start', [
-                'type'          => 'complete',
-                'subject_phone' => '+22599887766',
-            ])
-            ->assertStatus(201);
-
-        $subjectId  = $response->json('subject.identity_id');
-        $defaultOrg = $this->defaultOrganizationId();
-
-        $this->assertDatabaseHas('organizations', ['id' => $defaultOrg]);
-
-        $this->assertDatabaseHas('memberships', [
-            'identity_id'     => $subjectId,
-            'organization_id' => $defaultOrg,
-            'role'            => 'Beneficiary',
+        // Le doublon cree au demarrage est neutralise, pas supprime.
+        $this->assertDatabaseHas('identities', [
+            'id'     => $duplicate,
+            'status' => 'anonymized',
         ]);
 
-        // L'ambassadeur y est rattache aussi, sinon il ne pourrait pas evaluer
-        // la personne qu il vient d enroler.
-        $this->assertDatabaseHas('memberships', [
-            'identity_id'     => $ambassador->id,
-            'organization_id' => $defaultOrg,
-            'role'            => 'Ambassador',
-        ]);
+        // Aucun second compte sur ce numero.
+        $this->assertSame(1, Credential::where('identifier', '0701020304')->count());
     }
 
-    public function test_subject_id_and_subject_phone_are_mutually_exclusive(): void
+    public function test_subject_id_and_new_subject_are_mutually_exclusive(): void
     {
         $organization = $this->organization('Org A');
         $agent        = $this->evaluator($organization);
@@ -175,27 +199,25 @@ class BeneficiaryEnrollmentTest extends TestCase
 
         $this->actingAs($agent, 'sanctum')
             ->postJson('/api/evaluations/start', [
-                'type'          => 'complete',
-                'subject_id'    => $subject->id,
-                'subject_phone' => '+22500000000',
+                'type'        => 'complete',
+                'subject_id'  => $subject->id,
+                'new_subject' => true,
             ])
             ->assertStatus(422);
     }
 
-    public function test_a_non_evaluator_cannot_enroll_by_phone(): void
+    public function test_a_non_evaluator_cannot_create_a_subject(): void
     {
         $organization = $this->organization('Org A');
         $actor        = $this->evaluator($organization, 'Beneficiary');
 
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/evaluations/start', [
-                'type'          => 'complete',
-                'subject_phone' => '+22511223344',
+                'type'        => 'complete',
+                'new_subject' => true,
             ])
             ->assertStatus(403)
             ->assertJsonPath('error_code', 'EVALUATOR_REQUIRED');
-
-        $this->assertDatabaseMissing('credentials', ['identifier' => '+22511223344']);
     }
 
     public function test_an_ambassador_can_enroll_through_the_dedicated_endpoint(): void

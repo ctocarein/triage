@@ -40,9 +40,13 @@ return new class extends Migration {
         $table->json('activation_condition')->nullable();     
         $table->string('period')->nullable();                 
         // Cible de la réponse (profil, suivi, etc.)
+        // 'credential' : la reponse alimente les identifiants de connexion
+        // (numero de telephone), qui ne vivent pas dans personal_profiles.
+        // Les bases deja migrees le recoivent par 2026_06_26_000001.
         $table->enum('answer_target', [
             'personal_profile', 'medical_profile',
-            'evaluation', 'followup', 'tracking', 'survey', 'greeting', 'custom', 'consent'
+            'evaluation', 'followup', 'tracking', 'survey', 'greeting', 'custom', 'consent',
+            'credential'
         ])->nullable();
 
         // Groupe de questions

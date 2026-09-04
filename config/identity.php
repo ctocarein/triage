@@ -24,4 +24,23 @@ return [
         'type' => 'platform',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | PIN initial
+    |--------------------------------------------------------------------------
+    |
+    | PIN attribue au beneficiaire dont le numero est collecte pendant
+    | l'evaluation, communique par l'evaluateur a la fin de la visite pour
+    | qu'il puisse installer l'application et s'y connecter.
+    |
+    | Le numero de telephone servant d'identifiant de connexion, ce PIN
+    | partage rend le compte devinable par quiconque connait le numero.
+    | C'est pourquoi la credential est creee avec must_change_password : la
+    | fenetre se referme au premier acces. Ne pas desactiver ce drapeau sans
+    | remplacer le PIN par une valeur tiree au hasard et remise en main propre.
+    |
+    */
+
+    'default_pin' => env('DEFAULT_BENEFICIARY_PIN', '5555'),
+
 ];

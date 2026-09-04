@@ -8,6 +8,7 @@ use App\Domains\Identity\Infrastructure\Persistence\Models\Credential;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Organization\Models\Organization;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Enrolement d'un beneficiaire par un evaluateur (agent de terrain ou ambassadeur).
@@ -85,6 +86,93 @@ class BeneficiaryEnrollmentService
         });
 
         return ['identity' => $identity, 'is_new' => true];
+    }
+
+    /**
+     * Rattache un numero a un beneficiaire, collecte pendant l'evaluation.
+     *
+     * Le numero est la cle de dedoublonnage : s'il est deja porte par une autre
+     * identite, c'est que la personne est deja connue et que l'identite creee au
+     * demarrage est un doublon. On bascule alors sur l'identite existante plutot
+     * que de fusionner apres coup, ce qui n'est tenable que parce que la question
+     * est posee tot, quand presque rien n'a encore ete ecrit.
+     *
+     * @return array{identity: Identity, reconciled: bool, pin: string|null}
+     */
+    public function attachPhone(Identity $subject, string $phone): array
+    {
+        $existing = Credential::query()
+            ->where('type', 'phone')
+            ->where('identifier', $phone)
+            ->first();
+
+        if ($existing && (string) $existing->identity_id !== (string) $subject->id) {
+            $known = $existing->identity;
+
+            if ($known) {
+                return ['identity' => $known, 'reconciled' => true, 'pin' => null];
+            }
+        }
+
+        if ($existing) {
+            // Meme personne : la question a simplement ete re-repondue.
+            return ['identity' => $subject, 'reconciled' => false, 'pin' => null];
+        }
+
+        $own = $subject->credentials()->where('type', 'phone')->first();
+
+        if ($own) {
+            // L'evaluateur corrige un numero saisi plus tot dans la meme visite :
+            // on ne retouche pas le PIN deja attribue.
+            $own->forceFill(['identifier' => $phone])->save();
+
+            return ['identity' => $subject, 'reconciled' => false, 'pin' => null];
+        }
+
+        $pin = (string) config('identity.default_pin');
+
+        Credential::create([
+            'identity_id'          => $subject->id,
+            'type'                 => 'phone',
+            'identifier'           => $phone,
+            'secret_hash'          => Hash::make($pin),
+            'verified_at'          => now(),
+            'must_change_password' => true,
+        ]);
+
+        return ['identity' => $subject, 'reconciled' => false, 'pin' => $pin];
+    }
+
+    /**
+     * Neutralise l'identite creee au demarrage devenue orpheline apres une
+     * reconciliation. On ne supprime pas : le statut anonymized suffit a la
+     * sortir des parcours sans casser d'eventuelles references.
+     */
+    public function retireDuplicate(Identity $duplicate): void
+    {
+        if ($duplicate->credentials()->exists() || $duplicate->evaluationSessions()->exists()) {
+            return;
+        }
+
+        $duplicate->forceFill(['status' => 'anonymized'])->save();
+        $duplicate->memberships()->update(['status' => 'inactive']);
+    }
+
+    /**
+     * Cree un beneficiaire pas encore identifie, pour une evaluation qui demarre
+     * sans savoir a qui elle s'adresse. Le numero et le PIN viendront de la
+     * question dediee du questionnaire, via attachPhone().
+     */
+    public function createAnonymousBeneficiary(Identity $actor): Identity
+    {
+        $organization = $this->resolveEnrollmentOrganization($actor);
+
+        return DB::transaction(function () use ($organization): Identity {
+            $identity = Identity::create(['kind' => 'person', 'status' => 'active']);
+            $this->ensureBeneficiaryMembership($identity, $organization);
+
+            return $identity;
+        });
     }
 
     public function defaultOrganization(): Organization

@@ -63,6 +63,21 @@ class PatientContextSeeder extends Seeder
                 'order'         => 2,
                 'options'       => $communeOptions,
             ],
+            [
+                // Place apres la date de naissance, donc apres la sortie des
+                // mineurs : inutile d'ouvrir un compte a quelqu'un que le parcours
+                // va rediriger. Mais assez tot pour que la reconciliation d'une
+                // beneficiaire deja connue coute deux reponses, pas tout le
+                // questionnaire.
+                'key'           => 'phone',
+                'text'          => 'Quel est votre numéro de téléphone ?',
+                'type'          => 'text',
+                'bloc_key'      => 'patient_context',
+                'answer_target' => 'credential',
+                'order'         => 3,
+                'is_required'   => true,
+                'placeholder'   => 'Ex. 0701020304',
+            ],
         ];
 
         $validator->assertUniqueOrderPerBloc($questions, static::class);

@@ -30,6 +30,9 @@ class QuestionTemplateRequest extends FormRequest
             'answer_target'      => ['nullable', Rule::in([
                 'personal_profile', 'medical_profile', 'evaluation',
                 'followup', 'tracking', 'survey', 'greeting', 'custom', 'consent',
+                // 'credential' : la reponse alimente les identifiants de connexion
+                // (numero de telephone), qui ne vivent pas dans personal_profiles.
+                'credential',
             ])],
             'question_group_id'  => ['nullable', 'integer', 'exists:question_groups,id'],
             'bloc_key'           => ['nullable', 'string', 'max:100'],

@@ -42,10 +42,12 @@ class EvaluationSessionStartRequest extends FormRequest
             'referral_code' => ['nullable', 'string'],
             'client_ip' => ['nullable', 'ip'],
             // Deux facons de designer le beneficiaire, mutuellement exclusives :
-            // par son identifiant s'il est deja enrole, par son telephone sinon,
-            // auquel cas l'identite est creee ou retrouvee au demarrage.
-            'subject_id' => ['nullable', 'uuid', 'exists:identities,id', 'prohibits:subject_phone'],
-            'subject_phone' => ['nullable', 'string', 'max:30', 'prohibits:subject_id'],
+            // son identifiant s'il est deja connu, ou new_subject pour une
+            // personne pas encore enrolee. Le numero de telephone n'est pas
+            // demande ici : il est collecte pendant l'evaluation, comme les
+            // champs de profil.
+            'subject_id' => ['nullable', 'uuid', 'exists:identities,id', 'prohibits:new_subject'],
+            'new_subject' => ['nullable', 'boolean', 'prohibits:subject_id'],
         ];
     }
 }

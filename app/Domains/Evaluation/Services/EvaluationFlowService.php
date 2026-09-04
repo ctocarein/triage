@@ -45,16 +45,15 @@ class EvaluationFlowService
         $referralCode = $validated['referral_code'] ?? null;
         $clientIp     = $validated['client_ip'] ?? null;
         $subjectId    = $validated['subject_id'] ?? null;
-        $subjectPhone = $validated['subject_phone'] ?? null;
+        $newSubject   = (bool) ($validated['new_subject'] ?? false);
         $referral     = null;
         $agentIdentity = null;
         $subjectPayload = null;
 
-        // Le beneficiaire est designe soit par son identifiant s'il est deja enrole,
-        // soit par son telephone, auquel cas il est enrole ici meme. Trois refus
-        // distincts, du moins au plus informatif, pour ne pas renseigner un acteur
-        // non habilite sur l'existence d'une identite.
-        if ($subjectId !== null || $subjectPhone !== null) {
+        // Le beneficiaire est designe par son identifiant s'il est deja connu, ou
+        // cree a la volee avec new_subject. Son numero n'est pas demande ici : il
+        // est collecte pendant l'evaluation, comme les champs de profil.
+        if ($subjectId !== null || $newSubject) {
             if (! IdentityEvaluationPolicy::isEvaluator($identity)) {
                 return [
                     'status'  => 403,
@@ -65,17 +64,9 @@ class EvaluationFlowService
                 ];
             }
 
-            if ($subjectPhone !== null) {
-                // Enrolement implicite : identite, credential telephone verifiee et
-                // membership Beneficiary, en reutilisant l'identite si le numero est
-                // deja connu pour que les visites de suivi retombent sur la meme personne.
-                $enrolled = $this->enrollment->enroll($identity, $subjectPhone);
-                $subject  = $enrolled['identity'];
-                $subjectPayload = [
-                    'identity_id' => (string) $subject->id,
-                    'phone'       => $subjectPhone,
-                    'is_new'      => $enrolled['is_new'],
-                ];
+            if ($newSubject) {
+                $subject = $this->enrollment->createAnonymousBeneficiary($identity);
+                $subjectPayload = ['identity_id' => (string) $subject->id, 'is_new' => true];
             } else {
                 $subject = Identity::find($subjectId);
                 if (! $subject) {
@@ -346,6 +337,10 @@ class EvaluationFlowService
         $answer = $this->answerService->saveAnswer($answerData);
         $answer->loadMissing('question');
 
+        if ($answer->question && $answer->question->answer_target === 'credential') {
+            $this->syncCredentialFromAnswer($session, $answer);
+        }
+
         if (
             $answer->question &&
             in_array($answer->question->answer_target, ['personal_profile', 'medical_profile'], true)
@@ -469,6 +464,12 @@ class EvaluationFlowService
             $payload['message'] = $this->resolveTerminationMessage($session);
         }
 
+        // Les identifiants ne sont remis qu'une fois l'evaluation terminee :
+        // c'est le moment ou l'evaluateur les communique au beneficiaire.
+        if ($session->status === 'completed') {
+            $payload = $this->withAccount($payload, $session);
+        }
+
         return $payload;
     }
 
@@ -486,6 +487,75 @@ class EvaluationFlowService
         if ($subject !== null) {
             $payload['subject'] = $subject;
         }
+
+        return $payload;
+    }
+
+    /**
+     * Rattache le numero collecte dans le questionnaire aux identifiants du
+     * beneficiaire, et reconcilie la session si ce numero designe quelqu'un que
+     * l'on connait deja.
+     */
+    protected function syncCredentialFromAnswer(EvaluationSession $session, EvaluationAnswer $answer): void
+    {
+        $phone = is_array($answer->value) ? ($answer->value[0] ?? null) : $answer->value;
+        $phone = is_scalar($phone) ? trim((string) $phone) : '';
+
+        if ($phone === '' || $answer->question?->key !== 'phone') {
+            return;
+        }
+
+        $subject = $session->identity;
+        if (! $subject) {
+            return;
+        }
+
+        $result = $this->enrollment->attachPhone($subject, $phone);
+        $context = is_array($session->context) ? $session->context : [];
+
+        if ($result['reconciled']) {
+            // Le numero designe une personne deja connue : la session bascule sur
+            // elle, et l'identite creee au demarrage est neutralisee. Possible
+            // seulement parce que la question est posee tot, avant que le gros du
+            // questionnaire n'ait ete rattache au doublon.
+            $duplicate = $subject;
+            $session->forceFill(['identity_id' => $result['identity']->id])->save();
+            $session->setRelation('identity', $result['identity']);
+            $this->enrollment->retireDuplicate($duplicate);
+
+            $context['reconciled_from'] = (string) $duplicate->id;
+        }
+
+        $context['subject_phone'] = $phone;
+        if ($result['pin'] !== null) {
+            $context['pin_issued'] = true;
+        }
+
+        $session->context = $context;
+        $session->save();
+    }
+
+    /**
+     * Identifiants a communiquer au beneficiaire en fin de visite pour qu'il
+     * installe l'application. Le PIN est la valeur de configuration : il n'est
+     * pas relu depuis la base, ou il n'existe que sous forme de hash.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    protected function withAccount(array $payload, EvaluationSession $session): array
+    {
+        $context = is_array($session->context) ? $session->context : [];
+
+        if (($context['pin_issued'] ?? false) !== true || empty($context['subject_phone'])) {
+            return $payload;
+        }
+
+        $payload['account'] = [
+            'phone'                => $context['subject_phone'],
+            'pin'                  => (string) config('identity.default_pin'),
+            'must_change_password' => true,
+        ];
 
         return $payload;
     }
