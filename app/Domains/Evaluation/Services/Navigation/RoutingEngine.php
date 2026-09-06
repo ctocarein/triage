@@ -4,6 +4,7 @@ namespace App\Domains\Evaluation\Services\Navigation;
 
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Evaluation\Models\ThematicBloc;
 use Illuminate\Support\Collection;
 
 /**
@@ -201,6 +202,17 @@ class RoutingEngine
             return ['action' => 'end_session', 'status' => 'cancelled', 'reason' => $reason];
         }
 
+        if (str_starts_with($next, 'urgent:')) {
+            $reason = substr($next, strlen('urgent:'));
+
+            return $this->raiseUrgentReferral(
+                $session,
+                $context,
+                $reason === '' ? 'urgent_referral' : $reason,
+                $question->bloc_key,
+            );
+        }
+
         if (str_starts_with($next, 'level:')) {
             $context['level'] = substr($next, strlen('level:'));
             $this->writeContext($session, $context);
@@ -230,6 +242,76 @@ class RoutingEngine
         }
 
         return ['action' => 'noop', 'next' => $next];
+    }
+
+    /**
+     * Signale une orientation urgente sans interrompre l'evaluation.
+     *
+     * Le questionnaire symptomatique s'arrete -- il n'a plus d'objet une fois
+     * l'urgence etablie -- mais le parcours reprend aux antecedents. Sans eux,
+     * le score serait calcule sur un questionnaire tronque et le dossier de la
+     * beneficiaire resterait vide au moment ou il sert le plus.
+     *
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    private function raiseUrgentReferral(
+        EvaluationSession $session,
+        array $context,
+        string $reason,
+        ?string $currentBlocKey,
+    ): array {
+        $resumeBloc = (string) config('evaluation.urgent_referral.resume_bloc', 'medical_background');
+
+        // Conserve la premiere alerte : une seconde ne doit pas ecraser la
+        // raison qui a reellement declenche l'orientation.
+        $context['urgent_referral'] ??= [
+            'reason'  => $reason,
+            'bloc'    => $currentBlocKey,
+            'raised_at' => now()->toISOString(),
+        ];
+
+        // Signale au flux qu'une alerte vient d'etre levee, pour qu'il la
+        // remonte au client dans la reponse a cette question precise.
+        $context['urgent_referral_pending'] = true;
+
+        $this->writeContext($session, $context);
+
+        $this->skipBlocsBefore($session, $resumeBloc);
+
+        return $this->forceBloc(
+            $session,
+            $this->readContext($session),
+            $resumeBloc,
+            $currentBlocKey,
+        );
+    }
+
+    /**
+     * Marque comme visites tous les blocs non parcourus situes avant [$blocKey]
+     * dans l'ordre du catalogue.
+     *
+     * On s'appuie sur l'ordre plutot que sur une liste de cles : ajouter un bloc
+     * symptomatique ne demandera pas de revenir modifier le moteur.
+     */
+    private function skipBlocsBefore(EvaluationSession $session, string $blocKey): void
+    {
+        $target = ThematicBloc::query()->where('key', $blocKey)->value('order');
+
+        if ($target === null) {
+            return;
+        }
+
+        $toSkip = ThematicBloc::query()
+            ->where('is_active', true)
+            ->where('order', '<', $target)
+            ->pluck('key');
+
+        foreach ($toSkip as $key) {
+            if (! $session->hasVisitedBloc($key)) {
+                $session->addVisitedBloc($key);
+            }
+        }
     }
 
     private function forceBloc(

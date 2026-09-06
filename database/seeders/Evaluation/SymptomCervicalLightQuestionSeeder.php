@@ -102,7 +102,7 @@ class SymptomCervicalLightQuestionSeeder extends Seeder
                 'routing_rules' => [
                     [
                         'if'   => ['source' => 'answer', 'operator' => '=', 'value' => true],
-                        'next' => 'end_session:urgent_pelvic_mass',
+                        'next' => 'urgent:pelvic_mass',
                     ],
                 ],
             ],

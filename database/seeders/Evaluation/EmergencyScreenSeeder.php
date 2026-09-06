@@ -12,7 +12,10 @@ use Illuminate\Database\Seeder;
  *
  * Ce bloc pose 3 questions booléennes sur les signes qui nécessitent
  * une consultation urgente. Une réponse positive déclenche une action
- * `end_session:urgent_*` et interrompt immédiatement le parcours.
+ * `urgent:*` : le questionnaire symptomatique est court-circuité, mais le
+ * parcours reprend aux antécédents. Sans eux, le score serait calculé sur un
+ * questionnaire tronqué et le dossier resterait vide au moment où il sert le
+ * plus.
  *
  * Les questions n'ont pas de `answer_target` de profil : elles servent
  * uniquement au routage d'urgence et ne sont pas persistées dans le profil.
@@ -38,7 +41,7 @@ class EmergencyScreenSeeder extends Seeder
                 'order'          => 1,
                 'is_entry_point' => true,
                 'routing_rules'  => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'end_session:urgent_breast_bleeding'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'urgent:breast_bleeding'],
                 ],
             ],
             [
@@ -49,7 +52,7 @@ class EmergencyScreenSeeder extends Seeder
                 'answer_target' => null,
                 'order'         => 2,
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'end_session:urgent_breast_mass'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'urgent:breast_mass'],
                 ],
             ],
             [
@@ -60,7 +63,7 @@ class EmergencyScreenSeeder extends Seeder
                 'answer_target' => null,
                 'order'         => 3,
                 'routing_rules' => [
-                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'end_session:urgent_vaginal_bleeding'],
+                    ['if' => ['source' => 'answer', 'operator' => '=', 'value' => true], 'next' => 'urgent:vaginal_bleeding'],
                 ],
             ],
         ];

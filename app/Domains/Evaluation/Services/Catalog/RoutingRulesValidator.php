@@ -96,6 +96,12 @@ class RoutingRulesValidator
             return ["{$path} doit etre une string non vide pour {$questionKey}."];
         }
 
+        // Orientation urgente : coupe le questionnaire symptomatique et
+        // reprend aux antecedents, sans terminer la session.
+        if (str_starts_with($next, 'urgent:')) {
+            return [];
+        }
+
         if ($next === 'end_session' || str_starts_with($next, 'end_session:')) {
             return [];
         }
@@ -142,6 +148,6 @@ class RoutingRulesValidator
             return [];
         }
 
-        return ["{$path} doit utiliser un prefixe explicite (question:, bloc:, queue:, level:) ou end_session pour {$questionKey}."];
+        return ["{$path} doit utiliser un prefixe explicite (question:, bloc:, queue:, level:, urgent:) ou end_session pour {$questionKey}."];
     }
 }

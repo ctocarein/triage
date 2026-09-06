@@ -88,7 +88,7 @@ class SymptomBreastLightQuestionSeeder extends Seeder
                 'routing_rules' => [
                     [
                         'if'   => ['source' => 'answer', 'operator' => '=', 'value' => true],
-                        'next' => 'end_session:urgent_breast_nipple_bleeding',
+                        'next' => 'urgent:breast_nipple_bleeding',
                     ],
                 ],
             ],
@@ -105,7 +105,7 @@ class SymptomBreastLightQuestionSeeder extends Seeder
                 'routing_rules' => [
                     [
                         'if'   => ['source' => 'answer', 'operator' => '=', 'value' => true],
-                        'next' => 'end_session:urgent_breast_skin_orange',
+                        'next' => 'urgent:breast_skin_orange',
                     ],
                 ],
             ],

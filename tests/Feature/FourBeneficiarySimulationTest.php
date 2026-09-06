@@ -18,7 +18,8 @@ use Tests\TestCase;
  *   B2 — 20 ans, dépistage              → sein allégé complet, col allégé ignoré (âge < 21),
  *                                          puis antécédents → fin naturelle
  *   B3 — 45 ans, boule au sein          → symptom_breast + symptom_cervix → antécédents → fin
- *   B4 — 56 ans, saignement post-méno   → symptom_cervix → sortie urgente pelvic_mass
+ *   B4 — 56 ans, saignement post-méno   → symptom_cervix → alerte pelvic_mass,
+ *                                          puis antécédents → fin (la session n'est plus annulée)
  */
 class FourBeneficiarySimulationTest extends TestCase
 {
@@ -262,7 +263,7 @@ class FourBeneficiarySimulationTest extends TestCase
             'B4 : pelvic_mass=true doit déclencher pelvic_mass_since.'
         );
 
-        // pelvic_mass_since → routing if:true → end_session:urgent_pelvic_mass
+        // pelvic_mass_since → routing if:true → urgent:pelvic_mass
         $res = $this->actingAs($identity, 'sanctum')
             ->postJson("/api/evaluations/{$sessionId}/advance", [
                 'dynamic_question_template_id' => (int) $q['id'],
@@ -270,20 +271,42 @@ class FourBeneficiarySimulationTest extends TestCase
             ]);
 
         $res->assertOk();
-        $this->assertNull(
-            $res->json('question'),
-            'B4 : la session doit se terminer de façon urgente après pelvic_mass_since.'
-        );
+
+        // L'orientation est annoncée immédiatement, sur la réponse même qui
+        // l'a déclenchée : la bénéficiaire n'attend pas la fin du parcours
+        // pour apprendre qu'elle doit consulter.
         $this->assertSame(
             'urgent_referral',
-            $res->json('session.termination_type'),
-            'B4 : termination_type doit être urgent_referral.'
+            $res->json('alert.type'),
+            "B4 : l'alerte doit etre annoncee des la detection du signe."
         );
+        $this->assertSame('pelvic_mass', $res->json('alert.reason'), 'B4');
+        $this->assertSame('in_progress', $res->json('session.status'), 'B4');
+
+        // Le questionnaire du col est court-circuité, mais le parcours reprend
+        // aux antécédents : sans eux le score serait calculé sur un
+        // questionnaire tronqué.
+        $q = $res->json('question');
+        $this->assertNotNull($q, "B4 : l'evaluation doit se poursuivre apres l'alerte.");
         $this->assertSame(
-            'urgent_pelvic_mass',
-            $res->json('session.termination_reason'),
-            'B4 : termination_reason doit être urgent_pelvic_mass.'
+            'medical_background',
+            $q['bloc_key'],
+            'B4 : après une urgence, le parcours reprend aux antécédents.'
         );
+
+        // L'alerte n'est annoncée qu'une fois, mais reste attachée à la session.
+        $this->doAntecedents($identity, $sessionId, $q);
+
+        $state = $this->actingAs($identity, 'sanctum')
+            ->getJson("/api/evaluations/{$sessionId}/state");
+        $state->assertOk();
+        $this->assertSame('completed', $state->json('session.status'), 'B4');
+        $this->assertSame(
+            'pelvic_mass',
+            $state->json('urgent_referral.reason'),
+            "B4 : le bilan doit porter l'orientation urgente."
+        );
+        $this->assertNull($state->json('alert'), "B4 : l'alerte ne doit pas etre repetee.");
     }
 
     // -----------------------------------------------------------------------

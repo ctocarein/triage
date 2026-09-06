@@ -470,7 +470,7 @@ class EvaluationFlowService
             $payload = $this->withAccount($payload, $session);
         }
 
-        return $payload;
+        return $this->withUrgentReferral($payload, $session);
     }
 
     /**
@@ -734,6 +734,63 @@ class EvaluationFlowService
 
             event(new ReferralUsed($session->referral_id, 'completed'));
         }
+    }
+
+    /**
+     * Expose l'orientation urgente dans la reponse.
+     *
+     * `alert` n'apparait que sur la reponse a la question qui a leve l'alerte :
+     * c'est la que le client doit l'annoncer, sans attendre la fin du parcours.
+     * `urgent_referral` reste presente ensuite, pour que le bilan et la reprise
+     * de session portent l'information.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    protected function withUrgentReferral(array $payload, EvaluationSession $session): array
+    {
+        $context = is_array($session->context) ? $session->context : [];
+        $referral = $context['urgent_referral'] ?? null;
+
+        if (! is_array($referral)) {
+            return $payload;
+        }
+
+        $reason = (string) ($referral['reason'] ?? 'urgent_referral');
+        $message = $this->resolveUrgentMessage($reason);
+
+        $payload['urgent_referral'] = [
+            'reason'    => $reason,
+            'message'   => $message,
+            'raised_at' => $referral['raised_at'] ?? null,
+        ];
+
+        if (($context['urgent_referral_pending'] ?? false) === true) {
+            $payload['alert'] = [
+                'type'    => 'urgent_referral',
+                'reason'  => $reason,
+                'message' => $message,
+            ];
+
+            // Consommee : les reponses suivantes ne doivent pas la reafficher.
+            unset($context['urgent_referral_pending']);
+            $session->context = $context;
+            $session->save();
+        }
+
+        return $payload;
+    }
+
+    protected function resolveUrgentMessage(string $reason): string
+    {
+        return match ($reason) {
+            'breast_nipple_bleeding', 'breast_bleeding' => 'Un ecoulement sanglant du mamelon necessite une evaluation medicale rapide.',
+            'breast_skin_orange' => "Une modification cutanee de type peau d'orange necessite une evaluation medicale rapide.",
+            'breast_mass' => "Une masse mammaire d'evolution rapide necessite une evaluation medicale rapide.",
+            'vaginal_bleeding' => 'Des saignements vaginaux importants et inattendus necessitent une evaluation medicale rapide.',
+            'pelvic_mass' => 'Une masse ou un gonflement pelvien necessite une evaluation medicale rapide.',
+            default => "Des signes d'alerte ont ete detectes. Une evaluation medicale rapide est recommandee.",
+        };
     }
 
     protected function resolveTerminationMessage(EvaluationSession $session): string

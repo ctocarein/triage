@@ -178,7 +178,7 @@ class EvaluationRoutingCatalogTest extends TestCase
         $this->assertSame('pelvic_mass_since', $routing['question_key']);
     }
 
-    public function test_pelvic_mass_since_ends_session_as_urgent_referral(): void
+    public function test_pelvic_mass_since_raises_an_urgent_referral_without_ending_the_session(): void
     {
         $session = $this->makeSession();
         $question = DynamicQuestionTemplate::where('key', 'pelvic_mass_since')->firstOrFail();
@@ -195,10 +195,14 @@ class EvaluationRoutingCatalogTest extends TestCase
 
         $session->refresh();
 
-        $this->assertSame('end_session', $routing['action']);
-        $this->assertSame('cancelled', $session->status);
-        $this->assertSame('urgent_referral', data_get($session->context, 'termination_type'));
-        $this->assertSame('urgent_pelvic_mass', data_get($session->context, 'termination_reason'));
+        // L'urgence coupe le questionnaire symptomatique mais ne termine pas
+        // l'evaluation : sans antecedents, le score serait calcule sur un
+        // questionnaire tronque et le dossier resterait vide.
+        $this->assertSame('jump_bloc', $routing['action']);
+        $this->assertSame('in_progress', $session->status);
+        $this->assertSame('pelvic_mass', data_get($session->context, 'urgent_referral.reason'));
+        $this->assertTrue((bool) data_get($session->context, 'urgent_referral_pending'));
+        $this->assertNull(data_get($session->context, 'termination_type'));
     }
 
     public function test_breast_palpation_experience_is_shown_to_everyone(): void
