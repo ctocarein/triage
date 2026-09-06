@@ -10,7 +10,6 @@ use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Organization\Models\Organization;
 use App\Domains\Report\Models\Report;
 use App\Domains\Engagement\Infrastructure\Persistence\Models\ScanEvent;
-use App\Domains\Ambassador\Infrastructure\Providers\AmbassadorServiceProvider;
 use App\Domains\Ambassador\Domain\Events\AmbassadorActivated;
 use App\Domains\Ambassador\Domain\Events\ReferralCreated;
 use App\Domains\Ambassador\Domain\Events\ReferralUsed;
@@ -44,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->register(AmbassadorServiceProvider::class);
+        //
     }
 
     /**
