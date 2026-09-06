@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Domains\Identity\Presentation\Http\Controllers;
+
+use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
+use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
+use App\Domains\Profile\Infrastructure\Persistence\Models\PersonalProfile;
+use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Ce que l'evaluateur a reellement accompli.
+ *
+ * Les chiffres se deduisent des evaluations qu'il a conduites, pas d'un
+ * compteur maintenu a cote : rien a resynchroniser, et aucun moyen que
+ * l'affichage s'ecarte de la realite.
+ *
+ * Le perimetre est strictement le sien -- context.agent_id -- et non celui de
+ * son organisation. Une ambassadrice regarde son travail, pas celui de ses
+ * collegues.
+ */
+class EvaluatorImpactController extends Controller
+{
+    /**
+     * GET /agent/impact
+     */
+    public function __invoke(Request $request): JsonResponse
+    {
+        $actor = $request->user();
+
+        if (! $actor instanceof Identity || ! IdentityEvaluationPolicy::isEvaluator($actor)) {
+            abort(403, "Acces reserve aux agents de terrain et aux ambassadeurs.");
+        }
+
+        $conducted = fn (): Builder => EvaluationSession::query()
+            ->where('context->agent_id', (string) $actor->id);
+
+        // Femmes distinctes, et non nombre de sessions : revoir la meme personne
+        // en visite de suivi ne fait pas deux femmes accompagnees.
+        $identityIds = $conducted()->distinct()->pluck('identity_id');
+
+        $communes = PersonalProfile::query()
+            ->whereIn('identity_id', $identityIds)
+            ->whereNotNull('commune')
+            ->where('commune', '!=', '')
+            ->distinct()
+            ->orderBy('commune')
+            ->pluck('commune')
+            ->values();
+
+        return response()->json([
+            'women_reached'          => $identityIds->count(),
+            'evaluations_completed'  => $conducted()->where('status', 'completed')->count(),
+            'evaluations_in_progress' => $conducted()->where('status', 'in_progress')->count(),
+            // Le chiffre qui compte cliniquement : combien de femmes ont ete
+            // orientees vers une prise en charge rapide.
+            'urgent_referrals'       => $conducted()->whereNotNull('context->urgent_referral')->count(),
+            'communes_covered'       => $communes->count(),
+            'communes'               => $communes,
+            'active_since'           => $conducted()->min('started_at'),
+        ]);
+    }
+}
