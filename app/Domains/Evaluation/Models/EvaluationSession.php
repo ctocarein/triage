@@ -26,7 +26,6 @@ class EvaluationSession extends Model
         'started_at',
         'completed_at',
         'expires_at',
-        'referral_id',
         'current_question_id',
         'current_node_key',
         'is_completed',
@@ -76,10 +75,6 @@ class EvaluationSession extends Model
         return $this->belongsTo(Identity::class, 'identity_id');
     }
 
-    public function referral()
-    {
-        return $this->belongsTo(\App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral::class, 'referral_id');
-    }
     public function answers()
     {
         return $this->hasMany(EvaluationAnswer::class, 'evaluation_session_id');

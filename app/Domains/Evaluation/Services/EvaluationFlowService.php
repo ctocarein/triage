@@ -13,8 +13,6 @@ use App\Domains\Evaluation\Domain\Policies\IdentityEvaluationPolicy;
 use App\Domains\Identity\Application\Services\BeneficiaryEnrollmentService;
 use App\Domains\Report\Models\Report;
 use App\Domains\Report\Services\ReportGenerationService;
-use App\Domains\Ambassador\Infrastructure\Persistence\Models\Referral;
-use App\Domains\Ambassador\Domain\Events\ReferralUsed;
 use App\Domains\Evaluation\Services\ProfileUpdaterService;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Enums\AnswerStatus;
@@ -42,11 +40,8 @@ class EvaluationFlowService
     {
         $type         = $validated['type'];
         $blocKeys     = $validated['bloc_keys'] ?? [];
-        $referralCode = $validated['referral_code'] ?? null;
-        $clientIp     = $validated['client_ip'] ?? null;
         $subjectId    = $validated['subject_id'] ?? null;
         $newSubject   = (bool) ($validated['new_subject'] ?? false);
-        $referral     = null;
         $agentIdentity = null;
         $subjectPayload = null;
 
@@ -96,29 +91,6 @@ class EvaluationFlowService
         // n'a pas de token, c'est celui de l'evaluateur qui lie la session.
         $actor = $agentIdentity ?? $identity;
 
-        if ($referralCode !== null) {
-            $referral = Referral::query()->where('code', $referralCode)->first();
-            if (! $referral || $referral->revoked_at !== null || ($referral->expires_at !== null && $referral->expires_at->isPast())) {
-                return [
-                    'status'  => 410,
-                    'payload' => [
-                        'message'      => 'Lien de parrainage invalide ou expire.',
-                        'error_code'   => 'REFERRAL_EXPIRED',
-                        'redirect_url' => config('ambassador.referrals.expired_url'),
-                    ],
-                ];
-            }
-            if ($referral->ambassador?->user_id === $identity->id) {
-                return [
-                    'status'  => 403,
-                    'payload' => [
-                        'message'    => "Vous ne pouvez pas utiliser votre propre lien de parrainage.",
-                        'error_code' => 'REFERRAL_SELF',
-                    ],
-                ];
-            }
-        }
-
         $existingInProgress = $identity->evaluationSessions()
             ->active()
             ->latest('started_at')
@@ -153,54 +125,6 @@ class EvaluationFlowService
                     'session_id'   => $previous->public_id,
                     'completed_at' => $previous->completed_at,
                     'is_due'       => IdentityEvaluationPolicy::shouldSuggestFullEvaluation($identity),
-                ];
-            }
-        }
-
-        if ($referral && $clientIp) {
-            $otherIpSession = EvaluationSession::query()
-                ->where('referral_id', $referral->id)
-                ->where('identity_id', '!=', $identity->id)
-                ->where('context->client_ip', $clientIp)
-                ->first();
-
-            if ($otherIpSession) {
-                return [
-                    'status'  => 403,
-                    'payload' => [
-                        'message'      => 'Ce lien a deja ete utilise sur cet appareil.',
-                        'error_code'   => 'REFERRAL_DEVICE_USED',
-                        'redirect_url' => config('ambassador.referrals.used_url'),
-                    ],
-                ];
-            }
-        }
-
-        if ($referral) {
-            $existingReferralSession = $identity->evaluationSessions()
-                ->where('referral_id', $referral->id)
-                ->latest('started_at')
-                ->first();
-
-            if ($existingReferralSession && $existingReferralSession->isInProgress()) {
-                return [
-                    'status'  => 403,
-                    'payload' => [
-                        'message'    => 'Cette session est deja en cours. Veuillez la terminer.',
-                        'error_code' => 'SESSION_IN_PROGRESS',
-                        'session_id' => $existingReferralSession->public_id,
-                    ],
-                ];
-            }
-
-            if ($existingReferralSession && $existingReferralSession->status === 'completed') {
-                return [
-                    'status'  => 403,
-                    'payload' => [
-                        'message'      => 'Vous avez deja termine une evaluation avec ce lien.',
-                        'error_code'   => 'REFERRAL_USED',
-                        'redirect_url' => config('ambassador.referrals.used_url'),
-                    ],
                 ];
             }
         }
@@ -284,10 +208,8 @@ class EvaluationFlowService
                 'bloc_keys'           => $blocKeys ?: null,
                 'selected_group_ids'  => $selectedGroupIds ?: null,
                 'token_id'            => $actor->currentAccessToken()?->id,
-                'client_ip'           => $clientIp,
                 'agent_id'            => $agentIdentity?->id,
             ], fn ($v) => $v !== null),
-            'referral_id'           => $referral?->id,
         ]);
 
         $firstQuestion = $this->questionSequencer->goToNextQuestion($session, $selectedGroupIds);
@@ -800,14 +722,6 @@ class EvaluationFlowService
     protected function markCompleted(EvaluationSession $session): void
     {
         $session->markCompleted();
-
-        if ($session->referral_id !== null) {
-            Referral::query()
-                ->where('id', $session->referral_id)
-                ->update(['last_used_at' => now()]);
-
-            event(new ReferralUsed($session->referral_id, 'completed'));
-        }
     }
 
     /**
@@ -824,19 +738,19 @@ class EvaluationFlowService
     protected function withUrgentReferral(array $payload, EvaluationSession $session): array
     {
         $context = is_array($session->context) ? $session->context : [];
-        $referral = $context['urgent_referral'] ?? null;
+        $urgent = $context['urgent_referral'] ?? null;
 
-        if (! is_array($referral)) {
+        if (! is_array($urgent)) {
             return $payload;
         }
 
-        $reason = (string) ($referral['reason'] ?? 'urgent_referral');
+        $reason = (string) ($urgent['reason'] ?? 'urgent_referral');
         $message = $this->resolveUrgentMessage($reason);
 
         $payload['urgent_referral'] = [
             'reason'    => $reason,
             'message'   => $message,
-            'raised_at' => $referral['raised_at'] ?? null,
+            'raised_at' => $urgent['raised_at'] ?? null,
         ];
 
         if (($context['urgent_referral_pending'] ?? false) === true) {

@@ -21,13 +21,7 @@ class EvaluationSessionStartRequest extends FormRequest
             $blocKeys = [$blocKeys];
         }
 
-        $this->merge([
-            'bloc_keys' => $blocKeys,
-            'referral_code' => $this->input('referral_code')
-                ?? $this->query('ref')
-                ?? $this->cookie(config('ambassador.referrals.cookie_name', 'ambassador_referral')),
-            'client_ip' => $this->ip(),
-        ]);
+        $this->merge(['bloc_keys' => $blocKeys]);
     }
 
     /**
@@ -39,8 +33,6 @@ class EvaluationSessionStartRequest extends FormRequest
             'type' => ['required', 'in:complete,thematic'],
             'bloc_keys' => ['nullable', 'array', 'required_if:type,thematic'],
             'bloc_keys.*' => ['string'],
-            'referral_code' => ['nullable', 'string'],
-            'client_ip' => ['nullable', 'ip'],
             // Deux facons de designer le beneficiaire, mutuellement exclusives :
             // son identifiant s'il est deja connu, ou new_subject pour une
             // personne pas encore enrolee. Le numero de telephone n'est pas
