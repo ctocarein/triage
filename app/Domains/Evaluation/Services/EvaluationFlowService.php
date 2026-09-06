@@ -337,8 +337,8 @@ class EvaluationFlowService
         $answer = $this->answerService->saveAnswer($answerData);
         $answer->loadMissing('question');
 
-        if ($answer->question && $answer->question->answer_target === 'credential') {
-            $this->syncCredentialFromAnswer($session, $answer);
+        if ($answer->question) {
+            $this->syncContactFromAnswer($session, $answer);
         }
 
         if (
@@ -470,7 +470,10 @@ class EvaluationFlowService
             $payload = $this->withAccount($payload, $session);
         }
 
-        return $this->withUrgentReferral($payload, $session);
+        return $this->withClosureContact(
+            $this->withUrgentReferral($payload, $session),
+            $session
+        );
     }
 
     /**
@@ -492,19 +495,63 @@ class EvaluationFlowService
     }
 
     /**
+     * Recupere les moyens de joindre la beneficiaire collectes par le
+     * questionnaire.
+     *
+     * Deux cas distincts, et il ne faut pas les confondre : le numero du
+     * parcours nominal devient un identifiant de connexion, celui laisse a la
+     * cloture n'est qu'un contact. Une mineure ou une femme qui a refuse de
+     * participer ne se voit pas ouvrir un dossier de sante qu'elle n'a pas
+     * demande.
+     */
+    protected function syncContactFromAnswer(EvaluationSession $session, EvaluationAnswer $answer): void
+    {
+        $raw = is_array($answer->value) ? ($answer->value[0] ?? null) : $answer->value;
+        $number = is_scalar($raw) ? trim((string) $raw) : '';
+
+        if ($number === '') {
+            return;
+        }
+
+        match ($answer->question?->key) {
+            'phone' => $this->attachLoginPhone($session, $number),
+            'consent_declined_whatsapp' => $this->attachClosureContact($session, $number),
+            default => null,
+        };
+    }
+
+    /**
+     * Enregistre le contact laisse volontairement a la cloture, pour que
+     * l'orientation puisse effectivement atteindre la personne.
+     *
+     * Porte par la session plutot que par la table des identifiants : celle-ci
+     * impose l'unicite du couple (type, identifiant), ce qui est juste pour un
+     * identifiant de connexion mais faux pour un contact -- un telephone
+     * partage entre deux personnes d'un meme foyer ferait echouer l'insertion
+     * en plein questionnaire. La session porte deja identity_id, le contact
+     * reste donc rattache a la personne.
+     */
+    protected function attachClosureContact(EvaluationSession $session, string $number): void
+    {
+        $context = is_array($session->context) ? $session->context : [];
+
+        $context['closure_contact'] = [
+            'channel'     => 'whatsapp',
+            'value'       => $number,
+            'collected_at' => now()->toISOString(),
+        ];
+
+        $session->context = $context;
+        $session->save();
+    }
+
+    /**
      * Rattache le numero collecte dans le questionnaire aux identifiants du
      * beneficiaire, et reconcilie la session si ce numero designe quelqu'un que
      * l'on connait deja.
      */
-    protected function syncCredentialFromAnswer(EvaluationSession $session, EvaluationAnswer $answer): void
+    protected function attachLoginPhone(EvaluationSession $session, string $phone): void
     {
-        $phone = is_array($answer->value) ? ($answer->value[0] ?? null) : $answer->value;
-        $phone = is_scalar($phone) ? trim((string) $phone) : '';
-
-        if ($phone === '' || $answer->question?->key !== 'phone') {
-            return;
-        }
-
         $subject = $session->identity;
         if (! $subject) {
             return;
@@ -776,6 +823,26 @@ class EvaluationFlowService
             unset($context['urgent_referral_pending']);
             $session->context = $context;
             $session->save();
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Expose le contact laisse a la cloture : c'est la seule facon pour
+     * l'evaluateur de savoir qu'il a bien ete enregistre, et pour l'equipe de
+     * retrouver les personnes a rappeler.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    protected function withClosureContact(array $payload, EvaluationSession $session): array
+    {
+        $context = is_array($session->context) ? $session->context : [];
+        $contact = $context['closure_contact'] ?? null;
+
+        if (is_array($contact)) {
+            $payload['closure_contact'] = $contact;
         }
 
         return $payload;
