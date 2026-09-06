@@ -27,6 +27,19 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cadence des evaluations completes
+    |--------------------------------------------------------------------------
+    |
+    | Delai au-dela duquel une nouvelle evaluation complete est consideree comme
+    | attendue. C'est un signal remonte au client, pas un verrou : une visite de
+    | suivi anticipee reste possible.
+    |
+    */
+
+    'full_evaluation_cadence_months' => (int) env('EVALUATION_FULL_CADENCE_MONTHS', 6),
+
     'urgent_referral' => [
         'resume_bloc' => env('EVALUATION_URGENT_RESUME_BLOC', 'medical_background'),
     ],

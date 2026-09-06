@@ -85,13 +85,25 @@ class IdentityEvaluationPolicy
             ->first();
     }
 
-    public static function shouldSuggestFullEvaluation(Identity $identity, int $months = 6): bool
+    /**
+     * Une nouvelle evaluation complete est-elle attendue ?
+     *
+     * Signal, pas barriere : une visite de suivi reste possible avant l'echeance,
+     * l'evaluateur est sur le terrain et sait ce qu'il fait.
+     *
+     * Le sens du calcul compte : sous Carbon 3 les diffIn* sont signes, et
+     * now()->diffInMonths(passe) renvoie une valeur negative -- la comparaison
+     * n'aurait jamais ete vraie.
+     */
+    public static function shouldSuggestFullEvaluation(Identity $identity, ?int $months = null): bool
     {
         $last = self::lastCompletedFullEvaluation($identity);
-        if (! $last) {
+        if (! $last || $last->completed_at === null) {
             return true;
         }
 
-        return now()->diffInMonths($last->completed_at) >= $months;
+        $months ??= (int) config('evaluation.full_evaluation_cadence_months', 6);
+
+        return $last->completed_at->diffInMonths(now()) >= $months;
     }
 }

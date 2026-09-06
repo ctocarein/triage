@@ -140,22 +140,19 @@ class EvaluationFlowService
             ];
         }
 
+        // Une evaluation deja terminee ne bloque plus : l'evaluateur revoit la
+        // meme femme lors d'une visite de suivi, et lui refuser une nouvelle
+        // evaluation reviendrait a figer son dossier au jour de la premiere.
+        // L'echeance est remontee au client comme un signal, pas comme un verrou.
+        $previousPayload = null;
         if ($type === 'complete') {
-            $completedSession = $identity->evaluationSessions()
-                ->completed()
-                ->fullEvaluation()
-                ->latest('completed_at')
-                ->first();
+            $previous = IdentityEvaluationPolicy::lastCompletedFullEvaluation($identity);
 
-            if ($completedSession) {
-                return [
-                    'status'  => 403,
-                    'payload' => [
-                        'message'      => 'Vous avez deja complete une evaluation.',
-                        'error_code'   => 'ALREADY_COMPLETED',
-                        'redirect_url' => config('ambassador.referrals.used_url'),
-                        'session_id'   => $completedSession->public_id,
-                    ],
+            if ($previous) {
+                $previousPayload = [
+                    'session_id'   => $previous->public_id,
+                    'completed_at' => $previous->completed_at,
+                    'is_due'       => IdentityEvaluationPolicy::shouldSuggestFullEvaluation($identity),
                 ];
             }
         }
@@ -259,9 +256,12 @@ class EvaluationFlowService
 
                 return [
                     'status'  => 200,
-                    'payload' => $this->withSubject(
-                        $this->buildPayload($existing, $insight, $questionPayload, $report, 'Session deja en cours.'),
-                        $subjectPayload
+                    'payload' => $this->withPreviousEvaluation(
+                        $this->withSubject(
+                            $this->buildPayload($existing, $insight, $questionPayload, $report, 'Session deja en cours.'),
+                            $subjectPayload
+                        ),
+                        $previousPayload
                     ),
                 ];
             }
@@ -310,9 +310,12 @@ class EvaluationFlowService
 
         return [
             'status'  => 201,
-            'payload' => $this->withSubject(
-                $this->buildPayload($session, $insight, $questionPayload, null, 'Session demarree.'),
-                $subjectPayload
+            'payload' => $this->withPreviousEvaluation(
+                $this->withSubject(
+                    $this->buildPayload($session, $insight, $questionPayload, null, 'Session demarree.'),
+                    $subjectPayload
+                ),
+                $previousPayload
             ),
         ];
     }
@@ -606,6 +609,27 @@ class EvaluationFlowService
             'pin'                  => (string) config('identity.default_pin'),
             'must_change_password' => true,
         ];
+
+        return $payload;
+    }
+
+    /**
+     * Signale l'evaluation complete precedente au demarrage d'une nouvelle.
+     *
+     * L'evaluateur ouvre une visite de suivi : savoir quand la precedente a eu
+     * lieu, et si l'echeance est atteinte, change ce qu'il en fait. Ni le score
+     * ni le niveau de risque ne sont exposes ici -- meme regle que l'annuaire,
+     * une conclusion clinique ne circule pas au seul motif d'ouvrir une session.
+     *
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed>|null $previous
+     * @return array<string, mixed>
+     */
+    protected function withPreviousEvaluation(array $payload, ?array $previous): array
+    {
+        if ($previous !== null) {
+            $payload['previous_evaluation'] = $previous;
+        }
 
         return $payload;
     }
