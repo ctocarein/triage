@@ -10,6 +10,10 @@ use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 
 class AnswerService
 {
+    public function __construct(
+        protected RiskModelService $riskModel,
+    ) {}
+
     /**
      * Enregistre ou met a jour une reponse a une question.
      *
@@ -53,6 +57,14 @@ class AnswerService
             }
             if ($valueChanged) {
                 $this->invalidateDownstreamAnswers($session, (int) ($existing->order ?? 0));
+
+                // Reprendre dans le bloc de la question corrigee : l'evaluateur
+                // vient de se reprendre, les questions que sa correction rend
+                // caduques doivent revenir tout de suite et non apres un detour
+                // par un autre bloc.
+                if ($question->bloc_key) {
+                    $session->forceFill(['current_bloc' => $question->bloc_key])->save();
+                }
             }
             $this->syncSessionScore($session);
 
@@ -77,7 +89,7 @@ class AnswerService
 
     protected function syncSessionScore(EvaluationSession $session): void
     {
-        $risk = app(RiskModelService::class)->evaluate($session);
+        $risk = $this->riskModel->evaluate($session);
 
         $session->forceFill([
             'score' => round($risk['score_total'], 2),
@@ -122,6 +134,16 @@ class AnswerService
             return;
         }
 
+        $downstream = $session->answers()
+            ->where('order', '>', $order)
+            ->whereNotIn('status', [AnswerStatus::Invalidated->value])
+            ->with('question:id,bloc_key')
+            ->get();
+
+        if ($downstream->isEmpty()) {
+            return;
+        }
+
         $update = ['status' => AnswerStatus::Invalidated->value];
         if ((bool) config('vnext.purge_invalidated', false)) {
             $update['value'] = null;
@@ -130,8 +152,17 @@ class AnswerService
         }
 
         $session->answers()
-            ->where('order', '>', $order)
-            ->whereNotIn('status', [AnswerStatus::Invalidated->value])
+            ->whereIn('id', $downstream->pluck('id'))
             ->update($update);
+
+        // Les blocs concernes redeviennent a parcourir. Invalider une reponse ne
+        // suffit pas : le sequenceur saute tout bloc marque visite, donc sans
+        // cette liberation la session se terminerait sans reposer les questions
+        // que la correction vient de rendre caduques.
+        $downstream
+            ->pluck('question.bloc_key')
+            ->filter()
+            ->unique()
+            ->each(fn (string $blocKey) => $session->removeVisitedBloc($blocKey));
     }
 }

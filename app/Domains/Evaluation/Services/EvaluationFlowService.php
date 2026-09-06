@@ -333,6 +333,9 @@ class EvaluationFlowService
             ];
         }
 
+        $question = DynamicQuestionTemplate::findOrFail($answerData['dynamic_question_template_id']);
+        $this->questionSequencer->assertCanAnswer($session, $question);
+
         $answerData['evaluation_session_id'] = $session->id;
         $answer = $this->answerService->saveAnswer($answerData);
         $answer->loadMissing('question');

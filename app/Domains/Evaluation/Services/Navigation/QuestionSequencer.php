@@ -7,7 +7,9 @@ use App\Domains\Evaluation\Services\Scoring\RiskModelService;
 use App\Domains\Evaluation\Models\QuestionGroup;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
+use App\Domains\Evaluation\Enums\AnswerStatus;
 use Illuminate\Support\Collection;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 
 class QuestionSequencer
@@ -31,7 +33,11 @@ class QuestionSequencer
 
     protected function getAllTemplates(): Collection
     {
-        return $this->cachedTemplates ??= DynamicQuestionTemplate::orderBy('order')->get();
+        // Une question desactivee est sortie du catalogue : elle ne doit plus
+        // etre servie, mais ses reponses passees restent lisibles.
+        return $this->cachedTemplates ??= DynamicQuestionTemplate::where('is_active', true)
+            ->orderBy('order')
+            ->get();
     }
 
     public function getSessionContext(EvaluationSession $session): array
@@ -39,7 +45,16 @@ class QuestionSequencer
         $answersById  = [];
         $answersByKey = [];
 
-        foreach ($session->answers()->with('question:id,key')->get() as $answer) {
+        // Les reponses invalidees sont exclues : sans cela, corriger une reponse
+        // laisserait les questions en aval marquees comme deja repondues, donc
+        // jamais reposees, et les conditions visible_if continueraient de
+        // s'evaluer sur les anciennes valeurs.
+        $answers = $session->answers()
+            ->with('question:id,key')
+            ->where('status', '!=', AnswerStatus::Invalidated->value)
+            ->get();
+
+        foreach ($answers as $answer) {
             $normalized = $this->conditions->normalize($answer->value);
             $answersById[$answer->dynamic_question_template_id] = $normalized;
 
@@ -203,6 +218,59 @@ class QuestionSequencer
 
         $session->markCompleted();
         return null;
+    }
+
+    /**
+     * Verifie qu'une reponse a cette question est recevable dans cette session.
+     *
+     * Deux cas sont recevables et un seul est refuse : repondre a la question
+     * courante, ou corriger une question deja repondue. Ce qui est ferme, c'est
+     * de repondre a une question jamais servie -- sauter en avant dans le
+     * questionnaire, ou repondre a une question hors du perimetre de la session.
+     *
+     * L'egalite stricte avec current_question_id aurait ferme le meme trou, mais
+     * aurait aussi interdit toute correction : l'evaluateur transcrit une
+     * conversation, il se reprend constamment.
+     */
+    public function assertCanAnswer(EvaluationSession $session, DynamicQuestionTemplate $question): void
+    {
+        if (! $session->isInProgress()) {
+            throw new HttpException(409, "La session n'est plus en cours.");
+        }
+
+        if (! (bool) $question->is_active) {
+            throw new HttpException(422, 'Cette question est inactive.');
+        }
+
+        $isCurrent = (int) $session->current_question_id === (int) $question->id;
+
+        $alreadyServed = $session->answers()
+            ->where('dynamic_question_template_id', $question->id)
+            ->exists();
+
+        if (! $isCurrent && ! $alreadyServed) {
+            throw new HttpException(409, "Cette question n'est pas la question courante de la session.");
+        }
+
+        $context = $this->getSessionContext($session);
+        $groupIds = $session->context['selected_group_ids'] ?? [];
+
+        if ($session->type === 'thematic'
+            && ! empty($groupIds)
+            && ! in_array((int) $question->question_group_id, array_map('intval', $groupIds), true)
+        ) {
+            throw new HttpException(422, 'Cette question ne fait pas partie du perimetre thematique de la session.');
+        }
+
+        if ($this->isProfileAlreadyCaptured($session)
+            && in_array($question->answer_target, ['personal_profile', 'medical_profile'], true)
+        ) {
+            throw new HttpException(422, "Cette question de profil n'est pas attendue dans cette session.");
+        }
+
+        if (! $this->shouldBeVisible($question, $context['answers'], $context['profile'])) {
+            throw new HttpException(422, "Cette question n'est pas visible dans le contexte courant.");
+        }
     }
 
     public function getNextQuestions(EvaluationSession $session): array

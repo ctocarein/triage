@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use OpenApi\Annotations as OA;
 
 class EvaluationsController extends Controller
@@ -136,8 +137,38 @@ class EvaluationsController extends Controller
                 ->header('Idempotency-Key', $key);
         }
 
-        $result = $flow->advance($session, $request->validated());
-        $idempotency->store($key, $scope, $hash, $result['payload'], $result['status']);
+        // Une reponse doit etre enregistree sous verrou : deux envois
+        // concurrents -- un renvoi apres timeout, deux appareils -- feraient
+        // sinon avancer la session deux fois.
+        $result = DB::transaction(function () use ($request, $session, $flow, $idempotency, $key, $scope, $hash): array {
+            $cached = $idempotency->getResponse($key, $scope, $hash);
+            if ($cached) {
+                return [
+                    'payload' => $cached['body'],
+                    'status' => $cached['status'],
+                ];
+            }
+
+            $lockedSession = EvaluationSession::query()
+                ->whereKey($session->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($this->tokenInvalidatesSession($request, $lockedSession)) {
+                $this->expireSession($lockedSession);
+                abort(410, 'Session invalidee.');
+            }
+
+            if ($lockedSession->isExpired()) {
+                $this->expireSession($lockedSession);
+                abort(410, 'Session expiree.');
+            }
+
+            $result = $flow->advance($lockedSession, $request->validated());
+            $idempotency->store($key, $scope, $hash, $result['payload'], $result['status']);
+
+            return $result;
+        });
 
         return response()
             ->json($result['payload'], $result['status'])

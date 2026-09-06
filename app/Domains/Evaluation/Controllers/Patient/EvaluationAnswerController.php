@@ -90,6 +90,10 @@ class EvaluationAnswerController extends Controller
 
         $question = DynamicQuestionTemplate::findOrFail($validated['dynamic_question_template_id']);
 
+        // Cette route contourne advance : sans le guard, elle rouvrirait le trou
+        // qu'il vient de fermer.
+        $flow->assertCanAnswer($session, $question);
+
         if ($question->type === QuestionType::File && $request->hasFile('value')) {
             $file = $request->file('value');
             $validated['value'] = $file->store('uploads/responses', 'public');

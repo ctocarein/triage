@@ -191,6 +191,28 @@ class EvaluationSession extends Model
     }
 
     /**
+     * Retire un bloc de la liste des blocs visites : il redevient a parcourir.
+     *
+     * Pendant d'addVisitedBloc, appele quand une correction de reponse invalide
+     * des reponses en aval. Sans lui, le sequenceur sauterait ces blocs comme
+     * deja traites et la session se terminerait prematurement.
+     */
+    public function removeVisitedBloc(string $blocKey): void
+    {
+        $visited = $this->visited_blocs ?? [];
+
+        if (! in_array($blocKey, $visited)) {
+            return;
+        }
+
+        $this->visited_blocs = array_values(array_filter(
+            $visited,
+            fn ($key) => $key !== $blocKey
+        ));
+        $this->save();
+    }
+
+    /**
      * VAcrifie si un bloc fait partie des blocs ciblAcs (ou si tous les blocs sont autorisAcs).
      */
     public function isBlocTargeted(string $blocKey): bool

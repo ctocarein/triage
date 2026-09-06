@@ -96,7 +96,9 @@ class RoutingEngine
             unset($context['forced_question_key']);
             $this->writeContext($session, $context);
 
-            $question = DynamicQuestionTemplate::where('key', $forcedKey)->first();
+            $question = DynamicQuestionTemplate::where('key', $forcedKey)
+                ->where('is_active', true)
+                ->first();
             if ($question
                 && ! array_key_exists($forcedKey, $answers)
                 && $this->conditions->shouldBeVisible($question, $answers, $profile)
@@ -110,7 +112,9 @@ class RoutingEngine
         $queue = $context['question_queue'] ?? [];
         while (! empty($queue)) {
             $key      = array_shift($queue);
-            $question = DynamicQuestionTemplate::where('key', $key)->first();
+            $question = DynamicQuestionTemplate::where('key', $key)
+                ->where('is_active', true)
+                ->first();
 
             if (! $question) {
                 continue; // clé introuvable → skip silencieux
@@ -233,11 +237,11 @@ class RoutingEngine
         }
 
         // Résolution automatique par valeur brute (bloc_key ou question key)
-        if (DynamicQuestionTemplate::where('bloc_key', $next)->exists()) {
+        if (DynamicQuestionTemplate::where('bloc_key', $next)->where('is_active', true)->exists()) {
             return $this->forceBloc($session, $context, $next, $question->bloc_key);
         }
 
-        if (DynamicQuestionTemplate::where('key', $next)->exists()) {
+        if (DynamicQuestionTemplate::where('key', $next)->where('is_active', true)->exists()) {
             return $this->forceQuestion($session, $context, $next);
         }
 
