@@ -8,6 +8,7 @@ use App\Domains\Decision\Controllers\Patient\DecisionPathController;
 use App\Domains\Evaluation\Controllers\Patient\ThematicBlocController;
 use App\Domains\Notification\Controllers\Patient\ReminderController;
 use App\Domains\Identity\Presentation\Http\Controllers\FieldAgentController;
+use App\Domains\Identity\Presentation\Http\Controllers\BeneficiaryDirectoryController;
 use App\Domains\Identity\Presentation\Http\Controllers\Patient\PatientQrController;
 
 require base_path('app/Domains/Identity/Presentation/Http/Routes/identity.routes.php');
@@ -58,6 +59,7 @@ Route::middleware('auth:sanctum')->prefix('qr')->group(function () {
 
 // Routes FieldAgent : création de bénéficiaires et évaluation assistée
 Route::middleware(['auth:sanctum'])->prefix('agent')->group(function () {
+    Route::get('/beneficiaries',  [BeneficiaryDirectoryController::class, 'index']);
     Route::post('/beneficiaries', [FieldAgentController::class, 'createBeneficiary']);
     Route::post('/qr-scan',       [FieldAgentController::class, 'scanQr']);
 });

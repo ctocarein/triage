@@ -76,6 +76,17 @@ class Identity extends Authenticatable
         return $this->hasMany(EvaluationSession::class, 'identity_id');
     }
 
+    /**
+     * Derniere evaluation dont cette identite est le sujet.
+     *
+     * Relation dediee plutot qu'un tri en memoire : l'annuaire des beneficiaires
+     * la charge en lot, sinon chaque ligne de la liste declencherait sa requete.
+     */
+    public function latestEvaluationSession(): HasOne
+    {
+        return $this->hasOne(EvaluationSession::class, 'identity_id')->latestOfMany('started_at');
+    }
+
     public function personalProfile(): HasOne
     {
         return $this->hasOne(PersonalProfile::class, 'identity_id');
