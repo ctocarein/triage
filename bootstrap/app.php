@@ -10,12 +10,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         api: __DIR__ . '/../routes/api.php',
         health: '/up',
-        then: function () {
-            \Illuminate\Support\Facades\Route::get(
-                '/r/{code}',
-                [\App\Domains\Ambassador\Presentation\Http\Controllers\ReferralRedirectController::class, 'handle']
-            );
-        },
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(ApiCorsFallback::class);
