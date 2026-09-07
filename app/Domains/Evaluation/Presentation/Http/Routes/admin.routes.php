@@ -8,6 +8,7 @@ use App\Domains\Evaluation\Controllers\Admin\QuestionGroupController;
 use App\Domains\Evaluation\Controllers\Admin\QuestionTemplateController;
 use App\Domains\Evaluation\Controllers\Admin\RiskModelController;
 use App\Domains\Evaluation\Controllers\Admin\ThematicBlocController;
+use App\Domains\Evaluation\Controllers\Admin\HealthMapStatsController;
 use App\Domains\Evaluation\Controllers\Admin\TriageStatsController;
 use App\Domains\Decision\Controllers\Admin\DecisionInsightAdminController;
 use App\Domains\Identity\Presentation\Http\Controllers\Admin\OrgManagerOnboardingAdminController;
@@ -152,6 +153,9 @@ Route::middleware(['auth:sanctum', 'role:PlatformAdmin,OrgManager'])
         // Stats + Insights
         // ----------------------------------------------------------------
         Route::get('/triage/stats', [TriageStatsController::class, 'index']);
+
+        // Carte nationale : tous les districts, couverts ou non.
+        Route::get('/health-map/stats', HealthMapStatsController::class);
 
         Route::prefix('decisions')->group(function () {
             Route::get('/',      [DecisionInsightAdminController::class, 'index']);
