@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CountryCitySeeder::class,
             CapsuleSeeder::class,
-            CommuneSeeder::class,
+            MunicipalitySeeder::class,
             Evaluation\QuestionGroupSeeder::class,
             Evaluation\ThematicBlocSeeder::class,
             Evaluation\DynamicQuestionTemplateSeeder::class,

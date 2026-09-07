@@ -68,18 +68,18 @@ class TriageStatsController extends Controller
             else                $ageGroups['>65']++;
         }
 
-        // --- Commune breakdown ---
-        $communeQuery = PersonalProfile::whereNotNull('commune');
+        // --- Municipality breakdown ---
+        $municipalityQuery = PersonalProfile::whereNotNull('municipality');
         if ($identityIds !== null) {
-            $communeQuery->whereIn('identity_id', $identityIds);
+            $municipalityQuery->whereIn('identity_id', $identityIds);
         }
-        $communes = $communeQuery
-            ->select('commune', DB::raw('count(*) as count'))
-            ->groupBy('commune')
+        $municipalities = $municipalityQuery
+            ->select('municipality', DB::raw('count(*) as count'))
+            ->groupBy('municipality')
             ->orderByDesc('count')
             ->limit(20)
             ->get()
-            ->map(fn ($r) => ['commune' => $r->commune, 'count' => (int) $r->count])
+            ->map(fn ($r) => ['municipality' => $r->municipality, 'count' => (int) $r->count])
             ->values();
 
         // --- Risk level distribution ---
@@ -117,7 +117,7 @@ class TriageStatsController extends Controller
             'profiles_total' => $total,
             'cancer_types'   => $cancerTypes,
             'age_groups'     => $ageGroups,
-            'communes'       => $communes,
+            'municipalities' => $municipalities,
             'risk_levels'    => $riskLevels,
             'sessions'       => $sessionStats,
             'avg_score'      => $avgScore ? round((float) $avgScore, 1) : null,

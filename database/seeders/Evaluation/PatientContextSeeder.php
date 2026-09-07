@@ -30,7 +30,7 @@ class PatientContextSeeder extends Seeder
         $startYear = date('Y') - 90;
         $endYear   = date('Y') - 18;
 
-        $communeOptions = DB::table('communes')
+        $municipalityOptions = DB::table('municipalities')
             ->orderBy('name')
             ->get()
             ->map(fn ($row) => ['value' => $row->name, 'label' => $row->name])
@@ -55,13 +55,13 @@ class PatientContextSeeder extends Seeder
                 ],
             ],
             [
-                'key'           => 'commune',
+                'key'           => 'municipality',
                 'text'          => 'Dans quelle commune habitez-vous ?',
                 'type'          => 'select_one',
                 'bloc_key'      => 'patient_context',
                 'answer_target' => 'personal_profile',
                 'order'         => 2,
-                'options'       => $communeOptions,
+                'options'       => $municipalityOptions,
             ],
             [
                 // Place apres la date de naissance, donc apres la sortie des

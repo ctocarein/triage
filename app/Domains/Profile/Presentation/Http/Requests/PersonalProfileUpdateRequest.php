@@ -22,7 +22,7 @@ class PersonalProfileUpdateRequest extends FormRequest
             'birth_date' => ['required', 'date'],
             'language' => ['required', 'string', 'max:255'],
             'education_level' => ['required', 'string', 'in:none,primary,secondary,university'],
-            'commune' => ['required', 'string', 'max:255'],
+            'municipality' => ['required', 'string', 'max:255'],
         ];
     }
 }

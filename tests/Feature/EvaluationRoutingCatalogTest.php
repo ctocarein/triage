@@ -7,10 +7,10 @@ use App\Domains\Evaluation\Models\DynamicQuestionTemplate;
 use App\Domains\Evaluation\Models\EvaluationSession;
 use App\Domains\Evaluation\Models\ThematicBloc;
 use App\Domains\Evaluation\Services\Navigation\RoutingEngine;
-use Database\Seeders\CommuneSeeder;
 use Database\Seeders\Evaluation\DynamicQuestionTemplateSeeder;
 use Database\Seeders\Evaluation\QuestionGroupSeeder;
 use Database\Seeders\Evaluation\ThematicBlocSeeder;
+use Database\Seeders\MunicipalitySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,7 +29,7 @@ class EvaluationRoutingCatalogTest extends TestCase
         // liste figée précédemment ici ne produisait plus la moitié des clés
         // attendues — PersonalProfileQuestionSeeder est même devenu un no-op.
         $this->seed([
-            CommuneSeeder::class,
+            MunicipalitySeeder::class,
             QuestionGroupSeeder::class,
             ThematicBlocSeeder::class,
             DynamicQuestionTemplateSeeder::class,

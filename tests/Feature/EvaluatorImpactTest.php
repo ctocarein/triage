@@ -35,12 +35,12 @@ class EvaluatorImpactTest extends TestCase
         return $identity;
     }
 
-    private function beneficiary(Organization $organization, ?string $commune): Identity
+    private function beneficiary(Organization $organization, ?string $municipality): Identity
     {
         $identity = $this->member($organization, 'Beneficiary');
 
-        if ($commune !== null) {
-            $identity->personalProfile()->create(['commune' => $commune]);
+        if ($municipality !== null) {
+            $identity->personalProfile()->create(['municipality' => $municipality]);
         }
 
         return $identity;
@@ -84,8 +84,8 @@ class EvaluatorImpactTest extends TestCase
             ->assertJsonPath('women_reached', 2)
             ->assertJsonPath('evaluations_completed', 1)
             ->assertJsonPath('evaluations_in_progress', 1)
-            ->assertJsonPath('communes_covered', 2)
-            ->assertJsonPath('communes', ['Cocody', 'Yopougon']);
+            ->assertJsonPath('municipalities_covered', 2)
+            ->assertJsonPath('municipalities', ['Cocody', 'Yopougon']);
     }
 
     public function test_a_follow_up_visit_does_not_count_a_second_woman(): void
@@ -133,7 +133,7 @@ class EvaluatorImpactTest extends TestCase
             ->getJson('/api/agent/impact')
             ->assertOk()
             ->assertJsonPath('women_reached', 0)
-            ->assertJsonPath('communes_covered', 0)
+            ->assertJsonPath('municipalities_covered', 0)
             ->assertJsonPath('active_since', null);
     }
 

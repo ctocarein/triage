@@ -42,13 +42,13 @@ class EvaluatorImpactController extends Controller
         // en visite de suivi ne fait pas deux femmes accompagnees.
         $identityIds = $conducted()->distinct()->pluck('identity_id');
 
-        $communes = PersonalProfile::query()
+        $municipalities = PersonalProfile::query()
             ->whereIn('identity_id', $identityIds)
-            ->whereNotNull('commune')
-            ->where('commune', '!=', '')
+            ->whereNotNull('municipality')
+            ->where('municipality', '!=', '')
             ->distinct()
-            ->orderBy('commune')
-            ->pluck('commune')
+            ->orderBy('municipality')
+            ->pluck('municipality')
             ->values();
 
         return response()->json([
@@ -58,8 +58,8 @@ class EvaluatorImpactController extends Controller
             // Le chiffre qui compte cliniquement : combien de femmes ont ete
             // orientees vers une prise en charge rapide.
             'urgent_referrals'       => $conducted()->whereNotNull('context->urgent_referral')->count(),
-            'communes_covered'       => $communes->count(),
-            'communes'               => $communes,
+            'municipalities_covered' => $municipalities->count(),
+            'municipalities'         => $municipalities,
             'active_since'           => $conducted()->min('started_at'),
         ]);
     }

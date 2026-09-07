@@ -493,7 +493,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="language", type="string", nullable=true),
  *     @OA\Property(property="education_level", type="string", enum={"none","primary","secondary","university"}, nullable=true),
  *     @OA\Property(property="gender", type="string", nullable=true),
- *     @OA\Property(property="commune", type="string", nullable=true),
+ *     @OA\Property(property="municipality", type="string", nullable=true),
  *     @OA\Property(property="cmu", type="boolean", nullable=true),
  *     @OA\Property(property="height", type="string", nullable=true),
  *     @OA\Property(property="occupation", type="string", nullable=true),
@@ -509,7 +509,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="birth_date", type="string", format="date", nullable=true),
  *     @OA\Property(property="language", type="string", nullable=true),
  *     @OA\Property(property="education_level", type="string", enum={"none","primary","secondary","university"}, nullable=true),
- *     @OA\Property(property="commune", type="string", nullable=true)
+ *     @OA\Property(property="municipality", type="string", nullable=true)
  * )
  * @OA\Schema(
  *     schema="PersonalProfileUpdateRequest",
@@ -519,7 +519,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="birth_date", type="string", format="date", nullable=true),
  *     @OA\Property(property="language", type="string", nullable=true),
  *     @OA\Property(property="education_level", type="string", enum={"none","primary","secondary","university"}, nullable=true),
- *     @OA\Property(property="commune", type="string", nullable=true)
+ *     @OA\Property(property="municipality", type="string", nullable=true)
  * )
  * @OA\Schema(
  *     schema="PersonalProfileResponse",

@@ -23,7 +23,7 @@ class PersonalProfile extends Model
         'language',
         'education_level',
         'gender',
-        'commune',
+        'municipality',
         'cmu', // Couverture Maladie Universelle
         'height', // Taille
         'occupation', // Occupation

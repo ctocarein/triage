@@ -96,7 +96,7 @@ class FourBeneficiarySimulationTest extends TestCase
 
         // patient_context : 20 ans → commune
         $q = $this->answer($identity, $sessionId, $q, '2006-01-01');
-        $this->assertKey('commune', $q, 'B2');
+        $this->assertKey('municipality', $q, 'B2');
 
         $q = $this->skip($identity, $sessionId, $q);
         $this->assertKey('phone', $q, 'B2');
@@ -369,7 +369,7 @@ class FourBeneficiarySimulationTest extends TestCase
         string $birthDate,
     ): array {
         $q = $this->answer($identity, $sessionId, $birthDateQuestion, $birthDate);
-        $this->assertKey('commune', $q);
+        $this->assertKey('municipality', $q);
 
         $q = $this->skip($identity, $sessionId, $q);
         $this->assertKey('phone', $q);

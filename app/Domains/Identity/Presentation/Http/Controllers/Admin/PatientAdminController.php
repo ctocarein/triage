@@ -49,16 +49,16 @@ class PatientAdminController extends Controller
                 $q->whereHas('personalProfile', fn ($pp) =>
                     $pp->where('first_name', 'like', "%{$search}%")
                        ->orWhere('last_name', 'like', "%{$search}%")
-                       ->orWhere('commune', 'like', "%{$search}%")
+                       ->orWhere('municipality', 'like', "%{$search}%")
                 )->orWhereHas('credentials', fn ($c) =>
                     $c->where('identifier', 'like', "%{$search}%")
                 );
             });
         }
 
-        if ($request->filled('commune')) {
+        if ($request->filled('municipality')) {
             $query->whereHas('personalProfile', fn ($q) =>
-                $q->where('commune', $request->input('commune'))
+                $q->where('municipality', $request->input('municipality'))
             );
         }
 
@@ -107,7 +107,7 @@ class PatientAdminController extends Controller
                     'last_name'       => $identity->personalProfile->last_name,
                     'gender'          => $identity->personalProfile->gender,
                     'age'             => $identity->personalProfile->age,
-                    'commune'         => $identity->personalProfile->commune,
+                    'municipality'    => $identity->personalProfile->municipality,
                     'birth_date'      => $identity->personalProfile->birth_date,
                     'education_level' => $identity->personalProfile->education_level,
                     'occupation'      => $identity->personalProfile->occupation,

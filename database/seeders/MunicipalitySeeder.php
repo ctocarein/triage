@@ -5,14 +5,14 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class CommuneSeeder extends Seeder
+class MunicipalitySeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run()
     {
-            DB::table('communes')->insertOrIgnore([
+            DB::table('municipalities')->insertOrIgnore([
               ['name' => 'Abengourou'],
     ['name' => 'Abidjan'],
     ['name' => 'Abobo'],

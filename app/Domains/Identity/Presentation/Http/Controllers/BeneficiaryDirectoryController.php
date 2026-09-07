@@ -124,7 +124,7 @@ class BeneficiaryDirectoryController extends Controller
             'identity_id'     => (string) $identity->id,
             'name'            => $name !== '' ? $name : null,
             'phone'           => $identity->credentials->first()?->identifier,
-            'commune'         => $profile?->commune,
+            'municipality'    => $profile?->municipality,
             'birth_date'      => $profile?->birth_date,
             'last_evaluation' => $session ? $this->mapSession($session, $actor) : null,
         ];

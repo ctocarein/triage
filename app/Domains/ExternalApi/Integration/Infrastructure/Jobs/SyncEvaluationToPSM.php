@@ -147,7 +147,7 @@ class SyncEvaluationToPSM implements ShouldQueue
             'contact' => $contact,
             'datenaissance' => $personal?->birth_date?->format('Y-m-d'),
             'sensibilite' => null,
-            'lieuhabitation' => $personal?->commune,
+            'lieuhabitation' => $personal?->municipality,
             'typeCancer' => $typeCancer,
         ];
 
