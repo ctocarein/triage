@@ -4,6 +4,7 @@ namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Access\Models\Membership;
 use App\Domains\Organization\Models\Organization;
+use App\Domains\Organization\Services\LocationAliasService;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Decision\Services\DecisionInsightService;
@@ -30,7 +31,8 @@ class EvaluationFlowService
         protected ProfileUpdaterService $profileUpdater,
         protected QuestionSequencer $questionSequencer,
         protected EvaluationSnapshotService $snapshotService,
-        protected BeneficiaryEnrollmentService $enrollment
+        protected BeneficiaryEnrollmentService $enrollment,
+        protected LocationAliasService $locationAliases
     ) {
     }
 
@@ -294,6 +296,7 @@ class EvaluationFlowService
             $report = null;
             if ($session->status === 'completed') {
                 $report = $this->reportService->generate($session);
+                $this->locationAliases->harvest($session);
             }
             $insight = $this->insightService->generate($session, $report);
             $message = $session->status === 'completed' ? 'Evaluation terminee.' : null;
@@ -312,6 +315,15 @@ class EvaluationFlowService
 
         if (! $nextQuestion || ! $session->isInProgress()) {
             $report  = $this->reportService->generate($session);
+
+            // Ce que cette evaluation apprend a l'annuaire : le lieu qu'elle a
+            // nomme, et le district qu'une professionnelle a retenu. Recolte a
+            // la fin, donc une correction faite en cours d'entretien ne
+            // s'enregistre pas -- seule la paire finale compte.
+            if ($session->status === 'completed') {
+                $this->locationAliases->harvest($session);
+            }
+
             $insight = $this->insightService->generate($session, $report);
             $message = $session->status === 'completed' ? 'Evaluation terminee.' : null;
 
@@ -689,6 +701,18 @@ class EvaluationFlowService
     ): mixed {
         if ($question->key !== 'health_district_id' || ! $session) {
             return null;
+        }
+
+        // L'annuaire d'abord : il connait le lieu que la femme vient de nommer,
+        // l'evaluatrice ne fait que travailler la la plupart du temps.
+        $place = $this->locationAliases->placeAnsweredIn($session);
+
+        if ($place !== null) {
+            $fromDirectory = $this->locationAliases->suggestDistrictCode($place[0]);
+
+            if ($fromDirectory !== null) {
+                return $fromDirectory;
+            }
         }
 
         $context = is_array($session->context) ? $session->context : [];
