@@ -30,7 +30,11 @@ class PatientContextSeeder extends Seeder
         $startYear = date('Y') - 90;
         $endYear   = date('Y') - 18;
 
+        // Abidjan est ecartee : elle figure dans le referentiel a cote de ses
+        // propres communes, et proposer les deux ferait deux reponses pour le
+        // meme lieu.
         $municipalityOptions = DB::table('municipalities')
+            ->where('is_selectable', true)
             ->orderBy('name')
             ->get()
             ->map(fn ($row) => ['value' => $row->name, 'label' => $row->name])

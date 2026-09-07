@@ -8,6 +8,16 @@ use Illuminate\Support\Facades\DB;
 class MunicipalitySeeder extends Seeder
 {
     /**
+     * Municipalities kept in the reference list but withdrawn from the answer
+     * list.
+     *
+     * Abidjan sits alongside its own municipalities -- Abobo, Adjame,
+     * Yopougon, Port-Bouet. Offering both the parent and its children makes
+     * two answers for the same place, which never aggregate.
+     */
+    private const NOT_SELECTABLE = ['Abidjan'];
+
+    /**
      * Run the database seeds.
      */
     public function run()
@@ -165,5 +175,9 @@ class MunicipalitySeeder extends Seeder
     ['name' => 'Zoukougbeu'],
     ['name' => 'Zouan'],
         ]);
+
+        DB::table('municipalities')
+            ->whereIn('name', self::NOT_SELECTABLE)
+            ->update(['is_selectable' => false]);
     }
 }
