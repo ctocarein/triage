@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             CountryCitySeeder::class,
             CapsuleSeeder::class,
             MunicipalitySeeder::class,
+            HealthMapSeeder::class,
             Evaluation\QuestionGroupSeeder::class,
             Evaluation\ThematicBlocSeeder::class,
             Evaluation\DynamicQuestionTemplateSeeder::class,

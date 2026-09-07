@@ -1,0 +1,920 @@
+{
+  "pays": {
+    "nom": "Côte d'Ivoire",
+    "iso_3166_1_alpha_2": "CI",
+    "iso_3166_1_alpha_3": "CIV"
+  },
+  "referentiel": "Découpage sanitaire (niveau intermédiaire et périphérique)",
+  "version": "2025-carte-sanitaire-nationale",
+  "source": {
+    "libelle": "Carte sanitaire nationale, MSHPCMU — données DIS 2023, édition 2025",
+    "url": "https://www.sante.gouv.ci/uploads/publications/177082475110.pdf",
+    "complement_pres": "Arrêté portant création des 10 Pôles régionaux d'excellence santé (PRES), 2023"
+  },
+  "avertissement": "Les noms des 33 régions et des 113 districts proviennent de la carte sanitaire officielle. L'affectation district -> région a été reconstituée à partir du découpage administratif (départements) et n'est pas issue d'un tableau officiel : à faire valider par la DIIS/MSHPCMU avant usage en production.",
+  "totaux": {
+    "pres": 10,
+    "regions_sanitaires": 33,
+    "districts_sanitaires": 113
+  },
+  "regions": [
+    {
+      "code": "RS-ABIDJAN-1",
+      "nom": "Abidjan 1",
+      "slug": "abidjan-1",
+      "chef_lieu": "Abidjan",
+      "pres": "Abidjan",
+      "nb_districts": 5,
+      "districts": [
+        {
+          "code": "DS-YOPOUGON-OUEST-SONGON",
+          "nom": "Yopougon-Ouest-Songon",
+          "slug": "yopougon-ouest-songon"
+        },
+        {
+          "code": "DS-YOPOUGON-EST",
+          "nom": "Yopougon-Est",
+          "slug": "yopougon-est"
+        },
+        {
+          "code": "DS-ANYAMA",
+          "nom": "Anyama",
+          "slug": "anyama"
+        },
+        {
+          "code": "DS-ABOBO-OUEST",
+          "nom": "Abobo-Ouest",
+          "slug": "abobo-ouest"
+        },
+        {
+          "code": "DS-ABOBO-EST",
+          "nom": "Abobo-Est",
+          "slug": "abobo-est"
+        }
+      ]
+    },
+    {
+      "code": "RS-ABIDJAN-2",
+      "nom": "Abidjan 2",
+      "slug": "abidjan-2",
+      "chef_lieu": "Abidjan",
+      "pres": "Abidjan",
+      "nb_districts": 5,
+      "districts": [
+        {
+          "code": "DS-ADJAME-PLATEAU-ATTECOUBE",
+          "nom": "Adjamé-Plateau-Attécoubé",
+          "slug": "adjame-plateau-attecoube"
+        },
+        {
+          "code": "DS-COCODY-BINGERVILLE",
+          "nom": "Cocody-Bingerville",
+          "slug": "cocody-bingerville"
+        },
+        {
+          "code": "DS-TREICHVILLE-MARCORY",
+          "nom": "Treichville-Marcory",
+          "slug": "treichville-marcory"
+        },
+        {
+          "code": "DS-KOUMASSI",
+          "nom": "Koumassi",
+          "slug": "koumassi"
+        },
+        {
+          "code": "DS-PORT-BOUET-VRIDI",
+          "nom": "Port-Bouët-Vridi",
+          "slug": "port-bouet-vridi"
+        }
+      ]
+    },
+    {
+      "code": "RS-AGNEBY-TIASSA",
+      "nom": "Agnéby-Tiassa",
+      "slug": "agneby-tiassa",
+      "chef_lieu": "Agboville",
+      "pres": "Abidjan",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-AGBOVILLE",
+          "nom": "Agboville",
+          "slug": "agboville"
+        },
+        {
+          "code": "DS-TIASSALE",
+          "nom": "Tiassalé",
+          "slug": "tiassale"
+        },
+        {
+          "code": "DS-SIKENSI",
+          "nom": "Sikensi",
+          "slug": "sikensi"
+        }
+      ]
+    },
+    {
+      "code": "RS-GRANDS-PONTS",
+      "nom": "Grands-Ponts",
+      "slug": "grands-ponts",
+      "chef_lieu": "Dabou",
+      "pres": "Abidjan",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-DABOU",
+          "nom": "Dabou",
+          "slug": "dabou"
+        },
+        {
+          "code": "DS-JACQUEVILLE",
+          "nom": "Jacqueville",
+          "slug": "jacqueville"
+        },
+        {
+          "code": "DS-GRAND-LAHOU",
+          "nom": "Grand-Lahou",
+          "slug": "grand-lahou"
+        }
+      ]
+    },
+    {
+      "code": "RS-LA-ME",
+      "nom": "La Mé",
+      "slug": "la-me",
+      "chef_lieu": "Adzopé",
+      "pres": "Abidjan",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-ADZOPE",
+          "nom": "Adzopé",
+          "slug": "adzope"
+        },
+        {
+          "code": "DS-AKOUPE",
+          "nom": "Akoupé",
+          "slug": "akoupe"
+        },
+        {
+          "code": "DS-ALEPE",
+          "nom": "Alépé",
+          "slug": "alepe"
+        },
+        {
+          "code": "DS-YAKASSE-ATTOBROU",
+          "nom": "Yakassé-Attobrou",
+          "slug": "yakasse-attobrou"
+        }
+      ]
+    },
+    {
+      "code": "RS-SUD-COMOE",
+      "nom": "Sud-Comoé",
+      "slug": "sud-comoe",
+      "chef_lieu": "Aboisso",
+      "pres": "Abidjan",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-ABOISSO",
+          "nom": "Aboisso",
+          "slug": "aboisso"
+        },
+        {
+          "code": "DS-ADIAKE",
+          "nom": "Adiaké",
+          "slug": "adiake"
+        },
+        {
+          "code": "DS-GRAND-BASSAM",
+          "nom": "Grand-Bassam",
+          "slug": "grand-bassam"
+        },
+        {
+          "code": "DS-TIAPOUM",
+          "nom": "Tiapoum",
+          "slug": "tiapoum"
+        }
+      ]
+    },
+    {
+      "code": "RS-INDENIE-DJUABLIN",
+      "nom": "Indénié-Djuablin",
+      "slug": "indenie-djuablin",
+      "chef_lieu": "Abengourou",
+      "pres": "Abengourou",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-ABENGOUROU",
+          "nom": "Abengourou",
+          "slug": "abengourou"
+        },
+        {
+          "code": "DS-AGNIBILEKROU",
+          "nom": "Agnibilékrou",
+          "slug": "agnibilekrou"
+        },
+        {
+          "code": "DS-BETTIE",
+          "nom": "Bettié",
+          "slug": "bettie"
+        }
+      ]
+    },
+    {
+      "code": "RS-MORONOU",
+      "nom": "Moronou",
+      "slug": "moronou",
+      "chef_lieu": "Bongouanou",
+      "pres": "Abengourou",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-BONGOUANOU",
+          "nom": "Bongouanou",
+          "slug": "bongouanou"
+        },
+        {
+          "code": "DS-M-BATTO",
+          "nom": "M'Batto",
+          "slug": "m-batto"
+        },
+        {
+          "code": "DS-ARRAH",
+          "nom": "Arrah",
+          "slug": "arrah"
+        }
+      ]
+    },
+    {
+      "code": "RS-IFFOU",
+      "nom": "Iffou",
+      "slug": "iffou",
+      "chef_lieu": "Daoukro",
+      "pres": "Abengourou",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-DAOUKRO",
+          "nom": "Daoukro",
+          "slug": "daoukro"
+        },
+        {
+          "code": "DS-PRIKRO",
+          "nom": "Prikro",
+          "slug": "prikro"
+        },
+        {
+          "code": "DS-M-BAHIAKRO",
+          "nom": "M'Bahiakro",
+          "slug": "m-bahiakro"
+        }
+      ]
+    },
+    {
+      "code": "RS-GONTOUGO",
+      "nom": "Gontougo",
+      "slug": "gontougo",
+      "chef_lieu": "Bondoukou",
+      "pres": "Bondoukou",
+      "nb_districts": 5,
+      "districts": [
+        {
+          "code": "DS-BONDOUKOU",
+          "nom": "Bondoukou",
+          "slug": "bondoukou"
+        },
+        {
+          "code": "DS-TANDA",
+          "nom": "Tanda",
+          "slug": "tanda"
+        },
+        {
+          "code": "DS-KOUN-FAO",
+          "nom": "Koun-Fao",
+          "slug": "koun-fao"
+        },
+        {
+          "code": "DS-TRANSUA",
+          "nom": "Transua",
+          "slug": "transua"
+        },
+        {
+          "code": "DS-SANDEGUE",
+          "nom": "Sandégué",
+          "slug": "sandegue"
+        }
+      ]
+    },
+    {
+      "code": "RS-BOUNKANI",
+      "nom": "Bounkani",
+      "slug": "bounkani",
+      "chef_lieu": "Bouna",
+      "pres": "Bondoukou",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-BOUNA",
+          "nom": "Bouna",
+          "slug": "bouna"
+        },
+        {
+          "code": "DS-DOROPO",
+          "nom": "Doropo",
+          "slug": "doropo"
+        },
+        {
+          "code": "DS-TEHINI",
+          "nom": "Téhini",
+          "slug": "tehini"
+        },
+        {
+          "code": "DS-NASSIAN",
+          "nom": "Nassian",
+          "slug": "nassian",
+          "note": "Rattaché ici au Bounkani (département de Bounkani) ; certaines sources le placent dans le Gontougo."
+        }
+      ]
+    },
+    {
+      "code": "RS-GBEKE",
+      "nom": "Gbêkê",
+      "slug": "gbeke",
+      "chef_lieu": "Bouaké",
+      "pres": "Bouaké",
+      "nb_districts": 6,
+      "districts": [
+        {
+          "code": "DS-BOUAKE-NORD-EST",
+          "nom": "Bouaké Nord-Est",
+          "slug": "bouake-nord-est"
+        },
+        {
+          "code": "DS-BOUAKE-NORD-OUEST",
+          "nom": "Bouaké Nord-Ouest",
+          "slug": "bouake-nord-ouest"
+        },
+        {
+          "code": "DS-BOUAKE-SUD",
+          "nom": "Bouaké-Sud",
+          "slug": "bouake-sud"
+        },
+        {
+          "code": "DS-BEOUMI",
+          "nom": "Béoumi",
+          "slug": "beoumi"
+        },
+        {
+          "code": "DS-BOTRO",
+          "nom": "Botro",
+          "slug": "botro"
+        },
+        {
+          "code": "DS-SAKASSOU",
+          "nom": "Sakassou",
+          "slug": "sakassou"
+        }
+      ]
+    },
+    {
+      "code": "RS-BERE",
+      "nom": "Béré",
+      "slug": "bere",
+      "chef_lieu": "Mankono",
+      "pres": "Bouaké",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-MANKONO",
+          "nom": "Mankono",
+          "slug": "mankono"
+        },
+        {
+          "code": "DS-DIANRA",
+          "nom": "Dianra",
+          "slug": "dianra"
+        },
+        {
+          "code": "DS-KOUNAHIRI",
+          "nom": "Kounahiri",
+          "slug": "kounahiri"
+        }
+      ]
+    },
+    {
+      "code": "RS-HAMBOL",
+      "nom": "Hambol",
+      "slug": "hambol",
+      "chef_lieu": "Katiola",
+      "pres": "Bouaké",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-KATIOLA",
+          "nom": "Katiola",
+          "slug": "katiola"
+        },
+        {
+          "code": "DS-DABAKALA",
+          "nom": "Dabakala",
+          "slug": "dabakala"
+        },
+        {
+          "code": "DS-NIAKARAMANDOUGOU",
+          "nom": "Niakaramandougou",
+          "slug": "niakaramandougou"
+        }
+      ]
+    },
+    {
+      "code": "RS-HAUT-SASSANDRA",
+      "nom": "Haut-Sassandra",
+      "slug": "haut-sassandra",
+      "chef_lieu": "Daloa",
+      "pres": "Daloa",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-DALOA",
+          "nom": "Daloa",
+          "slug": "daloa"
+        },
+        {
+          "code": "DS-ISSIA",
+          "nom": "Issia",
+          "slug": "issia"
+        },
+        {
+          "code": "DS-VAVOUA",
+          "nom": "Vavoua",
+          "slug": "vavoua"
+        },
+        {
+          "code": "DS-ZOUKOUGBEU",
+          "nom": "Zoukougbeu",
+          "slug": "zoukougbeu"
+        }
+      ]
+    },
+    {
+      "code": "RS-WORODOUGOU",
+      "nom": "Worodougou",
+      "slug": "worodougou",
+      "chef_lieu": "Séguéla",
+      "pres": "Daloa",
+      "nb_districts": 2,
+      "districts": [
+        {
+          "code": "DS-SEGUELA",
+          "nom": "Séguéla",
+          "slug": "seguela"
+        },
+        {
+          "code": "DS-KANI",
+          "nom": "Kani",
+          "slug": "kani"
+        }
+      ]
+    },
+    {
+      "code": "RS-PORO",
+      "nom": "Poro",
+      "slug": "poro",
+      "chef_lieu": "Korhogo",
+      "pres": "Korhogo",
+      "nb_districts": 5,
+      "districts": [
+        {
+          "code": "DS-KORHOGO-1",
+          "nom": "Korhogo 1",
+          "slug": "korhogo-1"
+        },
+        {
+          "code": "DS-KORHOGO-2",
+          "nom": "Korhogo 2",
+          "slug": "korhogo-2"
+        },
+        {
+          "code": "DS-SINEMATIALI",
+          "nom": "Sinématiali",
+          "slug": "sinematiali"
+        },
+        {
+          "code": "DS-M-BENGUE",
+          "nom": "M'Bengué",
+          "slug": "m-bengue"
+        },
+        {
+          "code": "DS-DIKODOUGOU",
+          "nom": "Dikodougou",
+          "slug": "dikodougou"
+        }
+      ]
+    },
+    {
+      "code": "RS-TCHOLOGO",
+      "nom": "Tchologo",
+      "slug": "tchologo",
+      "chef_lieu": "Ferkessédougou",
+      "pres": "Korhogo",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-FERKESSEDOUGOU",
+          "nom": "Ferkessédougou",
+          "slug": "ferkessedougou"
+        },
+        {
+          "code": "DS-OUANGOLODOUGOU",
+          "nom": "Ouangolodougou",
+          "slug": "ouangolodougou"
+        },
+        {
+          "code": "DS-KONG",
+          "nom": "Kong",
+          "slug": "kong"
+        }
+      ]
+    },
+    {
+      "code": "RS-TONKPI",
+      "nom": "Tonkpi",
+      "slug": "tonkpi",
+      "chef_lieu": "Man",
+      "pres": "Man",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-MAN",
+          "nom": "Man",
+          "slug": "man"
+        },
+        {
+          "code": "DS-DANANE",
+          "nom": "Danané",
+          "slug": "danane"
+        },
+        {
+          "code": "DS-BIANKOUMA",
+          "nom": "Biankouma",
+          "slug": "biankouma"
+        },
+        {
+          "code": "DS-ZOUAN-HOUNIEN",
+          "nom": "Zouan-Hounien",
+          "slug": "zouan-hounien"
+        }
+      ]
+    },
+    {
+      "code": "RS-CAVALLY",
+      "nom": "Cavally",
+      "slug": "cavally",
+      "chef_lieu": "Guiglo",
+      "pres": "Man",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-GUIGLO",
+          "nom": "Guiglo",
+          "slug": "guiglo"
+        },
+        {
+          "code": "DS-BLOLEQUIN",
+          "nom": "Bloléquin",
+          "slug": "blolequin"
+        },
+        {
+          "code": "DS-TOULEPLEU",
+          "nom": "Toulépleu",
+          "slug": "toulepleu"
+        },
+        {
+          "code": "DS-TAI",
+          "nom": "Taï",
+          "slug": "tai"
+        }
+      ]
+    },
+    {
+      "code": "RS-GUEMON",
+      "nom": "Guémon",
+      "slug": "guemon",
+      "chef_lieu": "Duékoué",
+      "pres": "Man",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-DUEKOUE",
+          "nom": "Duékoué",
+          "slug": "duekoue"
+        },
+        {
+          "code": "DS-BANGOLO",
+          "nom": "Bangolo",
+          "slug": "bangolo"
+        },
+        {
+          "code": "DS-KOUIBLY",
+          "nom": "Kouibly",
+          "slug": "kouibly"
+        }
+      ]
+    },
+    {
+      "code": "RS-BAFING",
+      "nom": "Bafing",
+      "slug": "bafing",
+      "chef_lieu": "Touba",
+      "pres": "Man",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-TOUBA",
+          "nom": "Touba",
+          "slug": "touba"
+        },
+        {
+          "code": "DS-KORO",
+          "nom": "Koro",
+          "slug": "koro"
+        },
+        {
+          "code": "DS-OUANINOU",
+          "nom": "Ouaninou",
+          "slug": "ouaninou"
+        }
+      ]
+    },
+    {
+      "code": "RS-KABADOUGOU",
+      "nom": "Kabadougou",
+      "slug": "kabadougou",
+      "chef_lieu": "Odienné",
+      "pres": "Odienné",
+      "nb_districts": 2,
+      "districts": [
+        {
+          "code": "DS-ODIENNE",
+          "nom": "Odienné",
+          "slug": "odienne"
+        },
+        {
+          "code": "DS-MADINANI",
+          "nom": "Madinani",
+          "slug": "madinani"
+        }
+      ]
+    },
+    {
+      "code": "RS-BAGOUE",
+      "nom": "Bagoué",
+      "slug": "bagoue",
+      "chef_lieu": "Boundiali",
+      "pres": "Odienné",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-BOUNDIALI",
+          "nom": "Boundiali",
+          "slug": "boundiali"
+        },
+        {
+          "code": "DS-TENGRELA",
+          "nom": "Tengréla",
+          "slug": "tengrela"
+        },
+        {
+          "code": "DS-KOUTO",
+          "nom": "Kouto",
+          "slug": "kouto"
+        }
+      ]
+    },
+    {
+      "code": "RS-FOLON",
+      "nom": "Folon",
+      "slug": "folon",
+      "chef_lieu": "Minignan",
+      "pres": "Odienné",
+      "nb_districts": 2,
+      "districts": [
+        {
+          "code": "DS-MINIGNAN",
+          "nom": "Minignan",
+          "slug": "minignan"
+        },
+        {
+          "code": "DS-KANIASSO",
+          "nom": "Kaniasso",
+          "slug": "kaniasso",
+          "note": "Rattaché ici au Folon ; parfois listé sous Kabadougou."
+        }
+      ]
+    },
+    {
+      "code": "RS-SAN-PEDRO",
+      "nom": "San-Pédro",
+      "slug": "san-pedro",
+      "chef_lieu": "San-Pédro",
+      "pres": "San-Pédro",
+      "nb_districts": 2,
+      "districts": [
+        {
+          "code": "DS-SAN-PEDRO",
+          "nom": "San-Pédro",
+          "slug": "san-pedro"
+        },
+        {
+          "code": "DS-TABOU",
+          "nom": "Tabou",
+          "slug": "tabou"
+        }
+      ]
+    },
+    {
+      "code": "RS-NAWA",
+      "nom": "Nawa",
+      "slug": "nawa",
+      "chef_lieu": "Soubré",
+      "pres": "San-Pédro",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-SOUBRE",
+          "nom": "Soubré",
+          "slug": "soubre"
+        },
+        {
+          "code": "DS-MEAGUI",
+          "nom": "Méagui",
+          "slug": "meagui"
+        },
+        {
+          "code": "DS-BUYO",
+          "nom": "Buyo",
+          "slug": "buyo"
+        },
+        {
+          "code": "DS-GUEYO",
+          "nom": "Guéyo",
+          "slug": "gueyo"
+        }
+      ]
+    },
+    {
+      "code": "RS-GBOKLE",
+      "nom": "Gbôklé",
+      "slug": "gbokle",
+      "chef_lieu": "Sassandra",
+      "pres": "San-Pédro",
+      "nb_districts": 2,
+      "districts": [
+        {
+          "code": "DS-SASSANDRA",
+          "nom": "Sassandra",
+          "slug": "sassandra"
+        },
+        {
+          "code": "DS-FRESCO",
+          "nom": "Fresco",
+          "slug": "fresco"
+        }
+      ]
+    },
+    {
+      "code": "RS-BELIER",
+      "nom": "Bélier",
+      "slug": "belier",
+      "chef_lieu": "Yamoussoukro",
+      "pres": "Yamoussoukro",
+      "nb_districts": 4,
+      "districts": [
+        {
+          "code": "DS-YAMOUSSOUKRO",
+          "nom": "Yamoussoukro",
+          "slug": "yamoussoukro"
+        },
+        {
+          "code": "DS-TOUMODI",
+          "nom": "Toumodi",
+          "slug": "toumodi"
+        },
+        {
+          "code": "DS-TIEBISSOU",
+          "nom": "Tiébissou",
+          "slug": "tiebissou"
+        },
+        {
+          "code": "DS-DIDIEVI",
+          "nom": "Didiévi",
+          "slug": "didievi"
+        }
+      ]
+    },
+    {
+      "code": "RS-MARAHOUE",
+      "nom": "Marahoué",
+      "slug": "marahoue",
+      "chef_lieu": "Bouaflé",
+      "pres": "Yamoussoukro",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-BOUAFLE",
+          "nom": "Bouaflé",
+          "slug": "bouafle"
+        },
+        {
+          "code": "DS-SINFRA",
+          "nom": "Sinfra",
+          "slug": "sinfra"
+        },
+        {
+          "code": "DS-ZUENOULA",
+          "nom": "Zuénoula",
+          "slug": "zuenoula"
+        }
+      ]
+    },
+    {
+      "code": "RS-N-ZI",
+      "nom": "N'Zi",
+      "slug": "n-zi",
+      "chef_lieu": "Dimbokro",
+      "pres": "Yamoussoukro",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-DIMBOKRO",
+          "nom": "Dimbokro",
+          "slug": "dimbokro"
+        },
+        {
+          "code": "DS-BOCANDA",
+          "nom": "Bocanda",
+          "slug": "bocanda"
+        },
+        {
+          "code": "DS-KOUASSI-KOUASSIKRO",
+          "nom": "Kouassi-Kouassikro",
+          "slug": "kouassi-kouassikro",
+          "note": "Rattaché ici au N'Zi ; le district est parfois rattaché à l'Iffou (proximité de Prikro)."
+        }
+      ]
+    },
+    {
+      "code": "RS-LOH-DJIBOUA",
+      "nom": "Lôh-Djiboua",
+      "slug": "loh-djiboua",
+      "chef_lieu": "Divo",
+      "pres": "Yamoussoukro",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-DIVO",
+          "nom": "Divo",
+          "slug": "divo"
+        },
+        {
+          "code": "DS-LAKOTA",
+          "nom": "Lakota",
+          "slug": "lakota"
+        },
+        {
+          "code": "DS-GUITRY",
+          "nom": "Guitry",
+          "slug": "guitry"
+        }
+      ]
+    },
+    {
+      "code": "RS-GOH",
+      "nom": "Gôh",
+      "slug": "goh",
+      "chef_lieu": "Gagnoa",
+      "pres": "Yamoussoukro",
+      "nb_districts": 3,
+      "districts": [
+        {
+          "code": "DS-GAGNOA-1",
+          "nom": "Gagnoa 1",
+          "slug": "gagnoa-1"
+        },
+        {
+          "code": "DS-GAGNOA-2",
+          "nom": "Gagnoa 2",
+          "slug": "gagnoa-2"
+        },
+        {
+          "code": "DS-OUME",
+          "nom": "Oumé",
+          "slug": "oume"
+        }
+      ]
+    }
+  ]
+}
