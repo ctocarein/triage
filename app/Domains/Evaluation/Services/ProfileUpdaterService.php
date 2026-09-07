@@ -4,6 +4,7 @@ namespace App\Domains\Evaluation\Services;
 
 use App\Domains\Evaluation\Enums\QuestionType;
 use App\Domains\Evaluation\Models\EvaluationSession;
+use App\Domains\Organization\Models\HealthDistrict;
 use Carbon\Carbon;
 
 class ProfileUpdaterService
@@ -53,6 +54,10 @@ class ProfileUpdaterService
 
         if ($key === 'last_screening_date') {
             return $this->normalizeLastScreeningDate($value);
+        }
+
+        if ($key === 'health_district_id') {
+            return $this->resolveHealthDistrictId($value);
         }
 
         if ($key === 'menopause_status') {
@@ -105,6 +110,40 @@ class ProfileUpdaterService
         }
 
         return $value;
+    }
+
+    /**
+     * Traduit le code de district du catalogue en identifiant de base.
+     *
+     * Les options de la question portent le code de la carte sanitaire --
+     * DS-SAN-PEDRO -- et non l'identifiant auto-incremente, qui differerait
+     * d'un environnement a l'autre. La colonne, elle, est une cle etrangere.
+     * La traduction se fait donc ici, au meme titre que les autres reponses
+     * dont la valeur affichee n'est pas la valeur stockee.
+     *
+     * Un code inconnu donne null plutot qu'une violation de contrainte : mieux
+     * vaut un district manquant, visible, qu'une session interrompue au milieu
+     * d'un entretien.
+     */
+    private function resolveHealthDistrictId(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $value = trim($value);
+
+        // Une reponse deja resolue en identifiant -- reprise de session,
+        // correction depuis l'administration -- ne doit pas etre re-traduite.
+        if (ctype_digit($value)) {
+            return (int) $value;
+        }
+
+        return HealthDistrict::where('code', $value)->value('id');
     }
 
     private function normalizeBirthDate(mixed $value): ?string

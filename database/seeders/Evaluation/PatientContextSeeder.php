@@ -40,6 +40,17 @@ class PatientContextSeeder extends Seeder
             ->map(fn ($row) => ['value' => $row->name, 'label' => $row->name])
             ->toArray();
 
+        // Les options portent le CODE du district, pas son identifiant : les
+        // identifiants auto-incrementes differeraient entre environnements, et
+        // un catalogue exporte d'une base vers une autre rattacherait alors
+        // les beneficiaires a des districts au hasard. Le code vient de la
+        // carte sanitaire, il est le meme partout.
+        $districtOptions = DB::table('health_districts')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($row) => ['value' => $row->code, 'label' => $row->name])
+            ->toArray();
+
         $questions = [
             [
                 'key'            => 'birth_date',
@@ -68,6 +79,20 @@ class PatientContextSeeder extends Seeder
                 'options'       => $municipalityOptions,
             ],
             [
+                // Seule question du bloc qui ne s'adresse pas a la beneficiaire :
+                // elle ne connait pas son district sanitaire, elle connait son
+                // quartier. C'est l'ambassadrice qui repond -- elle exerce dans
+                // le systeme de sante -- et le formulaire lui propose le sien.
+                // D'ou une formulation d'etiquette et non de question parlee.
+                'key'           => 'health_district_id',
+                'text'          => 'District sanitaire de rattachement',
+                'type'          => 'select_one',
+                'bloc_key'      => 'patient_context',
+                'answer_target' => 'personal_profile',
+                'order'         => 3,
+                'options'       => $districtOptions,
+            ],
+            [
                 // Place apres la date de naissance, donc apres la sortie des
                 // mineurs : inutile d'ouvrir un compte a quelqu'un que le parcours
                 // va rediriger. Mais assez tot pour que la reconciliation d'une
@@ -78,7 +103,7 @@ class PatientContextSeeder extends Seeder
                 'type'          => 'text',
                 'bloc_key'      => 'patient_context',
                 'answer_target' => 'credential',
-                'order'         => 3,
+                'order'         => 4,
                 'is_required'   => true,
                 'placeholder'   => 'Ex. 0701020304',
             ],

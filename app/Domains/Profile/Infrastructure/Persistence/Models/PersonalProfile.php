@@ -3,6 +3,8 @@
 namespace App\Domains\Profile\Infrastructure\Persistence\Models;
 
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
+use App\Domains\Organization\Models\HealthDistrict;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +26,7 @@ class PersonalProfile extends Model
         'education_level',
         'gender',
         'municipality',
+        'health_district_id',
         'cmu', // Couverture Maladie Universelle
         'height', // Taille
         'occupation', // Occupation
@@ -40,6 +43,18 @@ class PersonalProfile extends Model
     protected $appends = [
         'age',
     ];
+
+    /**
+     * Le district sanitaire de rattachement -- la cle d'orientation.
+     *
+     * Distinct de `municipality`, qui est son adresse telle qu'elle la donne :
+     * l'une sert a la retrouver sur le terrain, l'autre a savoir ou elle peut
+     * etre prise en charge.
+     */
+    public function healthDistrict(): BelongsTo
+    {
+        return $this->belongsTo(HealthDistrict::class, 'health_district_id');
+    }
 
     /**
      * Accesseur dynamique pour calculer l'âge à partir de birth_date.

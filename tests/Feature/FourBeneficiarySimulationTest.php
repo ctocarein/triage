@@ -99,6 +99,11 @@ class FourBeneficiarySimulationTest extends TestCase
         $this->assertKey('municipality', $q, 'B2');
 
         $q = $this->skip($identity, $sessionId, $q);
+        $this->assertKey('health_district_id', $q, 'B2');
+
+        // B2 renseigne le district : le parcours doit se comporter pareil qu'il
+        // soit rempli ou passé.
+        $q = $this->answer($identity, $sessionId, $q, 'DS-SAN-PEDRO');
         $this->assertKey('phone', $q, 'B2');
 
         $q = $this->answer($identity, $sessionId, $q, $this->phoneFor($identity));
@@ -359,8 +364,8 @@ class FourBeneficiarySimulationTest extends TestCase
     }
 
     /**
-     * Répond à birth_date, skipe commune, puis renseigne le téléphone.
-     * Retourne la première question d'emergency_screen.
+     * Répond à birth_date, skipe la commune et le district, puis renseigne le
+     * téléphone. Retourne la première question d'emergency_screen.
      */
     private function doPatientContext(
         Identity $identity,
@@ -371,6 +376,11 @@ class FourBeneficiarySimulationTest extends TestCase
         $q = $this->answer($identity, $sessionId, $birthDateQuestion, $birthDate);
         $this->assertKey('municipality', $q);
 
+        $q = $this->skip($identity, $sessionId, $q);
+        $this->assertKey('health_district_id', $q);
+
+        // Le district est proposé, pas imposé : la simulation le passe pour
+        // vérifier que le parcours n'en dépend pas.
         $q = $this->skip($identity, $sessionId, $q);
         $this->assertKey('phone', $q);
 

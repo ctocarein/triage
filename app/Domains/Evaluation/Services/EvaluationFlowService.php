@@ -2,6 +2,8 @@
 
 namespace App\Domains\Evaluation\Services;
 
+use App\Domains\Access\Models\Membership;
+use App\Domains\Organization\Models\Organization;
 use App\Domains\Identity\Infrastructure\Persistence\Models\Identity;
 use App\Domains\Decision\Models\DecisionInsight;
 use App\Domains\Decision\Services\DecisionInsightService;
@@ -227,7 +229,7 @@ class EvaluationFlowService
 
         $session->update(['current_question_id' => $firstQuestion->id]);
 
-        $questionPayload = $this->buildQuestionPayloadFromTemplate($firstQuestion);
+        $questionPayload = $this->buildQuestionPayloadFromTemplate($firstQuestion, $session);
         $insight         = $this->insightService->generate($session);
 
         return [
@@ -321,7 +323,7 @@ class EvaluationFlowService
 
         $session->update(['current_question_id' => $nextQuestion->id]);
 
-        $questionPayload = $this->buildQuestionPayloadFromTemplate($nextQuestion);
+        $questionPayload = $this->buildQuestionPayloadFromTemplate($nextQuestion, $session);
         $insight         = $this->insightService->generate($session);
 
         return [
@@ -580,7 +582,7 @@ class EvaluationFlowService
 
         $question = DynamicQuestionTemplate::find($session->current_question_id);
 
-        return $question ? $this->buildQuestionPayloadFromTemplate($question) : null;
+        return $question ? $this->buildQuestionPayloadFromTemplate($question, $session) : null;
     }
 
     protected function mapSession(EvaluationSession $session): array
@@ -640,8 +642,10 @@ class EvaluationFlowService
     /**
      * @return array<string, mixed>
      */
-    protected function buildQuestionPayloadFromTemplate(DynamicQuestionTemplate $question): array
-    {
+    protected function buildQuestionPayloadFromTemplate(
+        DynamicQuestionTemplate $question,
+        ?EvaluationSession $session = null,
+    ): array {
         return [
             'id'            => $question->id,
             'key'           => $question->key,
@@ -662,7 +666,50 @@ class EvaluationFlowService
             'required'      => $question->is_required,
             'placeholder'   => $question->placeholder,
             'meta'          => $question->meta,
+
+            // Proposition, pas reponse : le client preselectionne, l'evaluateur
+            // confirme ou corrige. Rien n'est enregistre tant qu'il n'a pas
+            // valide.
+            'suggested_value' => $this->suggestValue($question, $session),
         ];
+    }
+
+    /**
+     * Ce que l'API peut proposer sans l'inventer.
+     *
+     * Aujourd'hui le district sanitaire : une ambassadrice evalue presque
+     * toujours des femmes de son propre district, donc la question devient une
+     * confirmation plutot qu'une recherche dans 113 entrees. Elle reste
+     * modifiable -- une femme peut venir d'ailleurs, et c'est precisement le
+     * cas ou la reponse compte le plus.
+     */
+    protected function suggestValue(
+        DynamicQuestionTemplate $question,
+        ?EvaluationSession $session,
+    ): mixed {
+        if ($question->key !== 'health_district_id' || ! $session) {
+            return null;
+        }
+
+        $context = is_array($session->context) ? $session->context : [];
+        $agentId = $context['agent_id'] ?? null;
+
+        if (! $agentId) {
+            return null;
+        }
+
+        // Le district de la structure ou l'evaluateur exerce. Les options
+        // portant le code, la suggestion doit le porter aussi.
+        $organization = Organization::query()
+            ->whereNotNull('organizations.health_district_id')
+            ->whereIn('organizations.id', Membership::query()
+                ->where('identity_id', $agentId)
+                ->where('status', 'active')
+                ->select('organization_id'))
+            ->with('healthDistrict')
+            ->first();
+
+        return $organization?->healthDistrict?->code;
     }
 
     protected function resolveActiveVersionId(string $name): ?int
