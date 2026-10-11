@@ -82,6 +82,8 @@ class EvaluatorImpactTest extends TestCase
             ->getJson('/api/agent/impact')
             ->assertOk()
             ->assertJsonPath('women_reached', 2)
+            // Fatou n'a pas fini sa visite : approchee, pas encore evaluee.
+            ->assertJsonPath('women_evaluated', 1)
             ->assertJsonPath('evaluations_completed', 1)
             ->assertJsonPath('evaluations_in_progress', 1)
             ->assertJsonPath('municipalities_covered', 2)
@@ -122,6 +124,42 @@ class EvaluatorImpactTest extends TestCase
             ->assertOk()
             ->assertJsonPath('urgent_referrals', 1)
             ->assertJsonPath('women_reached', 2);
+    }
+
+    public function test_women_to_follow_are_those_whose_last_evaluation_concludes_to_a_risk(): void
+    {
+        $organization = $this->organization();
+        $ambassador   = $this->member($organization, 'Ambassador');
+        $colleague    = $this->member($organization, 'FieldAgent');
+
+        $high = $this->beneficiary($organization, null);
+        $this->conducted($high, $ambassador)->update(['risk_level' => 'high']);
+
+        $moderate = $this->beneficiary($organization, null);
+        $this->conducted($moderate, $ambassador)->update(['risk_level' => 'moderate']);
+
+        $low = $this->beneficiary($organization, null);
+        $this->conducted($low, $ambassador)->update(['risk_level' => 'low']);
+
+        // Une visite de suivi plus recente l'a rassuree : elle sort de la liste.
+        $reassured = $this->beneficiary($organization, null);
+        $this->conducted($reassured, $ambassador)->update(['risk_level' => 'high']);
+        $this->conducted($reassured, $ambassador)
+            ->update(['risk_level' => 'low', 'completed_at' => now()]);
+
+        // Un suivi encore en cours n'a rien conclu : elle reste a suivre.
+        $pending = $this->beneficiary($organization, null);
+        $this->conducted($pending, $ambassador)->update(['risk_level' => 'high']);
+        $this->conducted($pending, $ambassador, 'in_progress');
+
+        // Evaluee par un collegue : ce n'est pas a elle de la suivre.
+        $other = $this->beneficiary($organization, null);
+        $this->conducted($other, $colleague)->update(['risk_level' => 'high']);
+
+        $this->actingAs($ambassador, 'sanctum')
+            ->getJson('/api/agent/impact')
+            ->assertOk()
+            ->assertJsonPath('women_to_follow', 3);
     }
 
     public function test_a_new_evaluator_starts_at_zero(): void

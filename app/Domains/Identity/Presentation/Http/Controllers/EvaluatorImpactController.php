@@ -53,11 +53,23 @@ class EvaluatorImpactController extends Controller
 
         return response()->json([
             'women_reached'          => $identityIds->count(),
+            // Femmes dont au moins une evaluation qu'il a conduite est allee a
+            // son terme : une visite en cours ne suffit pas.
+            'women_evaluated'        => $conducted()
+                ->where('status', 'completed')
+                ->distinct()
+                ->count('identity_id'),
             'evaluations_completed'  => $conducted()->where('status', 'completed')->count(),
             'evaluations_in_progress' => $conducted()->where('status', 'in_progress')->count(),
             // Le chiffre qui compte cliniquement : combien de femmes ont ete
             // orientees vers une prise en charge rapide.
             'urgent_referrals'       => $conducted()->whereNotNull('context->urgent_referral')->count(),
+            // Femmes dont sa derniere evaluation conclut a un risque modere ou
+            // eleve : celles qu'il doit revoir ou orienter.
+            'women_to_follow'        => EvaluationSession::query()
+                ->followUpRequiredBy((string) $actor->id)
+                ->distinct()
+                ->count('identity_id'),
             'municipalities_covered' => $municipalities->count(),
             'municipalities'         => $municipalities,
             'active_since'           => $conducted()->min('started_at'),

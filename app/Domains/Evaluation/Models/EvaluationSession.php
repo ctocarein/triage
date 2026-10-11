@@ -16,6 +16,14 @@ use App\Domains\ExternalApi\Evaluation\Domain\Events\EvaluationCompleted;
 class EvaluationSession extends Model
 {
     use HasFactory;
+
+    /**
+     * Niveaux de risque (config/risk-level.php) qui appellent un suivi.
+     *
+     * @var array<int, string>
+     */
+    public const FOLLOW_UP_RISK_LEVELS = ['moderate', 'high'];
+
     protected $fillable = [
         'identity_id',
         'public_id',
@@ -139,6 +147,32 @@ class EvaluationSession extends Model
     public function scopeFullEvaluation($query)
     {
         return $query->where('type', 'complete');
+    }
+
+    /**
+     * Sessions qui laissent une femme « a suivre » pour cet evaluateur : sa
+     * derniere evaluation complete terminee, conduite par lui, conclut a un
+     * risque modere ou eleve.
+     *
+     * La derniere terminee, et non la derniere ouverte : une visite de suivi
+     * en cours ne retire pas une femme de la liste avant d'avoir conclu. Une
+     * evaluation plus recente conduite par un autre l'en retire en revanche --
+     * son resultat n'est pas visible de cet evaluateur.
+     */
+    public function scopeFollowUpRequiredBy($query, string $agentId)
+    {
+        return $query->completed()
+            ->fullEvaluation()
+            ->where('context->agent_id', $agentId)
+            ->whereIn('risk_level', self::FOLLOW_UP_RISK_LEVELS)
+            ->whereNotExists(function ($later): void {
+                $later->selectRaw('1')
+                    ->from('evaluation_sessions as later')
+                    ->whereColumn('later.identity_id', 'evaluation_sessions.identity_id')
+                    ->where('later.status', 'completed')
+                    ->where('later.type', 'complete')
+                    ->whereColumn('later.completed_at', '>', 'evaluation_sessions.completed_at');
+            });
     }
     public function scopeThematic($query)
     {

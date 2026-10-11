@@ -195,6 +195,39 @@ class BeneficiaryDirectoryTest extends TestCase
         $this->assertArrayNotHasKey('risk_level', $response->json('data.0.last_evaluation'));
     }
 
+    public function test_the_directory_can_be_filtered_on_those_to_follow(): void
+    {
+        $organization = $this->organization('Org A');
+        $agent        = $this->member($organization, 'FieldAgent');
+        $colleague    = $this->member($organization, 'Ambassador');
+
+        $evaluate = function (Identity $subject, Identity $conductor, string $risk): void {
+            EvaluationSession::create([
+                'identity_id'  => $subject->id,
+                'status'       => 'completed',
+                'type'         => 'complete',
+                'score'        => 0,
+                'risk_level'   => $risk,
+                'started_at'   => now()->subDay(),
+                'completed_at' => now()->subDay(),
+                'context'      => ['agent_id' => (string) $conductor->id],
+            ]);
+        };
+
+        $evaluate($this->beneficiary($organization, '0700000001', 'Aminata'), $agent, 'high');
+        $evaluate($this->beneficiary($organization, '0700000002', 'Rassuree'), $agent, 'low');
+        $this->beneficiary($organization, '0700000003', 'Jamais');
+
+        // Le risque conclu par un collegue ne doit pas fuiter par le filtre.
+        $evaluate($this->beneficiary($organization, '0700000004', 'Collegue'), $colleague, 'high');
+
+        $this->actingAs($agent, 'sanctum')
+            ->getJson('/api/agent/beneficiaries?status=to_follow')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.name', 'Aminata');
+    }
+
     public function test_an_evaluator_without_an_organization_gets_an_empty_directory(): void
     {
         $agent = $this->member(null, 'FieldAgent');

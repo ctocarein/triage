@@ -31,7 +31,7 @@ class BeneficiaryDirectoryController extends Controller
 
         $validated = $request->validate([
             'search'   => ['nullable', 'string', 'max:100'],
-            'status'   => ['nullable', 'in:in_progress,completed,never'],
+            'status'   => ['nullable', 'in:in_progress,completed,never,to_follow'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -81,6 +81,13 @@ class BeneficiaryDirectoryController extends Controller
             $query->whereHas('evaluationSessions', fn ($q) => $q->active());
         } elseif (($validated['status'] ?? null) === 'completed') {
             $query->whereHas('evaluationSessions', fn ($q) => $q->completed());
+        } elseif (($validated['status'] ?? null) === 'to_follow') {
+            // Fonde sur ses propres evaluations : filtrer sur le risque d'une
+            // session conduite par un collegue revelerait ce que mapSession masque.
+            $query->whereHas(
+                'evaluationSessions',
+                fn ($q) => $q->followUpRequiredBy((string) $actor->id),
+            );
         }
 
         // Les plus recemment vues en premier : c'est l'ordre utile sur le terrain,
